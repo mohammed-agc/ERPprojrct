@@ -1,0 +1,251 @@
+import { useEffect, useState, useMemo } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Trash2, Check, FileText, ArrowRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+
+interface Line {
+  id?: string;
+  line_no: number;
+  vehicle_id: string | null;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  discount_pct: number;
+  vat_pct: number;
+  line_total: number;
+}
+
+const calcLine = (l: Line) => {
+  const gross = l.quantity * l.unit_price;
+  const afterDisc = gross * (1 - l.discount_pct / 100);
+  return Number(afterDisc.toFixed(2));
+};
+
+export default function SalesOrderDetail() {
+  const { id } = useParams();
+  const nav = useNavigate();
+  const [order, setOrder] = useState<any>(null);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [lines, setLines] = useState<Line[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    const [{ data: o }, { data: c }, { data: v }, { data: ls }] = await Promise.all([
+      supabase.from("sales_orders").select("*, customers(name, vat_number)").eq("id", id).maybeSingle(),
+      supabase.from("customers").select("id, name, code"),
+      supabase.from("vehicles").select("id, name, sale_price, status").eq("status", "available"),
+      supabase.from("sales_order_lines").select("*").eq("order_id", id).order("line_no"),
+    ]);
+    setOrder(o); setCustomers(c ?? []); setVehicles(v ?? []);
+    setLines((ls ?? []).map((x: any) => ({ ...x, quantity: Number(x.quantity), unit_price: Number(x.unit_price), discount_pct: Number(x.discount_pct), vat_pct: Number(x.vat_pct), line_total: Number(x.line_total) })));
+  };
+  useEffect(() => { load(); }, [id]);
+
+  const totals = useMemo(() => {
+    const subtotal = lines.reduce((s, l) => s + calcLine(l), 0);
+    const vat = lines.reduce((s, l) => s + calcLine(l) * (l.vat_pct / 100), 0);
+    return { subtotal: Number(subtotal.toFixed(2)), vat: Number(vat.toFixed(2)), total: Number((subtotal + vat).toFixed(2)) };
+  }, [lines]);
+
+  const updateLine = (i: number, patch: Partial<Line>) => {
+    setLines(prev => {
+      const next = [...prev];
+      next[i] = { ...next[i], ...patch };
+      next[i].line_total = calcLine(next[i]);
+      return next;
+    });
+  };
+
+  const onPickVehicle = (i: number, vid: string) => {
+    const v = vehicles.find(x => x.id === vid);
+    if (!v) return;
+    updateLine(i, { vehicle_id: vid, description: v.name, unit_price: Number(v.sale_price) });
+  };
+
+  const addLine = () => {
+    setLines(prev => [...prev, {
+      line_no: prev.length + 1, vehicle_id: null, description: "",
+      quantity: 1, unit_price: 0, discount_pct: 0, vat_pct: 15, line_total: 0,
+    }]);
+  };
+
+  const removeLine = (i: number) => setLines(prev => prev.filter((_, idx) => idx !== i));
+
+  const save = async () => {
+    if (!order) return;
+    setSaving(true);
+    await supabase.from("sales_order_lines").delete().eq("order_id", id);
+    if (lines.length) {
+      const { error } = await supabase.from("sales_order_lines").insert(
+        lines.map((l, idx) => ({
+          order_id: id, line_no: idx + 1, vehicle_id: l.vehicle_id, description: l.description,
+          quantity: l.quantity, unit_price: l.unit_price, discount_pct: l.discount_pct,
+          vat_pct: l.vat_pct, line_total: l.line_total,
+        }))
+      );
+      if (error) { toast.error(error.message); setSaving(false); return; }
+    }
+    await supabase.from("sales_orders").update({
+      subtotal: totals.subtotal, vat_amount: totals.vat, total: totals.total,
+      customer_id: order.customer_id, notes: order.notes ?? null,
+    }).eq("id", id);
+    setSaving(false);
+    toast.success("تم الحفظ");
+    load();
+  };
+
+  const confirm = async () => {
+    await save();
+    const { error } = await supabase.from("sales_orders").update({ status: "confirmed" }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("تم تأكيد الأمر");
+    load();
+  };
+
+  const generateInvoice = async () => {
+    if (!order) return;
+    const invNo = "INV-" + Date.now().toString().slice(-8);
+    // simple ZATCA Phase 1 QR (Base64 TLV)
+    const sellerName = "شركة ERP السعودية";
+    const vatNum = "300000000000003";
+    const tlv = (tag: number, val: string) => {
+      const v = new TextEncoder().encode(val);
+      return new Uint8Array([tag, v.length, ...v]);
+    };
+    const dt = new Date().toISOString();
+    const parts = [
+      tlv(1, sellerName), tlv(2, vatNum), tlv(3, dt),
+      tlv(4, totals.total.toFixed(2)), tlv(5, totals.vat.toFixed(2))
+    ];
+    const full = new Uint8Array(parts.reduce((s,p)=>s+p.length,0));
+    let off = 0; parts.forEach(p=>{ full.set(p, off); off += p.length; });
+    const qr = btoa(String.fromCharCode(...full));
+
+    const { data: inv, error } = await supabase.from("invoices").insert({
+      invoice_no: invNo, customer_id: order.customer_id, sales_order_id: id,
+      subtotal: totals.subtotal, vat_amount: totals.vat, total: totals.total,
+      qr_code: qr, status: "draft",
+      created_by: (await supabase.auth.getUser()).data.user?.id,
+    }).select().single();
+    if (error) { toast.error(error.message); return; }
+    await supabase.from("invoice_lines").insert(
+      lines.map((l, idx) => ({
+        invoice_id: inv.id, line_no: idx + 1, description: l.description,
+        quantity: l.quantity, unit_price: l.unit_price, vat_pct: l.vat_pct, line_total: l.line_total,
+      }))
+    );
+    await supabase.from("sales_orders").update({ status: "invoiced" }).eq("id", id);
+    toast.success("تم إنشاء الفاتورة");
+    nav(`/invoices`);
+  };
+
+  if (!order) return <div className="text-muted-foreground">جاري التحميل...</div>;
+
+  const isLocked = order.status !== "draft";
+
+  return (
+    <div>
+      <PageHeader
+        title={`أمر بيع ${order.order_no}`}
+        subtitle={<></> as any}
+        actions={
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={()=>nav("/sales-orders")}><ArrowRight className="h-4 w-4 ml-1" /> رجوع</Button>
+            {!isLocked && <Button size="sm" variant="outline" onClick={save} disabled={saving}>حفظ</Button>}
+            {!isLocked && <Button size="sm" onClick={confirm} disabled={saving}><Check className="h-4 w-4 ml-1" /> تأكيد</Button>}
+            {order.status === "confirmed" && <Button size="sm" onClick={generateInvoice}><FileText className="h-4 w-4 ml-1" /> إصدار فاتورة</Button>}
+          </div>
+        }
+      />
+
+      <div className="bg-card border border-border rounded-lg p-4 mb-4">
+        <div className="grid grid-cols-4 gap-4">
+          <div>
+            <Label>الحالة</Label>
+            <div className="mt-1"><Badge>{order.status}</Badge></div>
+          </div>
+          <div>
+            <Label>العميل</Label>
+            <Select value={order.customer_id} onValueChange={v=>setOrder({...order, customer_id:v})} disabled={isLocked}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{customers.map(c=><SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>التاريخ</Label>
+            <Input value={order.order_date} disabled dir="ltr" />
+          </div>
+          <div>
+            <Label>القسم</Label>
+            <Input value={order.department_code} disabled />
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-card border border-border rounded-lg overflow-hidden mb-4">
+        <table className="erp-table">
+          <thead>
+            <tr>
+              <th className="w-10">#</th>
+              <th className="w-1/3">المنتج / الوصف</th>
+              <th className="w-24">الكمية</th>
+              <th className="w-32">السعر (ر.س)</th>
+              <th className="w-20">خصم %</th>
+              <th className="w-20">VAT %</th>
+              <th className="w-32 text-left">المجموع</th>
+              <th className="w-10"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {lines.length === 0 && (
+              <tr><td colSpan={8} className="text-center text-muted-foreground py-6">لا توجد بنود — أضف بنداً جديداً</td></tr>
+            )}
+            {lines.map((l, i) => (
+              <tr key={i}>
+                <td className="text-muted-foreground num">{i+1}</td>
+                <td>
+                  <Select value={l.vehicle_id ?? ""} onValueChange={v=>onPickVehicle(i, v)} disabled={isLocked}>
+                    <SelectTrigger className="h-8 border-0 bg-transparent hover:bg-accent/40"><SelectValue placeholder="اختر مركبة..." /></SelectTrigger>
+                    <SelectContent>
+                      {vehicles.map(v=><SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  {l.description && <div className="text-[11px] text-muted-foreground px-2">{l.description}</div>}
+                </td>
+                <td><input className="erp-input num text-left" type="number" value={l.quantity} onChange={e=>updateLine(i,{quantity:Number(e.target.value)})} disabled={isLocked} /></td>
+                <td><input className="erp-input num text-left" type="number" value={l.unit_price} onChange={e=>updateLine(i,{unit_price:Number(e.target.value)})} disabled={isLocked} dir="ltr" /></td>
+                <td><input className="erp-input num text-left" type="number" value={l.discount_pct} onChange={e=>updateLine(i,{discount_pct:Number(e.target.value)})} disabled={isLocked} /></td>
+                <td><input className="erp-input num text-left" type="number" value={l.vat_pct} onChange={e=>updateLine(i,{vat_pct:Number(e.target.value)})} disabled={isLocked} /></td>
+                <td className="num text-left font-semibold">{l.line_total.toLocaleString("ar-SA", { minimumFractionDigits: 2 })}</td>
+                <td>
+                  {!isLocked && <Button variant="ghost" size="icon" className="h-7 w-7" onClick={()=>removeLine(i)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!isLocked && (
+          <div className="p-2 border-t border-border bg-muted/30">
+            <Button variant="ghost" size="sm" onClick={addLine}><Plus className="h-4 w-4 ml-1" /> إضافة بند</Button>
+          </div>
+        )}
+      </div>
+
+      <div className="flex justify-end">
+        <div className="bg-card border border-border rounded-lg p-4 w-80 space-y-2">
+          <div className="flex justify-between text-sm"><span className="text-muted-foreground">المجموع قبل الضريبة</span><span className="num font-medium">{totals.subtotal.toLocaleString("ar-SA", {minimumFractionDigits:2})}</span></div>
+          <div className="flex justify-between text-sm"><span className="text-muted-foreground">ضريبة القيمة المضافة (15%)</span><span className="num font-medium">{totals.vat.toLocaleString("ar-SA", {minimumFractionDigits:2})}</span></div>
+          <div className="flex justify-between text-base pt-2 border-t border-border"><span className="font-semibold">الإجمالي</span><span className="num font-bold text-primary">{totals.total.toLocaleString("ar-SA", {minimumFractionDigits:2})} ر.س</span></div>
+        </div>
+      </div>
+    </div>
+  );
+}
