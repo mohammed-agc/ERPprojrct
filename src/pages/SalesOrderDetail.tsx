@@ -43,6 +43,7 @@ export default function SalesOrderDetail() {
   const [lines, setLines] = useState<Line[]>([]);
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [role, setRole] = useState<ErpRole>("sales_manager");
 
   const load = async () => {
     const [{ data: o }, { data: c }, { data: v }, { data: ls }] = await Promise.all([
