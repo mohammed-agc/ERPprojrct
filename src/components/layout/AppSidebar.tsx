@@ -6,11 +6,13 @@ import {
   BookText, Scale, HandCoins, Wallet, ClipboardCheck, Contact2,
   TrendingUp, ArrowLeftRight, PieChart, Landmark, ArrowDownCircle, ArrowUpCircle, CheckSquare,
   Vault, Banknote, Target, Layers, GitBranch, Share2, Gauge,
-  Shield, CalendarRange, CalendarCheck, CalendarX, FileSearch, Lock, Hourglass, AlertTriangle
+  Shield, CalendarRange, CalendarCheck, CalendarX, FileSearch, Lock, Hourglass, AlertTriangle,
+  ClipboardList, FileText, Ship, PackageCheck, Trophy, ShoppingBag
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { governanceService } from "@/services/erp/governance";
+import { purchasingService } from "@/services/erp/purchasing";
 
 interface NavItem {
   label: string;
@@ -32,9 +34,22 @@ const groups: { title: string; items: NavItem[] }[] = [
     title: "المبيعات",
     items: [
       { label: "المركبات", to: "/vehicles", icon: Car, deptCode: "vehicles" },
-      { label: "المشتريات والإدخال", to: "/procurement", icon: ClipboardCheck, deptCode: "vehicles" },
       { label: "أوامر البيع", to: "/sales-orders", icon: ShoppingCart, deptCode: "vehicles" },
       { label: "الفواتير", to: "/invoices", icon: Receipt },
+    ],
+  },
+  {
+    title: "المشتريات",
+    items: [
+      { label: "لوحة المشتريات", to: "/purchasing", icon: ShoppingBag, deptCode: "vehicles" },
+      { label: "طلبات الشراء", to: "/purchasing/requests", icon: ClipboardList, deptCode: "vehicles" },
+      { label: "أوامر الشراء", to: "/purchasing/orders", icon: FileText, deptCode: "vehicles" },
+      { label: "ائتمان الموردين", to: "/purchasing/credit", icon: ShieldCheck, deptCode: "vehicles" },
+      { label: "حوافز الموردين", to: "/purchasing/incentives", icon: Trophy, deptCode: "vehicles" },
+      { label: "الشحنات", to: "/purchasing/shipments", icon: Ship, deptCode: "vehicles" },
+      { label: "الاستلام", to: "/purchasing/receiving", icon: PackageCheck, deptCode: "vehicles" },
+      { label: "الفحص والاعتماد", to: "/purchasing/inspection", icon: FileSearch, deptCode: "vehicles" },
+      { label: "المشتريات (قديم)", to: "/procurement", icon: ClipboardCheck, deptCode: "vehicles" },
     ],
   },
   {
@@ -130,25 +145,37 @@ export function AppSidebar() {
     pending_close: number;
     locked_periods: number;
   } | null>(null);
+  const [purCounts, setPurCounts] = useState<{
+    pending_prs: number;
+    awaiting_inspection: number;
+    in_transit: number;
+    over_limit: number;
+  } | null>(null);
 
   useEffect(() => {
     governanceService.dashboard().then(d => setGovCounts(d));
+    const d = purchasingService.dashboard();
+    setPurCounts({
+      pending_prs: d.pending_prs,
+      awaiting_inspection: d.awaiting_inspection,
+      in_transit: d.in_transit,
+      over_limit: d.over_limit,
+    });
   }, []);
 
   const itemsWithBadge = (items: NavItem[]): NavItem[] => {
-    if (!govCounts) return items;
     return items.map(it => {
-      if (it.to === "/governance/approvals") {
-        return { ...it, badge: { count: govCounts.pending_approvals, tone: "amber" as const } };
+      if (govCounts) {
+        if (it.to === "/governance/approvals") return { ...it, badge: { count: govCounts.pending_approvals, tone: "amber" as const } };
+        if (it.to === "/governance/audit") return { ...it, badge: { count: govCounts.audit_alerts + govCounts.audit_warnings, tone: "rose" as const } };
+        if (it.to === "/governance/monthly-close") return { ...it, badge: { count: govCounts.pending_close, tone: "amber" as const } };
+        if (it.to === "/governance/periods") return { ...it, badge: { count: govCounts.locked_periods, tone: "slate" as const } };
       }
-      if (it.to === "/governance/audit") {
-        return { ...it, badge: { count: govCounts.audit_alerts + govCounts.audit_warnings, tone: "rose" as const } };
-      }
-      if (it.to === "/governance/monthly-close") {
-        return { ...it, badge: { count: govCounts.pending_close, tone: "amber" as const } };
-      }
-      if (it.to === "/governance/periods") {
-        return { ...it, badge: { count: govCounts.locked_periods, tone: "slate" as const } };
+      if (purCounts) {
+        if (it.to === "/purchasing/requests") return { ...it, badge: { count: purCounts.pending_prs, tone: "amber" as const } };
+        if (it.to === "/purchasing/inspection") return { ...it, badge: { count: purCounts.awaiting_inspection, tone: "amber" as const } };
+        if (it.to === "/purchasing/shipments") return { ...it, badge: { count: purCounts.in_transit, tone: "slate" as const } };
+        if (it.to === "/purchasing/credit") return { ...it, badge: { count: purCounts.over_limit, tone: "rose" as const } };
       }
       return it;
     });
@@ -172,7 +199,7 @@ export function AppSidebar() {
         {groups.map((g) => {
           const visibleItems = g.items.filter(it => !it.deptCode || isManager || canAccessDept(it.deptCode));
           if (!visibleItems.length) return null;
-          const groupItems = g.title === "الحوكمة المالية" ? itemsWithBadge(visibleItems) : visibleItems;
+          const groupItems = (g.title === "الحوكمة المالية" || g.title === "المشتريات") ? itemsWithBadge(visibleItems) : visibleItems;
           const hasAlerts = groupItems.some(it => it.badge && it.badge.count > 0);
           return (
             <div key={g.title} className={cn("mb-3", hasAlerts && "border-r-2 border-amber-400/40")}>

@@ -1,0 +1,514 @@
+/**
+ * Enterprise Purchasing & Supplier Credit Management
+ * ---------------------------------------------------
+ * Frontend operational contract only. All data is seeded and persisted in
+ * localStorage so the UX behaves like a real ERP until the backend lands.
+ *
+ * Modules covered:
+ *   - Purchase Requests (PR)
+ *   - Purchase Orders (PO)
+ *   - Supplier Credit Management
+ *   - Supplier Incentives
+ *   - Shipment Tracking
+ *   - Goods Receiving
+ *   - Inspection & Approval
+ *   - Inventory Availability (computed)
+ */
+
+const LS_KEY = "sarat.purchasing.v1";
+
+/* ============================ Domain Types ============================ */
+
+export type Urgency = "low" | "normal" | "high" | "critical";
+
+export type PRStatus =
+  | "draft" | "pending" | "approved" | "rejected" | "converted_to_po";
+
+export type POStatus =
+  | "draft" | "approved" | "ordered" | "partially_received" | "completed" | "cancelled";
+
+export type ShipmentStatus =
+  | "preparing" | "shipped" | "in_transit" | "at_customs" | "cleared" | "arrived";
+
+export type ReceivingStatus =
+  | "pending" | "partial" | "received" | "with_discrepancy";
+
+export type InspectionStatus =
+  | "pending" | "in_progress" | "approved" | "rejected";
+
+export type ItemKind = "vehicle" | "part";
+
+export interface LineItem {
+  id: string;
+  kind: ItemKind;
+  description: string;     // "Toyota Camry 2025 / GLE" or "Brake Pad Set"
+  qty: number;
+  unit_cost: number;       // SAR
+  received_qty?: number;
+  inspected_qty?: number;
+  approved_qty?: number;
+}
+
+export interface PurchaseRequest {
+  id: string;
+  code: string;            // PR-2026-0001
+  requester: string;
+  department: string;
+  branch: string;
+  urgency: Urgency;
+  justification: string;
+  items: LineItem[];
+  status: PRStatus;
+  created_at: string;
+  approved_at?: string;
+  approver?: string;
+  po_id?: string;
+}
+
+export type PaymentTerm = "cash" | "net_30" | "net_60" | "net_90" | "credit_line";
+
+export interface PurchaseOrder {
+  id: string;
+  code: string;            // PO-2026-0001
+  supplier_id: string;
+  pr_id?: string;
+  branch_destination: string;
+  expected_delivery: string;
+  payment_term: PaymentTerm;
+  agreement_type: "spot" | "framework" | "consignment";
+  items: LineItem[];
+  status: POStatus;
+  total: number;           // SAR
+  created_at: string;
+  approved_at?: string;
+  ordered_at?: string;
+  completed_at?: string;
+  shipment_id?: string;
+}
+
+export interface Supplier {
+  id: string;
+  code: string;            // SUP-001
+  name: string;
+  country: string;
+  contact?: string;
+  agreement_type: "spot" | "framework" | "consignment";
+  /* credit */
+  credit_limit: number;        // SAR
+  utilized: number;            // SAR (open POs + unpaid invoices)
+  renewal_period_months: number;
+  agreement_start: string;
+  agreement_expiry: string;
+  /* incentives */
+  monthly_target: number;      // vehicles
+  achieved: number;            // vehicles this period
+  incentive_per_vehicle: number; // SAR
+  campaign?: string;
+}
+
+export interface Shipment {
+  id: string;
+  code: string;            // SHP-2026-0001
+  po_id: string;
+  carrier: string;
+  reference: string;       // BL number
+  status: ShipmentStatus;
+  customs_status: "not_started" | "in_progress" | "cleared";
+  eta: string;
+  origin: string;
+  destination: string;
+  created_at: string;
+}
+
+export interface ReceivingNote {
+  id: string;
+  code: string;            // GRN-2026-0001
+  po_id: string;
+  warehouse: string;
+  status: ReceivingStatus;
+  inspection_status: InspectionStatus;
+  received_at: string;
+  receiver: string;
+  discrepancy_notes?: string;
+  items: { line_id: string; qty: number; condition: "ok" | "damaged" | "missing" }[];
+}
+
+export interface InspectionRecord {
+  id: string;
+  grn_id: string;
+  po_id: string;
+  inspector: string;
+  status: InspectionStatus;
+  started_at: string;
+  completed_at?: string;
+  notes?: string;
+  items: { line_id: string; passed: number; failed: number; remarks?: string }[];
+}
+
+interface DB {
+  suppliers: Supplier[];
+  prs: PurchaseRequest[];
+  pos: PurchaseOrder[];
+  shipments: Shipment[];
+  grns: ReceivingNote[];
+  inspections: InspectionRecord[];
+}
+
+/* ============================ Storage ============================ */
+
+const uid = (p: string) => `${p}_${Math.random().toString(36).slice(2, 9)}`;
+const today = () => new Date().toISOString().slice(0, 10);
+const isoNow = () => new Date().toISOString();
+const addDays = (days: number) => {
+  const d = new Date(); d.setDate(d.getDate() + days); return d.toISOString().slice(0, 10);
+};
+
+function seed(): DB {
+  const sup1: Supplier = {
+    id: "sup_toyota", code: "SUP-001", name: "Toyota Motor Corporation",
+    country: "اليابان", agreement_type: "framework",
+    credit_limit: 4_000_000, utilized: 2_800_000,
+    renewal_period_months: 12, agreement_start: "2026-01-01", agreement_expiry: "2026-12-31",
+    monthly_target: 40, achieved: 28, incentive_per_vehicle: 4_500,
+    campaign: "Q2 2026 Hilux Push",
+  };
+  const sup2: Supplier = {
+    id: "sup_hyundai", code: "SUP-002", name: "Hyundai Motor Company",
+    country: "كوريا الجنوبية", agreement_type: "framework",
+    credit_limit: 3_000_000, utilized: 1_450_000,
+    renewal_period_months: 12, agreement_start: "2026-01-01", agreement_expiry: "2026-10-31",
+    monthly_target: 30, achieved: 19, incentive_per_vehicle: 3_200,
+    campaign: "Tucson Spring Drive",
+  };
+  const sup3: Supplier = {
+    id: "sup_nissan", code: "SUP-003", name: "Nissan Motor Co.",
+    country: "اليابان", agreement_type: "spot",
+    credit_limit: 2_000_000, utilized: 2_080_000,
+    renewal_period_months: 6, agreement_start: "2026-01-01", agreement_expiry: "2026-06-30",
+    monthly_target: 20, achieved: 22, incentive_per_vehicle: 2_800,
+  };
+  const sup4: Supplier = {
+    id: "sup_parts_kr", code: "SUP-004", name: "Korea OEM Parts Ltd.",
+    country: "كوريا الجنوبية", agreement_type: "consignment",
+    credit_limit: 800_000, utilized: 320_000,
+    renewal_period_months: 12, agreement_start: "2026-01-15", agreement_expiry: "2027-01-14",
+    monthly_target: 0, achieved: 0, incentive_per_vehicle: 0,
+  };
+
+  const pr1: PurchaseRequest = {
+    id: "pr_1", code: "PR-2026-0142", requester: "خالد العتيبي",
+    department: "المبيعات", branch: "الرياض الرئيسي",
+    urgency: "high", justification: "نقص حاد في موديل Camry GLE — طلبات معلقة",
+    items: [
+      { id: uid("li"), kind: "vehicle", description: "Toyota Camry 2026 GLE", qty: 8, unit_cost: 105_000 },
+      { id: uid("li"), kind: "vehicle", description: "Toyota Camry 2026 LE", qty: 4, unit_cost: 92_000 },
+    ],
+    status: "pending", created_at: addDays(-2),
+  };
+  const pr2: PurchaseRequest = {
+    id: "pr_2", code: "PR-2026-0141", requester: "سعد الحربي",
+    department: "قطع الغيار", branch: "جدة",
+    urgency: "normal", justification: "تجديد مخزون قطع الفرامل للربع الثاني",
+    items: [
+      { id: uid("li"), kind: "part", description: "Brake Pad Set — Toyota", qty: 120, unit_cost: 180 },
+      { id: uid("li"), kind: "part", description: "Brake Disc — Hyundai", qty: 60, unit_cost: 240 },
+    ],
+    status: "approved", created_at: addDays(-5), approved_at: addDays(-3), approver: "م. عبدالله",
+  };
+  const pr3: PurchaseRequest = {
+    id: "pr_3", code: "PR-2026-0140", requester: "فهد الزهراني",
+    department: "الورشة", branch: "الدمام",
+    urgency: "critical", justification: "صيانة طارئة — قطع متخصصة",
+    items: [{ id: uid("li"), kind: "part", description: "Transmission Kit", qty: 3, unit_cost: 12_500 }],
+    status: "converted_to_po", created_at: addDays(-10), approved_at: addDays(-8), approver: "م. عبدالله", po_id: "po_3",
+  };
+  const pr4: PurchaseRequest = {
+    id: "pr_4", code: "PR-2026-0143", requester: "نواف الشمري",
+    department: "المبيعات", branch: "الرياض الرئيسي",
+    urgency: "low", justification: "تنويع مخزون فئة الدفع الرباعي",
+    items: [{ id: uid("li"), kind: "vehicle", description: "Hyundai Tucson 2026", qty: 6, unit_cost: 88_000 }],
+    status: "draft", created_at: addDays(-1),
+  };
+
+  const po1: PurchaseOrder = {
+    id: "po_1", code: "PO-2026-0231", supplier_id: "sup_toyota", branch_destination: "الرياض الرئيسي",
+    expected_delivery: addDays(18), payment_term: "net_60", agreement_type: "framework",
+    items: [
+      { id: uid("li"), kind: "vehicle", description: "Toyota Hilux 2026 DLX", qty: 10, unit_cost: 138_000 },
+      { id: uid("li"), kind: "vehicle", description: "Toyota Land Cruiser 2026", qty: 3, unit_cost: 295_000 },
+    ],
+    status: "ordered", total: 10 * 138_000 + 3 * 295_000,
+    created_at: addDays(-15), approved_at: addDays(-14), ordered_at: addDays(-13), shipment_id: "shp_1",
+  };
+  const po2: PurchaseOrder = {
+    id: "po_2", code: "PO-2026-0230", supplier_id: "sup_hyundai", branch_destination: "جدة",
+    expected_delivery: addDays(4), payment_term: "net_30", agreement_type: "framework",
+    items: [{ id: uid("li"), kind: "vehicle", description: "Hyundai Tucson 2026", qty: 8, unit_cost: 88_000, received_qty: 5 }],
+    status: "partially_received", total: 8 * 88_000,
+    created_at: addDays(-25), approved_at: addDays(-23), ordered_at: addDays(-22), shipment_id: "shp_2",
+  };
+  const po3: PurchaseOrder = {
+    id: "po_3", code: "PO-2026-0228", supplier_id: "sup_parts_kr", branch_destination: "الدمام",
+    expected_delivery: addDays(-2), payment_term: "net_30", agreement_type: "consignment",
+    pr_id: "pr_3",
+    items: [{ id: uid("li"), kind: "part", description: "Transmission Kit", qty: 3, unit_cost: 12_500, received_qty: 3, inspected_qty: 3, approved_qty: 3 }],
+    status: "completed", total: 3 * 12_500,
+    created_at: addDays(-9), approved_at: addDays(-8), ordered_at: addDays(-7), completed_at: addDays(-1),
+  };
+  const po4: PurchaseOrder = {
+    id: "po_4", code: "PO-2026-0232", supplier_id: "sup_nissan", branch_destination: "الرياض الرئيسي",
+    expected_delivery: addDays(30), payment_term: "credit_line", agreement_type: "spot",
+    items: [{ id: uid("li"), kind: "vehicle", description: "Nissan Patrol 2026", qty: 4, unit_cost: 245_000 }],
+    status: "draft", total: 4 * 245_000, created_at: addDays(-1),
+  };
+
+  const shp1: Shipment = {
+    id: "shp_1", code: "SHP-2026-0098", po_id: "po_1", carrier: "K-Line Ro-Ro",
+    reference: "BL-KL-44821", status: "in_transit", customs_status: "not_started",
+    eta: addDays(18), origin: "Nagoya, JP", destination: "ميناء جدة الإسلامي",
+    created_at: addDays(-12),
+  };
+  const shp2: Shipment = {
+    id: "shp_2", code: "SHP-2026-0097", po_id: "po_2", carrier: "Glovis",
+    reference: "BL-GL-22014", status: "cleared", customs_status: "cleared",
+    eta: addDays(2), origin: "Ulsan, KR", destination: "ميناء جدة الإسلامي",
+    created_at: addDays(-20),
+  };
+
+  const grn1: ReceivingNote = {
+    id: "grn_1", code: "GRN-2026-0066", po_id: "po_2", warehouse: "مستودع جدة المركزي",
+    status: "partial", inspection_status: "in_progress",
+    received_at: addDays(-1), receiver: "م. ماجد",
+    items: [{ line_id: po2.items[0].id, qty: 5, condition: "ok" }],
+  };
+  const grn2: ReceivingNote = {
+    id: "grn_2", code: "GRN-2026-0065", po_id: "po_3", warehouse: "مستودع الدمام",
+    status: "received", inspection_status: "approved",
+    received_at: addDays(-3), receiver: "أ. مشعل",
+    items: [{ line_id: po3.items[0].id, qty: 3, condition: "ok" }],
+  };
+
+  const insp1: InspectionRecord = {
+    id: "insp_1", grn_id: "grn_1", po_id: "po_2", inspector: "م. ناصر",
+    status: "in_progress", started_at: addDays(-1),
+    items: [{ line_id: po2.items[0].id, passed: 4, failed: 0, remarks: "بانتظار فحص الوحدة الخامسة" }],
+  };
+  const insp2: InspectionRecord = {
+    id: "insp_2", grn_id: "grn_2", po_id: "po_3", inspector: "م. ناصر",
+    status: "approved", started_at: addDays(-3), completed_at: addDays(-2),
+    items: [{ line_id: po3.items[0].id, passed: 3, failed: 0 }],
+  };
+
+  return {
+    suppliers: [sup1, sup2, sup3, sup4],
+    prs: [pr1, pr2, pr3, pr4],
+    pos: [po1, po2, po3, po4],
+    shipments: [shp1, shp2],
+    grns: [grn1, grn2],
+    inspections: [insp1, insp2],
+  };
+}
+
+function load(): DB {
+  if (typeof window === "undefined") return seed();
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) {
+      const s = seed();
+      localStorage.setItem(LS_KEY, JSON.stringify(s));
+      return s;
+    }
+    return JSON.parse(raw) as DB;
+  } catch {
+    return seed();
+  }
+}
+function save(db: DB) {
+  if (typeof window !== "undefined") localStorage.setItem(LS_KEY, JSON.stringify(db));
+}
+
+/* ============================ Helpers ============================ */
+
+export const URGENCY_LABEL: Record<Urgency, string> = {
+  low: "منخفضة", normal: "عادية", high: "عالية", critical: "حرجة",
+};
+export const URGENCY_TONE: Record<Urgency, string> = {
+  low: "bg-muted text-muted-foreground border border-border",
+  normal: "bg-primary/10 text-primary border border-primary/30",
+  high: "bg-warning/10 text-warning border border-warning/40",
+  critical: "bg-destructive/10 text-destructive border border-destructive/40",
+};
+
+export const PR_LABEL: Record<PRStatus, string> = {
+  draft: "مسودة", pending: "بانتظار الاعتماد", approved: "معتمد",
+  rejected: "مرفوض", converted_to_po: "تم تحويلها لأمر شراء",
+};
+export const PR_TONE: Record<PRStatus, string> = {
+  draft: "bg-muted text-muted-foreground border border-border",
+  pending: "bg-warning/10 text-warning border border-warning/40",
+  approved: "bg-success/10 text-success border border-success/40",
+  rejected: "bg-destructive/10 text-destructive border border-destructive/40",
+  converted_to_po: "bg-primary/10 text-primary border border-primary/30",
+};
+
+export const PO_LABEL: Record<POStatus, string> = {
+  draft: "مسودة", approved: "معتمد", ordered: "تم الطلب",
+  partially_received: "مستلم جزئياً", completed: "مكتمل", cancelled: "ملغى",
+};
+export const PO_TONE: Record<POStatus, string> = {
+  draft: "bg-muted text-muted-foreground border border-border",
+  approved: "bg-primary/10 text-primary border border-primary/30",
+  ordered: "bg-primary/10 text-primary border border-primary/30",
+  partially_received: "bg-warning/10 text-warning border border-warning/40",
+  completed: "bg-success/10 text-success border border-success/40",
+  cancelled: "bg-destructive/10 text-destructive border border-destructive/40",
+};
+
+export const SHIPMENT_LABEL: Record<ShipmentStatus, string> = {
+  preparing: "قيد التحضير", shipped: "تم الشحن", in_transit: "في الطريق",
+  at_customs: "في الجمارك", cleared: "تم التخليص", arrived: "وصلت",
+};
+export const SHIPMENT_TONE: Record<ShipmentStatus, string> = {
+  preparing: "bg-muted text-muted-foreground border border-border",
+  shipped: "bg-primary/10 text-primary border border-primary/30",
+  in_transit: "bg-primary/10 text-primary border border-primary/30",
+  at_customs: "bg-warning/10 text-warning border border-warning/40",
+  cleared: "bg-success/10 text-success border border-success/40",
+  arrived: "bg-success/10 text-success border border-success/40",
+};
+
+export const RECV_LABEL: Record<ReceivingStatus, string> = {
+  pending: "بانتظار الاستلام", partial: "استلام جزئي",
+  received: "تم الاستلام", with_discrepancy: "بفروقات",
+};
+export const RECV_TONE: Record<ReceivingStatus, string> = {
+  pending: "bg-muted text-muted-foreground border border-border",
+  partial: "bg-warning/10 text-warning border border-warning/40",
+  received: "bg-success/10 text-success border border-success/40",
+  with_discrepancy: "bg-destructive/10 text-destructive border border-destructive/40",
+};
+
+export const INSP_LABEL: Record<InspectionStatus, string> = {
+  pending: "بانتظار الفحص", in_progress: "قيد الفحص",
+  approved: "معتمد", rejected: "مرفوض",
+};
+export const INSP_TONE: Record<InspectionStatus, string> = {
+  pending: "bg-muted text-muted-foreground border border-border",
+  in_progress: "bg-warning/10 text-warning border border-warning/40",
+  approved: "bg-success/10 text-success border border-success/40",
+  rejected: "bg-destructive/10 text-destructive border border-destructive/40",
+};
+
+export const fmtSAR = (n: number) =>
+  `${Math.round(n).toLocaleString("ar-SA")} ر.س`;
+export const fmtDate = (s?: string) =>
+  s ? new Date(s).toLocaleDateString("ar-SA", { dateStyle: "medium" }) : "—";
+
+/* ============================ Service ============================ */
+
+export const purchasingService = {
+  /* suppliers */
+  listSuppliers(): Supplier[] { return load().suppliers; },
+  getSupplier(id: string): Supplier | undefined { return load().suppliers.find(s => s.id === id); },
+
+  creditSummary(s: Supplier) {
+    const remaining = s.credit_limit - s.utilized;
+    const usage = s.credit_limit > 0 ? Math.min(100, (s.utilized / s.credit_limit) * 100) : 0;
+    const over = s.utilized > s.credit_limit;
+    const daysToExpiry = Math.ceil(
+      (new Date(s.agreement_expiry).getTime() - Date.now()) / 86_400_000,
+    );
+    return { remaining, usage, over, daysToExpiry };
+  },
+  expectedIncentive(s: Supplier) {
+    return { vehicles: s.achieved, total: s.achieved * s.incentive_per_vehicle, target: s.monthly_target };
+  },
+
+  /* purchase requests */
+  listPRs(): PurchaseRequest[] {
+    return load().prs.slice().sort((a, b) => b.created_at.localeCompare(a.created_at));
+  },
+  approvePR(id: string, approver = "م. عبدالله") {
+    const db = load();
+    const pr = db.prs.find(p => p.id === id); if (!pr) return;
+    pr.status = "approved"; pr.approved_at = isoNow(); pr.approver = approver;
+    save(db);
+  },
+  rejectPR(id: string) {
+    const db = load();
+    const pr = db.prs.find(p => p.id === id); if (!pr) return;
+    pr.status = "rejected";
+    save(db);
+  },
+
+  /* purchase orders */
+  listPOs(): PurchaseOrder[] {
+    return load().pos.slice().sort((a, b) => b.created_at.localeCompare(a.created_at));
+  },
+  getPO(id: string) { return load().pos.find(p => p.id === id); },
+
+  /* shipments */
+  listShipments(): Shipment[] {
+    return load().shipments.slice().sort((a, b) => b.created_at.localeCompare(a.created_at));
+  },
+
+  /* receiving */
+  listGRNs(): ReceivingNote[] {
+    return load().grns.slice().sort((a, b) => b.received_at.localeCompare(a.received_at));
+  },
+
+  /* inspection */
+  listInspections(): InspectionRecord[] {
+    return load().inspections.slice().sort((a, b) => b.started_at.localeCompare(a.started_at));
+  },
+  setInspectionStatus(id: string, status: InspectionStatus) {
+    const db = load();
+    const i = db.inspections.find(x => x.id === id); if (!i) return;
+    i.status = status;
+    if (status === "approved" || status === "rejected") i.completed_at = isoNow();
+    // sync GRN inspection status
+    const grn = db.grns.find(g => g.id === i.grn_id);
+    if (grn) grn.inspection_status = status;
+    save(db);
+  },
+
+  /* dashboards */
+  dashboard() {
+    const db = load();
+    const pending_prs = db.prs.filter(p => p.status === "pending").length;
+    const open_pos = db.pos.filter(p => ["approved", "ordered", "partially_received"].includes(p.status)).length;
+    const in_transit = db.shipments.filter(s => ["shipped", "in_transit", "at_customs"].includes(s.status)).length;
+    const awaiting_inspection = db.inspections.filter(i => i.status !== "approved" && i.status !== "rejected").length;
+    const over_limit = db.suppliers.filter(s => s.utilized > s.credit_limit).length;
+    const expiring_agreements = db.suppliers.filter(s => {
+      const d = (new Date(s.agreement_expiry).getTime() - Date.now()) / 86_400_000;
+      return d <= 60 && d >= 0;
+    }).length;
+    const open_po_value = db.pos
+      .filter(p => p.status !== "completed" && p.status !== "cancelled")
+      .reduce((s, p) => s + p.total, 0);
+    return {
+      pending_prs, open_pos, in_transit, awaiting_inspection,
+      over_limit, expiring_agreements, open_po_value,
+    };
+  },
+
+  /* inventory availability gate */
+  availability(po: PurchaseOrder) {
+    const totalQty = po.items.reduce((s, i) => s + i.qty, 0);
+    const approvedQty = po.items.reduce((s, i) => s + (i.approved_qty ?? 0), 0);
+    const receivedQty = po.items.reduce((s, i) => s + (i.received_qty ?? 0), 0);
+    return {
+      totalQty, approvedQty, receivedQty,
+      availableForSale: approvedQty,
+      pctReceived: totalQty ? (receivedQty / totalQty) * 100 : 0,
+      pctSellable: totalQty ? (approvedQty / totalQty) * 100 : 0,
+      gated: approvedQty < receivedQty,
+    };
+  },
+
+  /* utilities */
+  resetSeed() {
+    if (typeof window !== "undefined") localStorage.removeItem(LS_KEY);
+  },
+};
