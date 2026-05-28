@@ -13,6 +13,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { governanceService } from "@/services/erp/governance";
 import { purchasingService } from "@/services/erp/purchasing";
+import { salesService } from "@/services/erp/sales";
+
 
 interface NavItem {
   label: string;
@@ -33,11 +35,19 @@ const groups: { title: string; items: NavItem[] }[] = [
   {
     title: "المبيعات",
     items: [
+      { label: "لوحة المبيعات", to: "/sales", icon: LayoutDashboard, deptCode: "vehicles" },
       { label: "المركبات", to: "/vehicles", icon: Car, deptCode: "vehicles" },
+      { label: "عروض الأسعار", to: "/sales/quotations", icon: FileText, deptCode: "vehicles" },
       { label: "أوامر البيع", to: "/sales-orders", icon: ShoppingCart, deptCode: "vehicles" },
+      { label: "الحجوزات", to: "/sales/reservations", icon: CalendarCheck, deptCode: "vehicles" },
+      { label: "تنسيق التسليم", to: "/sales/deliveries", icon: PackageCheck, deptCode: "vehicles" },
+      { label: "التمويل والتقسيط", to: "/sales/financing", icon: Banknote, deptCode: "vehicles" },
+      { label: "تحليلات المبيعات", to: "/sales/analytics", icon: TrendingUp, deptCode: "vehicles" },
+      { label: "الخط الزمني للعميل", to: "/sales/customer-timeline", icon: Contact2, deptCode: "vehicles" },
       { label: "الفواتير", to: "/invoices", icon: Receipt },
     ],
   },
+
   {
     title: "المشتريات",
     items: [
@@ -151,6 +161,13 @@ export function AppSidebar() {
     in_transit: number;
     over_limit: number;
   } | null>(null);
+  const [salesCounts, setSalesCounts] = useState<{
+    expiring_quotes: number;
+    discount_pending: number;
+    reserved: number;
+    pending_deliveries: number;
+    fin_review: number;
+  } | null>(null);
 
   useEffect(() => {
     governanceService.dashboard().then(d => setGovCounts(d));
@@ -161,7 +178,16 @@ export function AppSidebar() {
       in_transit: d.in_transit,
       over_limit: d.over_limit,
     });
+    const s = salesService.dashboard();
+    setSalesCounts({
+      expiring_quotes: s.expiring_quotes,
+      discount_pending: s.discount_pending,
+      reserved: s.reserved,
+      pending_deliveries: s.pending_deliveries,
+      fin_review: s.fin_review,
+    });
   }, []);
+
 
   const itemsWithBadge = (items: NavItem[]): NavItem[] => {
     return items.map(it => {
@@ -177,9 +203,16 @@ export function AppSidebar() {
         if (it.to === "/purchasing/shipments") return { ...it, badge: { count: purCounts.in_transit, tone: "slate" as const } };
         if (it.to === "/purchasing/credit") return { ...it, badge: { count: purCounts.over_limit, tone: "rose" as const } };
       }
+      if (salesCounts) {
+        if (it.to === "/sales/quotations") return { ...it, badge: { count: salesCounts.expiring_quotes + salesCounts.discount_pending, tone: "amber" as const } };
+        if (it.to === "/sales/reservations") return { ...it, badge: { count: salesCounts.reserved, tone: "amber" as const } };
+        if (it.to === "/sales/deliveries") return { ...it, badge: { count: salesCounts.pending_deliveries, tone: "slate" as const } };
+        if (it.to === "/sales/financing") return { ...it, badge: { count: salesCounts.fin_review, tone: "amber" as const } };
+      }
       return it;
     });
   };
+
 
   return (
     <aside className="w-60 bg-sidebar text-sidebar-foreground border-l border-sidebar-border flex flex-col h-screen sticky top-0">
@@ -199,7 +232,8 @@ export function AppSidebar() {
         {groups.map((g) => {
           const visibleItems = g.items.filter(it => !it.deptCode || isManager || canAccessDept(it.deptCode));
           if (!visibleItems.length) return null;
-          const groupItems = (g.title === "الحوكمة المالية" || g.title === "المشتريات") ? itemsWithBadge(visibleItems) : visibleItems;
+          const groupItems = (g.title === "الحوكمة المالية" || g.title === "المشتريات" || g.title === "المبيعات") ? itemsWithBadge(visibleItems) : visibleItems;
+
           const hasAlerts = groupItems.some(it => it.badge && it.badge.count > 0);
           return (
             <div key={g.title} className={cn("mb-3", hasAlerts && "border-r-2 border-amber-400/40")}>

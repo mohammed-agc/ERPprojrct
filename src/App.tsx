@@ -66,6 +66,14 @@ const SupplierIncentives = lazy(() => import("./pages/purchasing/SupplierIncenti
 const Shipments = lazy(() => import("./pages/purchasing/Shipments"));
 const Receiving = lazy(() => import("./pages/purchasing/Receiving"));
 const Inspection = lazy(() => import("./pages/purchasing/Inspection"));
+const SalesDashboard = lazy(() => import("./pages/sales/SalesDashboard"));
+const SalesQuotations = lazy(() => import("./pages/sales/Quotations"));
+const SalesReservations = lazy(() => import("./pages/sales/Reservations"));
+const SalesDeliveries = lazy(() => import("./pages/sales/Deliveries"));
+const SalesFinancing = lazy(() => import("./pages/sales/Financing"));
+const SalesAnalytics = lazy(() => import("./pages/sales/SalesAnalytics"));
+const CustomerTimeline = lazy(() => import("./pages/sales/CustomerTimeline"));
+
 
 import { ErpAuthError } from "@/services/erp";
 
@@ -123,9 +131,17 @@ const App = () => (
               <Route path="/purchasing/shipments" element={<Shipments />} />
               <Route path="/purchasing/receiving" element={<Receiving />} />
               <Route path="/purchasing/inspection" element={<Inspection />} />
+              <Route path="/sales" element={<SalesDashboard />} />
+              <Route path="/sales/quotations" element={<SalesQuotations />} />
+              <Route path="/sales/reservations" element={<SalesReservations />} />
+              <Route path="/sales/deliveries" element={<SalesDeliveries />} />
+              <Route path="/sales/financing" element={<SalesFinancing />} />
+              <Route path="/sales/analytics" element={<SalesAnalytics />} />
+              <Route path="/sales/customer-timeline" element={<CustomerTimeline />} />
               <Route path="/sales-orders" element={<SalesOrders />} />
               <Route path="/sales-orders/:id" element={<SalesOrderDetail />} />
               <Route path="/invoices" element={<Invoices />} />
+
               <Route path="/accounts" element={<Accounts />} />
               <Route path="/accounts/:id" element={<AccountDetail />} />
               <Route path="/finance" element={<FinanceCenter />} />
