@@ -222,26 +222,72 @@ export default function SalesOrderDetail() {
         }
       />
 
+      {/* Workflow stepper */}
+      <div className="bg-card border border-border rounded-lg p-3 mb-4">
+        <WorkflowStepper
+          steps={[
+            { key: "draft", label: "مسودة" },
+            { key: "confirmed", label: "مؤكَّد" },
+            { key: "invoiced", label: "مفوتر" },
+            { key: "delivered", label: "مُسلَّم" },
+          ]}
+          current={order.status === "delivered" ? "delivered" : order.status}
+          cancelled={order.status === "cancelled"}
+        />
+      </div>
+
+      {/* Header form */}
       <div className="bg-card border border-border rounded-lg p-4 mb-4">
-        <div className="grid grid-cols-4 gap-4">
-          <div>
-            <Label>الحالة</Label>
-            <div className="mt-1"><Badge>{order.status}</Badge></div>
+        <div className="grid grid-cols-12 gap-4">
+          <div className="col-span-5">
+            <Label className="text-xs text-muted-foreground">العميل</Label>
+            <div className="mt-1">
+              <ProductCombobox
+                items={customers as any[]}
+                value={order.customer_id}
+                onChange={(cid) => setOrder({ ...order, customer_id: cid })}
+                disabled={isLocked}
+                placeholder="اختر عميلاً..."
+                searchKeys={["name", "code", "vat_number", "phone"] as any}
+                displayValue={(c: any) => c.name}
+                columns={[
+                  { key: "code", header: "الكود", className: "text-[11px]", render: (c: any) => <span dir="ltr" className="num">{c.code}</span> },
+                  { key: "name", header: "العميل", className: "font-medium", render: (c: any) => <span>{c.name}</span> },
+                  { key: "vat", header: "الرقم الضريبي", className: "text-[11px]", render: (c: any) => <span dir="ltr" className="num">{c.vat_number || "—"}</span> },
+                  { key: "phone", header: "الجوال", className: "text-[11px]", render: (c: any) => <span dir="ltr" className="num">{c.phone || "—"}</span> },
+                  { key: "city", header: "المدينة", render: (c: any) => <span className="text-muted-foreground">{c.city || "—"}</span> },
+                ]}
+              />
+            </div>
+            {/* Customer mini-card */}
+            {(() => {
+              const cust = customers.find((c: any) => c.id === order.customer_id);
+              if (!cust) return null;
+              return (
+                <div className="mt-2 grid grid-cols-3 gap-1.5 text-[11px] text-muted-foreground bg-muted/30 rounded px-2 py-1.5 border border-border">
+                  <div className="flex items-center gap-1 truncate"><Hash className="h-3 w-3 shrink-0" /><span dir="ltr" className="num truncate">{cust.vat_number || "بدون رقم ضريبي"}</span></div>
+                  <div className="flex items-center gap-1 truncate"><Phone className="h-3 w-3 shrink-0" /><span dir="ltr" className="num truncate">{cust.phone || "—"}</span></div>
+                  <div className="flex items-center gap-1 truncate"><MapPin className="h-3 w-3 shrink-0" /><span className="truncate">{cust.city || "—"}</span></div>
+                </div>
+              );
+            })()}
           </div>
-          <div>
-            <Label>العميل</Label>
-            <Select value={order.customer_id} onValueChange={v=>setOrder({...order, customer_id:v})} disabled={isLocked}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{customers.map(c=><SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-            </Select>
+
+          <div className="col-span-2">
+            <Label className="text-xs text-muted-foreground">رقم الأمر</Label>
+            <Input value={order.order_no} disabled dir="ltr" className="mt-1 num" />
           </div>
-          <div>
-            <Label>التاريخ</Label>
-            <Input value={order.order_date} disabled dir="ltr" />
+          <div className="col-span-2">
+            <Label className="text-xs text-muted-foreground">التاريخ</Label>
+            <Input value={order.order_date} disabled dir="ltr" className="mt-1 num" />
           </div>
-          <div>
-            <Label>القسم</Label>
-            <Input value={order.department_code} disabled />
+          <div className="col-span-2">
+            <Label className="text-xs text-muted-foreground">القسم</Label>
+            <Input value={order.department_code === "vehicles" ? "المركبات" : order.department_code === "spare_parts" ? "قطع الغيار" : order.department_code} disabled className="mt-1" />
+          </div>
+          <div className="col-span-1">
+            <Label className="text-xs text-muted-foreground">الحالة</Label>
+            <div className="mt-2"><Badge variant="outline">{order.status}</Badge></div>
           </div>
         </div>
       </div>
