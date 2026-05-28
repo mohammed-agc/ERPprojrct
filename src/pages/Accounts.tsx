@@ -187,7 +187,7 @@ function NodeRow(p: RowProps) {
                   <MoreHorizontal className="h-3.5 w-3.5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" dir="rtl">
+              <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => onAddChild(node)}>
                   <Plus className="h-3.5 w-3.5 ml-2" /> إضافة حساب فرعي
                 </DropdownMenuItem>
