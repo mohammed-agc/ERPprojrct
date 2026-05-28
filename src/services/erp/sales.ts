@@ -806,5 +806,107 @@ export const salesService = {
     return Array.from(map.values()).sort((a, b) => b.last.localeCompare(a.last));
   },
 
+
+  /* ============ Sales Approvals ============ */
+  listApprovals(): SalesApproval[] {
+    return load().approvals.slice().sort((a, b) => b.requested_at.localeCompare(a.requested_at));
+  },
+  submitSOForApproval(input: Omit<SalesApproval, "id" | "status" | "requested_at">): SalesApproval {
+    const db = load();
+    const ap: SalesApproval = {
+      ...input, id: uid("sap"), status: "pending", requested_at: isoNow(),
+    };
+    db.approvals.unshift(ap); save(db); return ap;
+  },
+  approveSO(id: string, approver = "م. عبدالله", note?: string) {
+    const db = load(); const ap = db.approvals.find(a => a.id === id); if (!ap) return;
+    ap.status = "approved"; ap.approver = approver; ap.decided_at = isoNow(); ap.note = note;
+    save(db);
+  },
+  rejectSO(id: string, note?: string) {
+    const db = load(); const ap = db.approvals.find(a => a.id === id); if (!ap) return;
+    ap.status = "rejected"; ap.decided_at = isoNow(); ap.note = note;
+    save(db);
+  },
+  soApprovalStatus(soId: string): SalesApprovalStatus | "not_required" {
+    const ap = load().approvals.find(a => a.so_id === soId);
+    return ap?.status ?? "not_required";
+  },
+
+  /* ============ Sales Invoices ============ */
+  listSalesInvoices(): SalesInvoice[] {
+    return load().invoices.slice().sort((a, b) => b.issued_at.localeCompare(a.issued_at));
+  },
+  invoicesForSO(soId: string) { return load().invoices.filter(i => i.so_id === soId); },
+  createSalesInvoice(input: {
+    so_id: string; so_code: string; customer: string; vehicle: string;
+    vin?: string; branch: string; subtotal: number; vat_pct?: number;
+    due_date?: string; notes?: string;
+  }): SalesInvoice | undefined {
+    const db = load();
+    // Gate: SO must be approved (if approval record exists) — else allowed
+    const ap = db.approvals.find(a => a.so_id === input.so_id);
+    if (ap && ap.status !== "approved") return undefined;
+    const year = new Date().getFullYear();
+    const seq = db.invoices.filter(i => i.code.startsWith(`SINV-${year}`)).length + 220;
+    const vatPct = input.vat_pct ?? 15;
+    const vat = Math.round(input.subtotal * (vatPct / 100));
+    const inv: SalesInvoice = {
+      id: uid("sinv"), code: `SINV-${year}-${String(seq).padStart(4, "0")}`,
+      so_id: input.so_id, so_code: input.so_code, customer: input.customer,
+      vehicle: input.vehicle, vin: input.vin, branch: input.branch,
+      issued_at: isoNow(),
+      due_date: input.due_date ?? addDays(7),
+      subtotal: input.subtotal, vat_amount: vat, total: input.subtotal + vat,
+      paid: 0, status: "issued", notes: input.notes,
+    };
+    db.invoices.unshift(inv); save(db); return inv;
+  },
+
+  /* ============ Sales Payments ============ */
+  recordSalesPayment(input: {
+    invoice_id: string; amount: number; method: SalesPaymentMethod;
+    reference?: string; notes?: string;
+  }): SalesPayment | undefined {
+    const db = load();
+    const inv = db.invoices.find(i => i.id === input.invoice_id);
+    if (!inv) return undefined;
+    if (inv.status === "paid" || inv.status === "cancelled") return undefined;
+    const remaining = inv.total - inv.paid;
+    const amount = Math.min(input.amount, remaining);
+    const year = new Date().getFullYear();
+    const seq = db.payments.filter(p => p.code.startsWith(`SPAY-${year}`)).length + 183;
+    const pay: SalesPayment = {
+      id: uid("spay"), code: `SPAY-${year}-${String(seq).padStart(4, "0")}`,
+      invoice_id: inv.id, amount, method: input.method, reference: input.reference,
+      paid_at: isoNow(), notes: input.notes,
+    };
+    db.payments.unshift(pay);
+    inv.paid += amount;
+    inv.status = inv.paid >= inv.total ? "paid" : "partially_paid";
+    save(db); return pay;
+  },
+  paymentsForInvoice(invoiceId: string) {
+    return load().payments.filter(p => p.invoice_id === invoiceId);
+  },
+  soPaymentSummary(soId: string) {
+    const invs = this.invoicesForSO(soId);
+    const billed = invs.reduce((s, i) => s + i.total, 0);
+    const paid = invs.reduce((s, i) => s + i.paid, 0);
+    return { billed, paid, fullyPaid: invs.length > 0 && invs.every(i => i.status === "paid"), anyIssued: invs.length > 0, remaining: billed - paid };
+  },
+
+  /* ============ Delivery Gate ============ */
+  canDeliver(soId: string): { allowed: boolean; reason?: string } {
+    const ap = this.soApprovalStatus(soId);
+    if (ap === "pending") return { allowed: false, reason: "اعتماد أمر البيع مطلوب" };
+    if (ap === "rejected") return { allowed: false, reason: "اعتماد أمر البيع مرفوض" };
+    const ps = this.soPaymentSummary(soId);
+    if (!ps.anyIssued) return { allowed: false, reason: "لم تُصدر فاتورة بيع بعد" };
+    if (!ps.fullyPaid) return { allowed: false, reason: `السداد غير مكتمل — متبقي ${Math.round(ps.remaining).toLocaleString("ar-SA")} ر.س` };
+    return { allowed: true };
+  },
+
   resetSeed() { if (typeof window !== "undefined") localStorage.removeItem(LS_KEY); },
 };
+
