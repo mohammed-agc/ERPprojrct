@@ -4,7 +4,7 @@ import {
   Users, BarChart3, LayoutDashboard, Receipt, BookOpen, UserCog, Building2, ShieldCheck,
   BookText, Scale, HandCoins, Wallet, ClipboardCheck, Contact2,
   TrendingUp, ArrowLeftRight, PieChart, Landmark, ArrowDownCircle, ArrowUpCircle, CheckSquare,
-  Vault, Banknote
+  Vault, Banknote, Target, Layers, GitBranch, Share2, Gauge
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -61,6 +61,17 @@ const groups: { title: string; items: NavItem[] }[] = [
       { label: "الصرف", to: "/treasury/payments", icon: ArrowUpCircle, deptCode: "accounting" },
       { label: "التحويلات", to: "/treasury/transfers", icon: ArrowLeftRight, deptCode: "accounting" },
       { label: "التسوية البنكية", to: "/treasury/reconciliation", icon: CheckSquare, deptCode: "accounting" },
+    ],
+  },
+  {
+    title: "التحليل الإداري",
+    items: [
+      { label: "لوحة التحليل المالي", to: "/costing", icon: Gauge, deptCode: "accounting" },
+      { label: "مراكز التكلفة", to: "/costing/centers", icon: Target, deptCode: "accounting" },
+      { label: "الأبعاد المالية", to: "/costing/dimensions", icon: Layers, deptCode: "accounting" },
+      { label: "ربحية الأقسام", to: "/costing/departments", icon: PieChart, deptCode: "accounting" },
+      { label: "ربحية الفروع", to: "/costing/branches", icon: GitBranch, deptCode: "accounting" },
+      { label: "توزيع التكاليف", to: "/costing/allocation", icon: Share2, deptCode: "accounting" },
     ],
   },
   {
