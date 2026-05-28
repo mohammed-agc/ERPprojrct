@@ -32,6 +32,8 @@ export default function PurchaseInvoices() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<InvoiceStatus | "all">("all");
   const [payOpen, setPayOpen] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+
 
   const invs = useMemo(() => purchasingService.listPurchaseInvoices(), [tick]);
   const suppliers = useMemo(() => purchasingService.listSuppliers(), []);
