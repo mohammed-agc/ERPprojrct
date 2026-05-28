@@ -110,8 +110,9 @@ export default function PurchaseInvoices() {
               return (
                 <tr key={i.id}>
                   <td className="font-mono text-[11px]">
-                    <div className="flex items-center gap-1.5"><Receipt className="h-3 w-3 text-muted-foreground" />{i.code}</div>
+                    <Link to={`/purchasing/invoices/${i.id}`} className="flex items-center gap-1.5 text-primary hover:underline"><Receipt className="h-3 w-3" />{i.code}</Link>
                   </td>
+
                   <td className="text-xs">{sup?.name ?? "—"}</td>
                   <td className="font-mono text-[10px] text-muted-foreground">{po?.code ?? "—"}</td>
                   <td className="text-xs">{fmtDate(i.issued_at)}</td>
