@@ -80,6 +80,11 @@ const App = () => (
               <Route path="/sales-orders/:id" element={<SalesOrderDetail />} />
               <Route path="/invoices" element={<Invoices />} />
               <Route path="/accounts" element={<Accounts />} />
+              <Route path="/accounts/:id" element={<AccountDetail />} />
+              <Route path="/finance" element={<FinanceCenter />} />
+              <Route path="/income-statement" element={<IncomeStatementPage />} />
+              <Route path="/balance-sheet" element={<BalanceSheetPage />} />
+              <Route path="/cash-flow" element={<CashFlow />} />
               <Route path="/journals" element={<Journals />} />
               <Route path="/journals/:id" element={<JournalDetail />} />
               <Route path="/general-ledger" element={<GeneralLedger />} />
