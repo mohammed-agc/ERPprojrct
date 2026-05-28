@@ -706,8 +706,12 @@ export const purchasingService = {
       items: input.items.map(i => ({ id: uid("li"), ...i })),
       status: input.submit ? "pending" : "draft",
       created_at: isoNow(),
+      audit: [makeAudit({ role: "purchasing_officer", action: "إنشاء طلب الشراء", to_status: input.submit ? "pending" : "draft" })],
+      approvals: [],
     };
     db.prs.unshift(pr); save(db); return pr;
+  },
+
   },
 
   /* purchase orders */
