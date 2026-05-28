@@ -147,3 +147,46 @@
   /* Numeric cells */
   .num { font-variant-numeric: tabular-nums; }
 }
+
+/* ============================================================
+   Print & PDF — executive-quality output for ERP documents
+   Only `.print-area` is rendered. App shell, sidebar, header,
+   and any `.print:hidden` element disappear.
+   ============================================================ */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+  html, body {
+    background: #fff !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  body * { visibility: hidden !important; }
+  .print-area, .print-area * { visibility: visible !important; }
+  .print-area {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    background: #fff !important;
+  }
+  .print\:hidden { display: none !important; }
+  /* Tighter tables for print */
+  .erp-table thead th,
+  .erp-table tbody td {
+    padding: 4px 6px !important;
+    border-color: #ccc !important;
+  }
+  /* Avoid awkward page breaks */
+  table, .avoid-break { page-break-inside: avoid; break-inside: avoid; }
+  tr, h1, h2, h3 { page-break-inside: avoid; break-inside: avoid; }
+  thead { display: table-header-group; }
+  tfoot { display: table-footer-group; }
+}
+
