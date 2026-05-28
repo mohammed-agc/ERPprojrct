@@ -7,9 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Plus, FileText } from "lucide-react";
 import {
   purchasingService, PO_LABEL, PO_TONE, fmtSAR, fmtDate, type POStatus,
+import {
+  purchasingService, PO_LABEL, PO_TONE, fmtSAR, fmtDate, type POStatus,
 } from "@/services/erp/purchasing";
+import { PurchaseOrderDialog } from "@/components/erp/PurchaseOrderDialog";
 
-const PAYMENT_LABEL: Record<string, string> = {
   cash: "نقدي", net_30: "30 يوم", net_60: "60 يوم", net_90: "90 يوم", credit_line: "حد ائتماني",
 };
 
