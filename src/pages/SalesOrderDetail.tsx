@@ -253,7 +253,7 @@ export default function SalesOrderDetail() {
               <Button variant="ghost" size="sm" onClick={()=>nav("/sales-orders")}>
                 <ArrowRight className="h-4 w-4 ml-1" /> رجوع
               </Button>
-              <ActionButton size="sm" variant="ghost" permission={canPerform("print", state, role)} hideIfDenied onClick={()=>window.print()}>
+              <ActionButton size="sm" variant="ghost" permission={can("print")} hideIfDenied onClick={()=>window.print()}>
                 <Printer className="h-4 w-4 ml-1" /> طباعة
               </ActionButton>
             </div>
@@ -262,7 +262,7 @@ export default function SalesOrderDetail() {
 
             {/* Persistence group */}
             <div className="erp-action-group">
-              <ActionButton size="sm" variant="outline" permission={canPerform("save", state, role)} onClick={save} disabled={saving}>
+              <ActionButton size="sm" variant="outline" permission={can("save")} onClick={save} disabled={saving}>
                 {saving ? "جاري الحفظ..." : "حفظ"}
               </ActionButton>
             </div>
@@ -271,22 +271,22 @@ export default function SalesOrderDetail() {
 
             {/* Workflow progression group */}
             <div className="erp-action-group">
-              <ActionButton size="sm" permission={canPerform("confirm", state, role)} onClick={confirm} disabled={saving}>
+              <ActionButton size="sm" permission={can("confirm")} onClick={confirm} disabled={saving}>
                 <Check className="h-4 w-4 ml-1" /> تأكيد
               </ActionButton>
-              <ActionButton size="sm" permission={canPerform("invoice", state, role)} onClick={generateInvoice}>
+              <ActionButton size="sm" permission={can("invoice")} onClick={generateInvoice}>
                 <FileText className="h-4 w-4 ml-1" /> إصدار فاتورة
               </ActionButton>
-              <ActionButton size="sm" permission={canPerform("receive_payment", state, role)} onClick={()=>setStatus("paid","تم تسجيل الدفعة")}>
+              <ActionButton size="sm" permission={can("receive_payment")} onClick={()=>setStatus("paid","تم تسجيل الدفعة")}>
                 <Banknote className="h-4 w-4 ml-1" /> استلام دفعة
               </ActionButton>
-              <ActionButton size="sm" permission={canPerform("deliver", state, role)} onClick={()=>setStatus("delivered","تم التسليم")}>
+              <ActionButton size="sm" permission={can("deliver")} onClick={()=>setStatus("delivered","تم التسليم")}>
                 <Truck className="h-4 w-4 ml-1" /> تسليم
               </ActionButton>
             </div>
 
             {/* Destructive — separated, hidden when not allowed */}
-            <ActionButton size="sm" variant="destructive" permission={canPerform("cancel", state, role)} hideIfDenied onClick={()=>setStatus("cancelled","تم إلغاء الأمر")}>
+            <ActionButton size="sm" variant="destructive" permission={can("cancel")} hideIfDenied onClick={()=>setStatus("cancelled","تم إلغاء الأمر")}>
               <XCircle className="h-4 w-4 ml-1" /> إلغاء
             </ActionButton>
           </div>
