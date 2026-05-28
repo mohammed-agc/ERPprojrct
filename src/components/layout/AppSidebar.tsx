@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   Car, Wrench, Package, Calculator, Boxes, ShoppingCart,
-  Users, BarChart3, LayoutDashboard, Receipt, BookOpen, UserCog, Building2
+  Users, BarChart3, LayoutDashboard, Receipt, BookOpen, UserCog, Building2, ShieldCheck
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -44,6 +44,7 @@ const groups: { title: string; items: NavItem[] }[] = [
     items: [
       { label: "التقارير", to: "/reports", icon: BarChart3 },
       { label: "الهيكل التنظيمي", to: "/organization", icon: Building2 },
+      { label: "مصفوفة الصلاحيات", to: "/permissions", icon: ShieldCheck },
       { label: "المستخدمون والصلاحيات", to: "/users", icon: UserCog },
     ],
   },
