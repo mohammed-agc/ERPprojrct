@@ -1,21 +1,20 @@
 /**
  * Vehicle extended metadata helper.
  *
- * The backend `vehicles` table currently has only a `notes` text column for
- * extra data. To deliver the ERP frontend UX contract without changing the
- * backend schema, we encode the extended master-data fields (chassis, engine,
- * trim, transmission, fuel type, branch, supplier, photos, free notes) as a
- * JSON envelope inside `notes`.
+ * Backend `vehicles` table has only `notes` (text). To deliver the ERP
+ * frontend UX contract without schema changes we encode extended
+ * master-data, reservation tracking and media references as a JSON
+ * envelope inside `notes`:
  *
- * Envelope shape:
- *   ###VMETA###{"chassis":"...", ...}
- * followed optionally by free-form notes on subsequent lines.
+ *   ###VMETA###{...json...}
+ *   (optional free-form text on following lines)
  *
- * When the backend later promotes these to real columns, this helper can be
- * swapped without touching UI components.
+ * When the backend later promotes these fields to real columns, swap this
+ * helper without touching UI.
  */
 
 export type VehicleMeta = {
+  // master data
   chassis?: string;
   engine?: string;
   trim?: string;
@@ -23,7 +22,30 @@ export type VehicleMeta = {
   fuel_type?: "petrol" | "diesel" | "hybrid" | "electric" | "";
   branch?: string;
   supplier?: string;
-  photos?: string[];
+  purchase_source?: string;
+
+  // ERP virtual status overlay (extends DB enum: delivered / maintenance / transit / returned)
+  status_overlay?: "delivered" | "maintenance" | "transit" | "returned" | "";
+  status_overlay_at?: string;
+  status_overlay_by?: string;
+  status_overlay_note?: string;
+
+  // reservation overlay (UX contract — backend engine will own this later)
+  reservation?: {
+    reserved_by?: string;       // user/sales person display name
+    customer_name?: string;
+    customer_id?: string;
+    sales_order_no?: string;
+    sales_order_id?: string;
+    expires_at?: string;        // ISO date
+    note?: string;
+    created_at?: string;
+  };
+
+  // media
+  photos?: string[];            // public URLs in vehicle-media bucket
+  documents?: { name: string; url: string; size?: number; type?: string }[];
+
   note?: string;
 };
 
@@ -31,9 +53,7 @@ const MARKER = "###VMETA###";
 
 export function parseVehicleMeta(notes: string | null | undefined): VehicleMeta {
   if (!notes) return {};
-  if (!notes.startsWith(MARKER)) {
-    return { note: notes };
-  }
+  if (!notes.startsWith(MARKER)) return { note: notes };
   try {
     const rest = notes.slice(MARKER.length);
     const nl = rest.indexOf("\n");
@@ -50,10 +70,30 @@ export function parseVehicleMeta(notes: string | null | undefined): VehicleMeta 
 export function serializeVehicleMeta(meta: VehicleMeta): string {
   const clean: VehicleMeta = {};
   (Object.keys(meta) as (keyof VehicleMeta)[]).forEach((k) => {
-    const v = meta[k];
-    if (v === undefined || v === "" || (Array.isArray(v) && v.length === 0)) return;
+    const v = meta[k] as any;
+    if (v === undefined || v === null || v === "") return;
+    if (Array.isArray(v) && v.length === 0) return;
+    if (typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === 0) return;
     (clean as any)[k] = v;
   });
   if (Object.keys(clean).length === 0) return "";
   return MARKER + JSON.stringify(clean);
+}
+
+/** Effective ERP status: overlay wins if set, otherwise DB status. */
+export type EffectiveStatus =
+  | "available" | "reserved" | "sold"
+  | "delivered" | "maintenance" | "transit" | "returned";
+
+export function effectiveStatus(dbStatus: string, meta: VehicleMeta): EffectiveStatus {
+  if (meta.status_overlay) return meta.status_overlay;
+  return (dbStatus as EffectiveStatus) ?? "available";
+}
+
+/** Reservation expiry helpers. */
+export function reservationDaysLeft(meta: VehicleMeta): number | null {
+  const exp = meta.reservation?.expires_at;
+  if (!exp) return null;
+  const ms = new Date(exp).getTime() - Date.now();
+  return Math.ceil(ms / (1000 * 60 * 60 * 24));
 }
