@@ -227,7 +227,7 @@ export const PROCUREMENT_STATES: ProcurementState[] = [
 
 export function isInProcurement(meta: VehicleMeta): boolean {
   const s = meta.procurement?.state;
-  return !!s && s !== "" && s !== "approved";
+  return !!s && s !== "approved";
 }
 
 /** Reservation expiry helpers. */
