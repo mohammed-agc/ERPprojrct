@@ -52,6 +52,18 @@ const groups: { title: string; items: NavItem[] }[] = [
     ],
   },
   {
+    title: "الخزينة",
+    items: [
+      { label: "الخزينة", to: "/treasury", icon: Vault, deptCode: "accounting" },
+      { label: "الصناديق", to: "/treasury/accounts", icon: Banknote, deptCode: "accounting" },
+      { label: "البنوك", to: "/treasury/accounts", icon: Landmark, deptCode: "accounting" },
+      { label: "القبض", to: "/treasury/receipts", icon: ArrowDownCircle, deptCode: "accounting" },
+      { label: "الصرف", to: "/treasury/payments", icon: ArrowUpCircle, deptCode: "accounting" },
+      { label: "التحويلات", to: "/treasury/transfers", icon: ArrowLeftRight, deptCode: "accounting" },
+      { label: "التسوية البنكية", to: "/treasury/reconciliation", icon: CheckSquare, deptCode: "accounting" },
+    ],
+  },
+  {
     title: "الإدارة",
     items: [
       { label: "التقارير", to: "/reports", icon: BarChart3 },
