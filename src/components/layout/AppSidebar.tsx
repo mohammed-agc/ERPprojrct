@@ -161,6 +161,13 @@ export function AppSidebar() {
     in_transit: number;
     over_limit: number;
   } | null>(null);
+  const [salesCounts, setSalesCounts] = useState<{
+    expiring_quotes: number;
+    discount_pending: number;
+    reserved: number;
+    pending_deliveries: number;
+    fin_review: number;
+  } | null>(null);
 
   useEffect(() => {
     governanceService.dashboard().then(d => setGovCounts(d));
@@ -171,7 +178,16 @@ export function AppSidebar() {
       in_transit: d.in_transit,
       over_limit: d.over_limit,
     });
+    const s = salesService.dashboard();
+    setSalesCounts({
+      expiring_quotes: s.expiring_quotes,
+      discount_pending: s.discount_pending,
+      reserved: s.reserved,
+      pending_deliveries: s.pending_deliveries,
+      fin_review: s.fin_review,
+    });
   }, []);
+
 
   const itemsWithBadge = (items: NavItem[]): NavItem[] => {
     return items.map(it => {
