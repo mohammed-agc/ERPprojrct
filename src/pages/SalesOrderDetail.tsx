@@ -277,7 +277,10 @@ export default function SalesOrderDetail() {
               <ActionButton size="sm" permission={can("invoice")} onClick={generateInvoice}>
                 <FileText className="h-4 w-4 ml-1" /> إصدار فاتورة
               </ActionButton>
-              <ActionButton size="sm" permission={can("receive_payment")} onClick={()=>setStatus("paid","تم تسجيل الدفعة")}>
+              {/* Payment registration belongs to Accounting (Invoices screen).
+                  Hidden from sales operational flow; visible only when the
+                  current actor has the accounting permission. */}
+              <ActionButton size="sm" permission={can("receive_payment")} hideIfDenied onClick={()=>setStatus("paid","تم تسجيل الدفعة")}>
                 <Banknote className="h-4 w-4 ml-1" /> استلام دفعة
               </ActionButton>
               <ActionButton size="sm" permission={can("deliver")} onClick={()=>setStatus("delivered","تم التسليم")}>
