@@ -150,13 +150,23 @@ export interface ReceivingNote {
   id: string;
   code: string;            // GRN-2026-0001
   po_id: string;
-  warehouse: string;
+  invoice_id?: string;
+  shipment_ref?: string;
+  branch?: string;
+  warehouse: string;       // warehouse code/name (display)
+  warehouse_id?: string;
+  yard?: string;
   status: ReceivingStatus;
   inspection_status: InspectionStatus;
   received_at: string;
+  created_at?: string;
+  completed_at?: string;
+  handoff_at?: string;
   receiver: string;
+  notes?: string;
   discrepancy_notes?: string;
-  items: { line_id: string; qty: number; condition: "ok" | "damaged" | "missing" }[];
+  items: GRNReceiptItem[];
+  discrepancies?: GRNDiscrepancy[];
 }
 
 export interface InspectionRecord {
