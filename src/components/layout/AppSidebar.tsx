@@ -12,7 +12,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { governanceService } from "@/services/erp/governance";
 
-interface NavItem { label: string; to: string; icon: any; deptCode?: string; }
+interface NavItem {
+  label: string;
+  to: string;
+  icon: any;
+  deptCode?: string;
+  badge?: { count: number; tone: "amber" | "rose" | "emerald" | "slate" };
+}
 
 const groups: { title: string; items: NavItem[] }[] = [
   {
@@ -75,6 +81,17 @@ const groups: { title: string; items: NavItem[] }[] = [
       { label: "ربحية الأقسام", to: "/costing/departments", icon: PieChart, deptCode: "accounting" },
       { label: "ربحية الفروع", to: "/costing/branches", icon: GitBranch, deptCode: "accounting" },
       { label: "توزيع التكاليف", to: "/costing/allocation", icon: Share2, deptCode: "accounting" },
+    ],
+  },
+  {
+    title: "الحوكمة المالية",
+    items: [
+      { label: "لوحة الحوكمة", to: "/governance", icon: Shield, deptCode: "accounting" },
+      { label: "الفترات المالية", to: "/governance/periods", icon: CalendarRange, deptCode: "accounting" },
+      { label: "الإقفال الشهري", to: "/governance/monthly-close", icon: CalendarCheck, deptCode: "accounting" },
+      { label: "إقفال السنة", to: "/governance/year-end-close", icon: CalendarX, deptCode: "accounting" },
+      { label: "الاعتمادات", to: "/governance/approvals", icon: ClipboardCheck, deptCode: "accounting" },
+      { label: "مركز التدقيق", to: "/governance/audit", icon: FileSearch, deptCode: "accounting" },
     ],
   },
   {
