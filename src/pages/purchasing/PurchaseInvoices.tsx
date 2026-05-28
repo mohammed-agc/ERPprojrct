@@ -8,12 +8,15 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Search, Receipt, Wallet } from "lucide-react";
+import { Search, Receipt, Wallet, Plus } from "lucide-react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import {
   purchasingService, PINV_LABEL, PINV_TONE, PAYMENT_METHOD_LABEL,
   fmtSAR, fmtDate, type InvoiceStatus, type PaymentMethod,
 } from "@/services/erp/purchasing";
+import { PurchaseInvoiceCreateDialog } from "@/components/erp/PurchaseInvoiceCreateDialog";
+
 
 const STATUS_OPTS: { value: InvoiceStatus | "all"; label: string }[] = [
   { value: "all", label: "كل الحالات" },
@@ -29,6 +32,8 @@ export default function PurchaseInvoices() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<InvoiceStatus | "all">("all");
   const [payOpen, setPayOpen] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+
 
   const invs = useMemo(() => purchasingService.listPurchaseInvoices(), [tick]);
   const suppliers = useMemo(() => purchasingService.listSuppliers(), []);
@@ -70,7 +75,11 @@ export default function PurchaseInvoices() {
           <SelectTrigger className="w-[180px] h-9"><SelectValue /></SelectTrigger>
           <SelectContent>{STATUS_OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
         </Select>
+        <Button size="sm" className="h-9" onClick={() => setCreateOpen(true)}>
+          <Plus className="h-4 w-4 ml-1" /> فاتورة جديدة
+        </Button>
         <div className="text-xs text-muted-foreground ml-auto">{filtered.length} نتيجة</div>
+
       </div>
 
       <div className="bg-card border border-border rounded-lg overflow-hidden">
@@ -101,8 +110,9 @@ export default function PurchaseInvoices() {
               return (
                 <tr key={i.id}>
                   <td className="font-mono text-[11px]">
-                    <div className="flex items-center gap-1.5"><Receipt className="h-3 w-3 text-muted-foreground" />{i.code}</div>
+                    <Link to={`/purchasing/invoices/${i.id}`} className="flex items-center gap-1.5 text-primary hover:underline"><Receipt className="h-3 w-3" />{i.code}</Link>
                   </td>
+
                   <td className="text-xs">{sup?.name ?? "—"}</td>
                   <td className="font-mono text-[10px] text-muted-foreground">{po?.code ?? "—"}</td>
                   <td className="text-xs">{fmtDate(i.issued_at)}</td>
@@ -132,6 +142,8 @@ export default function PurchaseInvoices() {
           onPaid={() => { setPayOpen(null); refresh(); }}
         />
       )}
+      <PurchaseInvoiceCreateDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={refresh} />
+
     </div>
   );
 }

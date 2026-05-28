@@ -64,8 +64,14 @@ const PurchaseOrders = lazy(() => import("./pages/purchasing/PurchaseOrders"));
 const PurchaseInvoices = lazy(() => import("./pages/purchasing/PurchaseInvoices"));
 const SupplierCredit = lazy(() => import("./pages/purchasing/SupplierCredit"));
 const SupplierIncentives = lazy(() => import("./pages/purchasing/SupplierIncentives"));
+const PurchaseInvoiceDetail = lazy(() => import("./pages/purchasing/PurchaseInvoiceDetail"));
+const Allocations = lazy(() => import("./pages/purchasing/Allocations"));
+const AllocationDetail = lazy(() => import("./pages/purchasing/AllocationDetail"));
+const AllocationConfirmations = lazy(() => import("./pages/purchasing/AllocationConfirmations"));
+const AllocationConfirmationDetail = lazy(() => import("./pages/purchasing/AllocationConfirmationDetail"));
 const Shipments = lazy(() => import("./pages/purchasing/Shipments"));
 const Receiving = lazy(() => import("./pages/purchasing/Receiving"));
+
 const Inspection = lazy(() => import("./pages/purchasing/Inspection"));
 const SalesDashboard = lazy(() => import("./pages/sales/SalesDashboard"));
 const SalesQuotations = lazy(() => import("./pages/sales/Quotations"));
@@ -138,6 +144,12 @@ const App = () => (
               <Route path="/purchasing/requests" element={<PurchaseRequests />} />
               <Route path="/purchasing/orders" element={<PurchaseOrders />} />
               <Route path="/purchasing/invoices" element={<PurchaseInvoices />} />
+              <Route path="/purchasing/invoices/:id" element={<PurchaseInvoiceDetail />} />
+              <Route path="/purchasing/allocations" element={<Allocations />} />
+              <Route path="/purchasing/allocations/:id" element={<AllocationDetail />} />
+              <Route path="/purchasing/allocation-confirmations" element={<AllocationConfirmations />} />
+              <Route path="/purchasing/allocation-confirmations/:id" element={<AllocationConfirmationDetail />} />
+
               <Route path="/purchasing/credit" element={<SupplierCredit />} />
               <Route path="/purchasing/incentives" element={<SupplierIncentives />} />
               <Route path="/purchasing/shipments" element={<Shipments />} />

@@ -209,9 +209,12 @@ export const allocationService = {
   }): Allocation | { error: string } {
     const po = purchasingService.getPO(input.po_id);
     if (!po) return { error: "أمر الشراء غير موجود" };
-    if (po.status === "draft" || po.status === "cancelled") {
-      return { error: "يجب اعتماد أمر الشراء وانتظار تأكيد المورد قبل التخصيص" };
+    // Gov v1.3: Allocation requires supplier confirmation first
+    const allowed = ["ready_for_allocation", "allocation_pending"];
+    if (!allowed.includes(po.status)) {
+      return { error: "لا يمكن التخصيص — يجب أن يكون أمر الشراء في حالة (جاهز للتخصيص) بعد تأكيد المورد" };
     }
+
     // VIN uniqueness
     const seen = new Set<string>();
     for (const l of input.lines) {
