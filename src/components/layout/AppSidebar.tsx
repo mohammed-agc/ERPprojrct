@@ -3,7 +3,8 @@ import {
   Car, Wrench, Package, Calculator, Boxes, ShoppingCart,
   Users, BarChart3, LayoutDashboard, Receipt, BookOpen, UserCog, Building2, ShieldCheck,
   BookText, Scale, HandCoins, Wallet, ClipboardCheck, Contact2,
-  TrendingUp, ArrowLeftRight, PieChart, Landmark, ArrowDownCircle, ArrowUpCircle, CheckSquare
+  TrendingUp, ArrowLeftRight, PieChart, Landmark, ArrowDownCircle, ArrowUpCircle, CheckSquare,
+  Vault, Banknote
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
