@@ -30,8 +30,11 @@ export default function PurchaseOrders() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<POStatus | "all" | "open">("open");
   const [supplier, setSupplier] = useState<string>("all");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [tick, setTick] = useState(0);
 
-  const pos = useMemo(() => purchasingService.listPOs(), []);
+  const pos = useMemo(() => purchasingService.listPOs(), [tick]);
+
   const suppliers = useMemo(() => purchasingService.listSuppliers(), []);
 
   const filtered = useMemo(() => {
