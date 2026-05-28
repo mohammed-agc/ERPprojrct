@@ -56,6 +56,8 @@ export type VehicleMeta = {
     requested_at?: string;
     requested_by?: string;
     buyer?: string;
+    supplier?: string;
+    purchase_source?: string;
     branch_destination?: string;
     source_country?: string;
     expected_arrival?: string;
