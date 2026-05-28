@@ -142,6 +142,8 @@ export default function PurchaseInvoices() {
           onPaid={() => { setPayOpen(null); refresh(); }}
         />
       )}
+      <PurchaseInvoiceCreateDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={refresh} />
+
     </div>
   );
 }
