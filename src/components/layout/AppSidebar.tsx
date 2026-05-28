@@ -21,6 +21,7 @@ const groups: { title: string; items: NavItem[] }[] = [
     title: "المبيعات",
     items: [
       { label: "المركبات", to: "/vehicles", icon: Car, deptCode: "vehicles" },
+      { label: "المشتريات والإدخال", to: "/procurement", icon: ClipboardCheck, deptCode: "vehicles" },
       { label: "أوامر البيع", to: "/sales-orders", icon: ShoppingCart, deptCode: "vehicles" },
       { label: "الفواتير", to: "/invoices", icon: Receipt },
     ],
