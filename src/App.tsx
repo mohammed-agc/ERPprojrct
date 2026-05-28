@@ -81,6 +81,9 @@ const InventoryParts = lazy(() => import("./pages/inventory/PartsInventory"));
 const InventoryMovements = lazy(() => import("./pages/inventory/Movements"));
 const InventoryReservations = lazy(() => import("./pages/inventory/Reservations"));
 const InventoryTransfers = lazy(() => import("./pages/inventory/Transfers"));
+const GRNDashboard = lazy(() => import("./pages/grn/GRNDashboard"));
+const GRNList = lazy(() => import("./pages/grn/GRNList"));
+const GRNDetail = lazy(() => import("./pages/grn/GRNDetail"));
 
 
 import { ErpAuthError } from "@/services/erp";
