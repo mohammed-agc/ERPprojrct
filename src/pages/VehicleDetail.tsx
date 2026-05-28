@@ -42,7 +42,9 @@ const fmtDate = (s?: string) =>
   s ? new Date(s).toLocaleDateString("ar-SA", { dateStyle: "medium" }) : "—";
 
 type TimelineEvent = {
-  type: "purchase" | "reservation" | "release" | "sale" | "ready" | "delivery" | "transfer" | "maintenance" | "return" | "ownership";
+  type: "purchase" | "reservation" | "release" | "sale" | "ready" | "delivery" | "transfer" | "maintenance" | "return" | "ownership"
+       | "procurement_request" | "procurement_ordered" | "procurement_transit" | "procurement_received"
+       | "procurement_inspected" | "procurement_approved" | "procurement_rejected";
   label: string;
   at: string;
   detail?: string;
