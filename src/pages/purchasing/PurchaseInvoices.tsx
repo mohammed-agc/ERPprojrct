@@ -8,12 +8,15 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Search, Receipt, Wallet } from "lucide-react";
+import { Search, Receipt, Wallet, Plus } from "lucide-react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import {
   purchasingService, PINV_LABEL, PINV_TONE, PAYMENT_METHOD_LABEL,
   fmtSAR, fmtDate, type InvoiceStatus, type PaymentMethod,
 } from "@/services/erp/purchasing";
+import { PurchaseInvoiceCreateDialog } from "@/components/erp/PurchaseInvoiceCreateDialog";
+
 
 const STATUS_OPTS: { value: InvoiceStatus | "all"; label: string }[] = [
   { value: "all", label: "كل الحالات" },
