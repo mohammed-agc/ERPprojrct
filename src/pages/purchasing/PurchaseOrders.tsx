@@ -14,7 +14,6 @@ const PAYMENT_LABEL: Record<string, string> = {
   cash: "نقدي", net_30: "30 يوم", net_60: "60 يوم", net_90: "90 يوم", credit_line: "حد ائتماني",
 };
 
-};
 
 const STATUS_OPTS: { value: POStatus | "all" | "open"; label: string }[] = [
   { value: "open", label: "المفتوحة" },
