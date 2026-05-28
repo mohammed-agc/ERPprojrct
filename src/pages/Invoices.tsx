@@ -75,7 +75,7 @@ export default function Invoices() {
                       variant="outline"
                       permission={payPerm}
                       hideIfDenied
-                      onClick={() => registerPayment(r.id, r.sales_order_id ?? null)}
+                      onClick={() => registerPayment(r.id)}
                     >
                       <Banknote className="h-3.5 w-3.5 ml-1" /> تسجيل دفعة
                     </ActionButton>
