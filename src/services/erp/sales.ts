@@ -691,7 +691,16 @@ export const salesService = {
   },
   setDeliveryStatus(id: string, status: DeliveryStatus) {
     const db = load(); const d = db.deliveries.find(x => x.id === id); if (!d) return;
+    const wasCompleted = d.status === "completed";
     d.status = status; save(db);
+    if (status === "completed" && !wasCompleted) {
+      try {
+        inventoryIntegration.onDeliveryCompleted({
+          delivery_code: d.code, so_code: d.so_code,
+          vehicle_label: d.vehicle, delivery_officer: d.delivery_officer, branch: d.branch,
+        });
+      } catch (e) { console.warn("inv-integration:", e); }
+    }
   },
   confirmCustomer(id: string) {
     const db = load(); const d = db.deliveries.find(x => x.id === id); if (!d) return;
