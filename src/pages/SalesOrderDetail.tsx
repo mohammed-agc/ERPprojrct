@@ -14,7 +14,9 @@ import { WorkflowStepper } from "@/components/erp/WorkflowStepper";
 import { ActionButton } from "@/components/erp/ActionButton";
 import { RoleSwitcher } from "@/components/erp/RoleSwitcher";
 import { EmptyState } from "@/components/erp/EmptyState";
-import { canPerform, ErpRole, SalesOrderState, STATE_LABELS } from "@/lib/erpPermissions";
+import { SalesOrderState, STATE_LABELS } from "@/lib/erpPermissions";
+import { useErpSession } from "@/contexts/ErpSessionContext";
+import { useSalesActions } from "@/hooks/erp/useSalesActions";
 import { Banknote, Truck, XCircle, Printer } from "lucide-react";
 
 interface Line {
@@ -44,7 +46,8 @@ export default function SalesOrderDetail() {
   const [lines, setLines] = useState<Line[]>([]);
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
-  const [role, setRole] = useState<ErpRole>("sales_manager");
+  const { role, setRole } = useErpSession();
+
 
   const load = async () => {
     const [{ data: o }, { data: c }, { data: v }, { data: ls }] = await Promise.all([
@@ -209,11 +212,12 @@ export default function SalesOrderDetail() {
     nav(`/invoices`);
   };
 
+  const state = ((order?.status ?? "draft") as SalesOrderState);
+  const { can } = useSalesActions(state);
   if (!order) return <div className="text-muted-foreground">جاري التحميل...</div>;
 
-  const state = (order.status ?? "draft") as SalesOrderState;
-  const canEditHeader = canPerform("edit_header", state, role).allowed;
-  const canEditLines = canPerform("edit_lines", state, role).allowed;
+  const canEditHeader = can("edit_header").allowed;
+  const canEditLines = can("edit_lines").allowed;
 
   const setStatus = async (next: SalesOrderState, msg: string) => {
     const { error } = await supabase.from("sales_orders").update({ status: next as any }).eq("id", id);
@@ -249,7 +253,7 @@ export default function SalesOrderDetail() {
               <Button variant="ghost" size="sm" onClick={()=>nav("/sales-orders")}>
                 <ArrowRight className="h-4 w-4 ml-1" /> رجوع
               </Button>
-              <ActionButton size="sm" variant="ghost" permission={canPerform("print", state, role)} hideIfDenied onClick={()=>window.print()}>
+              <ActionButton size="sm" variant="ghost" permission={can("print")} hideIfDenied onClick={()=>window.print()}>
                 <Printer className="h-4 w-4 ml-1" /> طباعة
               </ActionButton>
             </div>
@@ -258,7 +262,7 @@ export default function SalesOrderDetail() {
 
             {/* Persistence group */}
             <div className="erp-action-group">
-              <ActionButton size="sm" variant="outline" permission={canPerform("save", state, role)} onClick={save} disabled={saving}>
+              <ActionButton size="sm" variant="outline" permission={can("save")} onClick={save} disabled={saving}>
                 {saving ? "جاري الحفظ..." : "حفظ"}
               </ActionButton>
             </div>
@@ -267,22 +271,22 @@ export default function SalesOrderDetail() {
 
             {/* Workflow progression group */}
             <div className="erp-action-group">
-              <ActionButton size="sm" permission={canPerform("confirm", state, role)} onClick={confirm} disabled={saving}>
+              <ActionButton size="sm" permission={can("confirm")} onClick={confirm} disabled={saving}>
                 <Check className="h-4 w-4 ml-1" /> تأكيد
               </ActionButton>
-              <ActionButton size="sm" permission={canPerform("invoice", state, role)} onClick={generateInvoice}>
+              <ActionButton size="sm" permission={can("invoice")} onClick={generateInvoice}>
                 <FileText className="h-4 w-4 ml-1" /> إصدار فاتورة
               </ActionButton>
-              <ActionButton size="sm" permission={canPerform("receive_payment", state, role)} onClick={()=>setStatus("paid","تم تسجيل الدفعة")}>
+              <ActionButton size="sm" permission={can("receive_payment")} onClick={()=>setStatus("paid","تم تسجيل الدفعة")}>
                 <Banknote className="h-4 w-4 ml-1" /> استلام دفعة
               </ActionButton>
-              <ActionButton size="sm" permission={canPerform("deliver", state, role)} onClick={()=>setStatus("delivered","تم التسليم")}>
+              <ActionButton size="sm" permission={can("deliver")} onClick={()=>setStatus("delivered","تم التسليم")}>
                 <Truck className="h-4 w-4 ml-1" /> تسليم
               </ActionButton>
             </div>
 
             {/* Destructive — separated, hidden when not allowed */}
-            <ActionButton size="sm" variant="destructive" permission={canPerform("cancel", state, role)} hideIfDenied onClick={()=>setStatus("cancelled","تم إلغاء الأمر")}>
+            <ActionButton size="sm" variant="destructive" permission={can("cancel")} hideIfDenied onClick={()=>setStatus("cancelled","تم إلغاء الأمر")}>
               <XCircle className="h-4 w-4 ml-1" /> إلغاء
             </ActionButton>
           </div>
