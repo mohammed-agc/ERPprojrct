@@ -336,6 +336,30 @@ function seed(): DB {
     items: [{ line_id: po3.items[0].id, passed: 3, failed: 0 }],
   };
 
+  // Seed a sample purchase invoice for the completed PO3
+  const pinv1: PurchaseInvoice = {
+    id: "pinv_1", code: "PINV-2026-0042", po_id: "po_3", supplier_id: "sup_parts_kr",
+    issued_at: addDays(-6), due_date: addDays(24), payment_term: "net_30",
+    subtotal: 37_500, vat_amount: Math.round(37_500 * 0.15), total: Math.round(37_500 * 1.15),
+    paid: Math.round(37_500 * 1.15), status: "paid",
+  };
+  const ppay1: PurchasePayment = {
+    id: "ppay_1", code: "PPAY-2026-0031", invoice_id: "pinv_1", supplier_id: "sup_parts_kr",
+    amount: Math.round(37_500 * 1.15), method: "bank_transfer", reference: "TRX-44218",
+    paid_at: addDays(-4),
+  };
+  const pinv2: PurchaseInvoice = {
+    id: "pinv_2", code: "PINV-2026-0043", po_id: "po_2", supplier_id: "sup_hyundai",
+    issued_at: addDays(-18), due_date: addDays(12), payment_term: "net_30",
+    subtotal: 8 * 88_000, vat_amount: Math.round(8 * 88_000 * 0.15), total: Math.round(8 * 88_000 * 1.15),
+    paid: Math.round(8 * 88_000 * 1.15 * 0.4), status: "partially_paid",
+  };
+  const ppay2: PurchasePayment = {
+    id: "ppay_2", code: "PPAY-2026-0032", invoice_id: "pinv_2", supplier_id: "sup_hyundai",
+    amount: Math.round(8 * 88_000 * 1.15 * 0.4), method: "bank_transfer", reference: "TRX-44301",
+    paid_at: addDays(-10),
+  };
+
   return {
     suppliers: [sup1, sup2, sup3, sup4],
     prs: [pr1, pr2, pr3, pr4],
@@ -343,7 +367,11 @@ function seed(): DB {
     shipments: [shp1, shp2],
     grns: [grn1, grn2],
     inspections: [insp1, insp2],
+    invoices: [pinv1, pinv2],
+    payments: [ppay1, ppay2],
   };
+}
+
 }
 
 function load(): DB {
