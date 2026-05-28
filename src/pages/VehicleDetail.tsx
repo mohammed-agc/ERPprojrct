@@ -111,9 +111,39 @@ export default function VehicleDetail() {
 
   const timeline = useMemo<TimelineEvent[]>(() => {
     const events: TimelineEvent[] = [];
+    // Procurement events
+    const p = meta.procurement;
+    if (p?.requested_at)
+      events.push({ type: "procurement_request", label: "طلب شراء", at: p.requested_at,
+        detail: [p.request_no, p.buyer && `بواسطة ${p.buyer}`].filter(Boolean).join(" · "),
+        icon: ClipboardCheck, tone: "default" });
+    if (p?.ordered_at)
+      events.push({ type: "procurement_ordered", label: "تأكيد الطلب", at: p.ordered_at,
+        detail: p.po_reference ? `PO ${p.po_reference}` : undefined,
+        icon: ShoppingCart, tone: "primary" });
+    if (p?.transit_started_at)
+      events.push({ type: "procurement_transit", label: "بدء الشحن", at: p.transit_started_at,
+        detail: [p.transit_carrier, p.transit_tracking].filter(Boolean).join(" · "),
+        icon: Truck, tone: "primary" });
+    if (p?.received_at)
+      events.push({ type: "procurement_received", label: "استلام المركبة", at: p.received_at,
+        detail: [p.received_by && `بواسطة ${p.received_by}`, conditionLabel(p.received_condition)].filter(Boolean).join(" · "),
+        icon: PackageCheck, tone: "warning" });
+    if (p?.inspection_at)
+      events.push({ type: "procurement_inspected", label: "تقرير الفحص", at: p.inspection_at,
+        detail: inspectionResultLabel(p.inspection_result),
+        icon: FileSearch, tone: p.inspection_result === "rejected" ? "destructive" : "warning" });
+    if (p?.approved_at && p.state === "approved")
+      events.push({ type: "procurement_approved", label: "اعتماد الإدخال", at: p.approved_at,
+        detail: p.approved_by ? `بواسطة ${p.approved_by}` : undefined,
+        icon: ShieldCheck, tone: "success" });
+    if (p?.approved_at && p.state === "rejected")
+      events.push({ type: "procurement_rejected", label: "رفض المركبة", at: p.approved_at,
+        detail: p.rejection_reason, icon: XCircle, tone: "destructive" });
+
     if (vehicle?.created_at) {
       events.push({
-        type: "purchase", label: "إضافة للمخزون", at: vehicle.created_at,
+        type: "purchase", label: "إضافة للسجل", at: vehicle.created_at,
         detail: meta.supplier ? `المورد: ${meta.supplier}` : undefined,
         icon: ArrowDownToLine, tone: "default",
       });
