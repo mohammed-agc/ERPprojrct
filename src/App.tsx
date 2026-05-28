@@ -18,6 +18,9 @@ import Journals from "./pages/Journals";
 import JournalDetail from "./pages/JournalDetail";
 import GeneralLedger from "./pages/GeneralLedger";
 import TrialBalance from "./pages/TrialBalance";
+import AccountsReceivable from "./pages/AccountsReceivable";
+import CustomerStatement from "./pages/CustomerStatement";
+import AccountsPayable from "./pages/AccountsPayable";
 import UsersAdmin from "./pages/UsersAdmin";
 import Organization from "./pages/Organization";
 import Permissions from "./pages/Permissions";
@@ -68,6 +71,9 @@ const App = () => (
               <Route path="/journals/:id" element={<JournalDetail />} />
               <Route path="/general-ledger" element={<GeneralLedger />} />
               <Route path="/trial-balance" element={<TrialBalance />} />
+              <Route path="/ar" element={<AccountsReceivable />} />
+              <Route path="/ar/:id" element={<CustomerStatement />} />
+              <Route path="/ap" element={<AccountsPayable />} />
               <Route path="/users" element={<UsersAdmin />} />
               <Route path="/organization" element={<Organization />} />
               <Route path="/permissions" element={<Permissions />} />
