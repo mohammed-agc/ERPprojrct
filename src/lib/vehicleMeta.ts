@@ -201,8 +201,8 @@ export type EffectiveStatus =
 
 export function effectiveStatus(dbStatus: string, meta: VehicleMeta): EffectiveStatus {
   const proc = meta.procurement?.state;
-  // Active procurement (anything except empty / approved) takes precedence over inventory state.
-  if (proc && proc !== "" && proc !== "approved") return proc as EffectiveStatus;
+  // Active procurement (anything except approved) takes precedence over inventory state.
+  if (proc && proc !== "approved") return proc as EffectiveStatus;
   if (meta.status_overlay) return meta.status_overlay;
   return (dbStatus as EffectiveStatus) ?? "available";
 }
