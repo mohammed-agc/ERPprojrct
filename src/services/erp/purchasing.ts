@@ -1319,26 +1319,51 @@ export const purchasingService = {
   supplierConfirm(
     poId: string,
     outcome: "confirm_all" | "confirm_partial" | "model_change" | "qty_change" | "rejected",
+    actor = "م. عبدالله",
+    note?: string,
   ) {
     const db = load();
     const po = db.pos.find(p => p.id === poId); if (!po) return;
+    const from = po.status;
     if (outcome === "rejected") {
       po.status = "cancelled";
     } else {
-      // partial / model / qty changes still unlock allocation — UI will flag
       po.status = "ready_for_allocation";
+      po.supplier_confirmed_at = isoNow();
     }
+    po.supplier_confirm_outcome = outcome;
+    po.supplier_confirm_note = note;
+    const outcomeLabel: Record<string, string> = {
+      confirm_all: "تأكيد كامل", confirm_partial: "تأكيد جزئي",
+      model_change: "تغيير في الموديل", qty_change: "تغيير في الكميات", rejected: "رفض",
+    };
+    po.audit = [...(po.audit ?? []), makeAudit({
+      role: "purchasing_manager", actor,
+      action: `تأكيد المورد — ${outcomeLabel[outcome]}`,
+      from_status: from, to_status: po.status, note,
+    })];
+    po.approvals = [...(po.approvals ?? []), makeApproval({
+      role: "purchasing_manager", actor,
+      decision: outcome === "rejected" ? "rejected" : "approved",
+      note: outcomeLabel[outcome] + (note ? " — " + note : ""),
+    })];
     save(db);
   },
 
   /** Move an approved PO into awaiting-supplier-confirmation. */
-  moveToAwaitingSupplier(poId: string) {
+  moveToAwaitingSupplier(poId: string, actor = "موظف المشتريات") {
     const db = load();
     const po = db.pos.find(p => p.id === poId); if (!po) return;
     if (po.status !== "approved") return;
     po.status = "awaiting_supplier_confirmation";
+    po.awaiting_supplier_at = isoNow();
+    po.audit = [...(po.audit ?? []), makeAudit({
+      role: "purchasing_officer", actor,
+      action: "إرسال أمر الشراء للمورد", from_status: "approved", to_status: "awaiting_supplier_confirmation",
+    })];
     save(db);
   },
+
 
   /** Hook invoked by allocationService.confirmAllocation. */
   onAllocationConfirmed(poId: string) {
