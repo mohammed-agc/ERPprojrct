@@ -33,7 +33,31 @@ export type ShipmentStatus =
   | "preparing" | "shipped" | "in_transit" | "at_customs" | "cleared" | "arrived";
 
 export type ReceivingStatus =
-  | "pending" | "partial" | "received" | "with_discrepancy";
+  | "draft" | "receiving" | "pending" | "partial" | "partially_received"
+  | "received" | "with_discrepancy" | "awaiting_inspection" | "completed" | "cancelled";
+
+export type DiscrepancyKind = "missing" | "damaged" | "wrong_item" | "extra" | "supplier_issue";
+
+export interface GRNDiscrepancy {
+  id: string;
+  line_id?: string;
+  kind: DiscrepancyKind;
+  qty?: number;
+  notes?: string;
+  reported_at: string;
+}
+
+export interface GRNReceiptItem {
+  line_id: string;
+  qty: number;
+  condition: "ok" | "damaged" | "missing" | "wrong_item" | "extra";
+  bin?: string;
+  vin_pending?: boolean;       // vehicle without confirmed VIN
+  chassis_verified?: boolean;
+  sku_verified?: boolean;
+  barcode_verified?: boolean;
+  notes?: string;
+}
 
 export type InspectionStatus =
   | "pending" | "in_progress" | "approved" | "rejected";
