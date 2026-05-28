@@ -411,6 +411,42 @@ export const purchasingService = {
   listSuppliers(): Supplier[] { return load().suppliers; },
   getSupplier(id: string): Supplier | undefined { return load().suppliers.find(s => s.id === id); },
 
+  /**
+   * Provision a Supplier record from a Contact (vendor role) if one doesn't
+   * already exist for that contact. Returns the supplier id to use in POs.
+   * Uses contact meta defaults (credit_limit, payment_terms_days) when available.
+   */
+  upsertSupplierFromContact(input: {
+    contact_id: string;
+    code: string;
+    name: string;
+    country?: string;
+    credit_limit?: number;
+    payment_terms_days?: number;
+  }): string {
+    const db = load();
+    const existingById = db.suppliers.find(s => s.id === `contact_${input.contact_id}`);
+    if (existingById) return existingById.id;
+    const supplier: Supplier = {
+      id: `contact_${input.contact_id}`,
+      code: input.code || `SUP-C-${input.contact_id.slice(0, 6)}`,
+      name: input.name,
+      country: input.country || "SA",
+      agreement_type: "spot",
+      credit_limit: input.credit_limit ?? 0,
+      utilized: 0,
+      renewal_period_months: 12,
+      agreement_start: today(),
+      agreement_expiry: addDays(365),
+      monthly_target: 0,
+      achieved: 0,
+      incentive_per_vehicle: 0,
+    };
+    db.suppliers.unshift(supplier); save(db);
+    return supplier.id;
+  },
+
+
   creditSummary(s: Supplier) {
     const remaining = s.credit_limit - s.utilized;
     const usage = s.credit_limit > 0 ? Math.min(100, (s.utilized / s.credit_limit) * 100) : 0;
