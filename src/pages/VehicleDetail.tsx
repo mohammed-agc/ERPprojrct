@@ -473,6 +473,88 @@ export default function VehicleDetail() {
             )}
           </Card>
 
+          {/* Delivery panel */}
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-sm font-semibold flex items-center gap-2">
+                <ClipboardCheck className="h-4 w-4 text-primary" /> التسليم
+              </div>
+              <Button size="sm" variant="ghost" onClick={() => setDeliveryOpen(true)} disabled={eff === "available" || eff === "returned"}>
+                إدارة
+              </Button>
+            </div>
+            {(() => {
+              const d = meta.delivery;
+              const prog = deliveryProgress(meta);
+              if (!d && eff !== "ready_for_delivery" && eff !== "delivered") {
+                return (
+                  <div className="text-xs text-muted-foreground py-3 text-center border border-dashed border-border rounded-md">
+                    لم تبدأ عملية التسليم بعد.
+                  </div>
+                );
+              }
+              return (
+                <div className="space-y-3 text-sm">
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">قائمة التحقق</span>
+                      <span className="font-medium">{prog.done}/{prog.total}</span>
+                    </div>
+                    <Progress value={prog.pct} className="h-2" />
+                  </div>
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {DELIVERY_CHECKLIST_KEYS.map((k) => {
+                      const checked = !!d?.checklist?.[k];
+                      return (
+                        <div key={k} className="flex items-center gap-2 text-xs">
+                          {checked
+                            ? <ShieldCheck className="h-3.5 w-3.5 text-success" />
+                            : <span className="h-3.5 w-3.5 rounded-full border border-border" />}
+                          <span className={checked ? "text-foreground" : "text-muted-foreground"}>
+                            {CHECKLIST_LABEL[k]}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {d?.officer && <Row label="موظف التسليم" value={d.officer} />}
+                  {d?.invoice_no && <Row label="الفاتورة" value={d.invoice_no} mono />}
+                  {d?.ready_at && <Row label="جاهز منذ" value={fmtDateTime(d.ready_at)} />}
+                  {d?.delivered_at && <Row label="تم التسليم" value={fmtDateTime(d.delivered_at)} />}
+                  {d?.customer_signature_name && (
+                    <div className="border border-dashed border-border rounded-md p-2 text-xs">
+                      <div className="text-muted-foreground mb-0.5">توقيع العميل (مدخل اسمياً)</div>
+                      <div className="font-medium" style={{ fontFamily: "cursive" }}>{d.customer_signature_name}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </Card>
+
+          {/* Ownership panel */}
+          <Card className="p-4">
+            <div className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <UserCheck className="h-4 w-4 text-primary" /> الملكية
+            </div>
+            {meta.ownership?.current_owner ? (
+              <div className="space-y-2 text-sm">
+                <Row label="المالك الحالي" value={meta.ownership.current_owner} />
+                {meta.ownership.previous_owner && (
+                  <Row label="المالك السابق" value={meta.ownership.previous_owner} />
+                )}
+                {meta.ownership.transferred_at && (
+                  <Row label="تاريخ النقل" value={fmtDate(meta.ownership.transferred_at)} />
+                )}
+              </div>
+            ) : (
+              <div className="text-xs text-muted-foreground py-3 text-center border border-dashed border-border rounded-md">
+                المركبة ما زالت بملكية المعرض.
+              </div>
+            )}
+          </Card>
+
+
           {/* Timeline */}
           <Card className="p-4">
             <div className="text-sm font-semibold mb-3 flex items-center gap-2">
