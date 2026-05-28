@@ -11,8 +11,10 @@ import { AlertTriangle, ShieldCheck, Car, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
+import {
   purchasingService, fmtSAR, type InspectionRecord, type PurchaseOrder, type LineItem,
 } from "@/services/erp/purchasing";
+import { inventoryIntegration } from "@/services/erp/integration";
 import { serializeVehicleMeta, VehicleMeta } from "@/lib/vehicleMeta";
 
 interface Props {
