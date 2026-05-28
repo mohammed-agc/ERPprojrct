@@ -89,6 +89,7 @@ const queryClient = new QueryClient({
 });
 
 const App = () => (
+  <ErrorBoundary scope="app">
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -157,6 +158,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
