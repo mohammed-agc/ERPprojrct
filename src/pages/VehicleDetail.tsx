@@ -855,6 +855,17 @@ export default function VehicleDetail() {
           if (ok) { toast.success("تم تسجيل ارتجاع المركبة"); setDeliveryOpen(false); }
         }}
       />
+
+      {/* Procurement workflow dialog */}
+      <ProcurementWorkflow
+        open={procOpen}
+        onOpenChange={setProcOpen}
+        meta={meta}
+        currentUser={profile?.full_name ?? ""}
+        onSave={async (patch, dbStatus) => {
+          return await patchMeta(patch, dbStatus);
+        }}
+      />
     </div>
   );
 }
