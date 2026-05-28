@@ -93,6 +93,25 @@ export default function SalesOrderDetail() {
     });
   };
 
+  const duplicateLine = (i: number) => {
+    setLines(prev => {
+      const src = prev[i];
+      if (!src) return prev;
+      const copy: Line = {
+        line_no: prev.length + 1,
+        // do NOT copy vehicle_id (vehicle is unique per order)
+        vehicle_id: null,
+        description: src.description,
+        quantity: src.quantity,
+        unit_price: src.unit_price,
+        discount_pct: src.discount_pct,
+        vat_pct: src.vat_pct,
+        line_total: src.line_total,
+      };
+      return [...prev, copy];
+    });
+  };
+
   const save = async () => {
     if (!order) return;
     setSaving(true);
