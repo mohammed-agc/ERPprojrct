@@ -47,15 +47,16 @@ function DepartmentsTab() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
+      <div className="erp-toolbar">
         <div className="relative flex-1 max-w-sm">
           <Search className="h-4 w-4 absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input value={q} onChange={e=>setQ(e.target.value)} placeholder="بحث عن قسم..." className="pr-8 h-9" />
         </div>
-        <div className="text-xs text-muted-foreground">{filtered.length} قسم</div>
+        <div className="text-xs text-muted-foreground tabular-nums">{filtered.length} قسم</div>
         <div className="flex-1" />
         <Button size="sm" onClick={startCreate}><Plus className="h-4 w-4 ml-1" /> قسم جديد</Button>
       </div>
+
 
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <table className="erp-table">
@@ -139,13 +140,14 @@ function UnitsTab() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
+      <div className="erp-toolbar">
         <div className="text-sm text-muted-foreground">عرض هرمي للأقسام والوحدات التشغيلية</div>
         <div className="flex-1" />
         <Button size="sm" variant="outline" onClick={()=>setExpanded(new Set(mockDepartments.map(d=>d.id)))}>توسيع الكل</Button>
         <Button size="sm" variant="outline" onClick={()=>setExpanded(new Set())}>طيّ الكل</Button>
         <Button size="sm"><Plus className="h-4 w-4 ml-1" /> وحدة جديدة</Button>
       </div>
+
 
       <div className="bg-card border border-border rounded-lg p-2">
         {mockDepartments.map(d => {
@@ -216,7 +218,7 @@ function PositionsTab() {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="erp-toolbar">
         <div className="relative flex-1 max-w-xs min-w-[200px]">
           <Search className="h-4 w-4 absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input value={q} onChange={e=>setQ(e.target.value)} placeholder="بحث عن وظيفة..." className="pr-8 h-9" />
@@ -292,7 +294,7 @@ function AssignmentsTab() {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="erp-toolbar">
         <div className="relative flex-1 max-w-xs min-w-[200px]">
           <Search className="h-4 w-4 absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input value={q} onChange={e=>setQ(e.target.value)} placeholder="بحث عن موظف..." className="pr-8 h-9" />

@@ -13,6 +13,7 @@ import { ProductCombobox } from "@/components/erp/ProductCombobox";
 import { WorkflowStepper } from "@/components/erp/WorkflowStepper";
 import { ActionButton } from "@/components/erp/ActionButton";
 import { RoleSwitcher } from "@/components/erp/RoleSwitcher";
+import { EmptyState } from "@/components/erp/EmptyState";
 import { canPerform, ErpRole, SalesOrderState, STATE_LABELS } from "@/lib/erpPermissions";
 import { Banknote, Truck, XCircle, Printer } from "lucide-react";
 
@@ -221,48 +222,66 @@ export default function SalesOrderDetail() {
     load();
   };
 
-  const stateBadgeClass: Record<SalesOrderState, string> = {
-    draft: "bg-muted text-muted-foreground border-border",
-    confirmed: "bg-primary/10 text-primary border-primary/30",
-    invoiced: "bg-accent/20 text-accent-foreground border-accent/40",
-    paid: "bg-success/10 text-success border-success/30",
-    delivered: "bg-success/20 text-success border-success/40",
-    cancelled: "bg-destructive/10 text-destructive border-destructive/30",
+  const stateClass: Record<SalesOrderState, string> = {
+    draft: "state-draft",
+    confirmed: "state-confirmed",
+    invoiced: "state-invoiced",
+    paid: "state-paid",
+    delivered: "state-delivered",
+    cancelled: "state-cancelled",
   };
 
   return (
     <div>
       <PageHeader
+        sticky
         title={`أمر بيع ${order.order_no}`}
         subtitle={
-          <div className="flex items-center gap-3 mt-1">
-            <span className={`px-2 py-0.5 rounded border text-[11px] font-medium ${stateBadgeClass[state]}`}>
-              {STATE_LABELS[state]}
-            </span>
+          <div className="flex items-center gap-3 mt-1 flex-wrap">
+            <span className={`state-badge ${stateClass[state]}`}>{STATE_LABELS[state]}</span>
             <RoleSwitcher value={role} onChange={setRole} />
           </div>
         }
         actions={
-          <div className="flex flex-wrap gap-2 justify-end">
-            <Button variant="ghost" size="sm" onClick={()=>nav("/sales-orders")}><ArrowRight className="h-4 w-4 ml-1" /> رجوع</Button>
-            <ActionButton size="sm" variant="ghost" permission={canPerform("print", state, role)} hideIfDenied onClick={()=>window.print()}>
-              <Printer className="h-4 w-4 ml-1" /> طباعة
-            </ActionButton>
-            <ActionButton size="sm" variant="outline" permission={canPerform("save", state, role)} onClick={save} disabled={saving}>
-              حفظ
-            </ActionButton>
-            <ActionButton size="sm" permission={canPerform("confirm", state, role)} onClick={confirm} disabled={saving}>
-              <Check className="h-4 w-4 ml-1" /> تأكيد
-            </ActionButton>
-            <ActionButton size="sm" permission={canPerform("invoice", state, role)} onClick={generateInvoice}>
-              <FileText className="h-4 w-4 ml-1" /> إصدار فاتورة
-            </ActionButton>
-            <ActionButton size="sm" permission={canPerform("receive_payment", state, role)} onClick={()=>setStatus("paid","تم تسجيل الدفعة")}>
-              <Banknote className="h-4 w-4 ml-1" /> استلام دفعة
-            </ActionButton>
-            <ActionButton size="sm" permission={canPerform("deliver", state, role)} onClick={()=>setStatus("delivered","تم التسليم")}>
-              <Truck className="h-4 w-4 ml-1" /> تسليم
-            </ActionButton>
+          <div className="flex flex-wrap items-center gap-1.5 justify-end">
+            {/* Navigation group */}
+            <div className="erp-action-group">
+              <Button variant="ghost" size="sm" onClick={()=>nav("/sales-orders")}>
+                <ArrowRight className="h-4 w-4 ml-1" /> رجوع
+              </Button>
+              <ActionButton size="sm" variant="ghost" permission={canPerform("print", state, role)} hideIfDenied onClick={()=>window.print()}>
+                <Printer className="h-4 w-4 ml-1" /> طباعة
+              </ActionButton>
+            </div>
+
+            <span className="erp-action-divider" />
+
+            {/* Persistence group */}
+            <div className="erp-action-group">
+              <ActionButton size="sm" variant="outline" permission={canPerform("save", state, role)} onClick={save} disabled={saving}>
+                {saving ? "جاري الحفظ..." : "حفظ"}
+              </ActionButton>
+            </div>
+
+            <span className="erp-action-divider" />
+
+            {/* Workflow progression group */}
+            <div className="erp-action-group">
+              <ActionButton size="sm" permission={canPerform("confirm", state, role)} onClick={confirm} disabled={saving}>
+                <Check className="h-4 w-4 ml-1" /> تأكيد
+              </ActionButton>
+              <ActionButton size="sm" permission={canPerform("invoice", state, role)} onClick={generateInvoice}>
+                <FileText className="h-4 w-4 ml-1" /> إصدار فاتورة
+              </ActionButton>
+              <ActionButton size="sm" permission={canPerform("receive_payment", state, role)} onClick={()=>setStatus("paid","تم تسجيل الدفعة")}>
+                <Banknote className="h-4 w-4 ml-1" /> استلام دفعة
+              </ActionButton>
+              <ActionButton size="sm" permission={canPerform("deliver", state, role)} onClick={()=>setStatus("delivered","تم التسليم")}>
+                <Truck className="h-4 w-4 ml-1" /> تسليم
+              </ActionButton>
+            </div>
+
+            {/* Destructive — separated, hidden when not allowed */}
             <ActionButton size="sm" variant="destructive" permission={canPerform("cancel", state, role)} hideIfDenied onClick={()=>setStatus("cancelled","تم إلغاء الأمر")}>
               <XCircle className="h-4 w-4 ml-1" /> إلغاء
             </ActionButton>
@@ -271,7 +290,7 @@ export default function SalesOrderDetail() {
       />
 
       {/* Workflow stepper */}
-      <div className="bg-card border border-border rounded-lg p-3 mb-4">
+      <div className="bg-card border border-border rounded-lg p-2.5 mb-4">
         <WorkflowStepper
           steps={[
             { key: "draft", label: "مسودة" },
@@ -284,6 +303,7 @@ export default function SalesOrderDetail() {
           cancelled={state === "cancelled"}
         />
       </div>
+
 
 
       {/* Header form */}
@@ -337,8 +357,9 @@ export default function SalesOrderDetail() {
           </div>
           <div className="col-span-1">
             <Label className="text-xs text-muted-foreground">الحالة</Label>
-            <div className="mt-2"><Badge variant="outline">{order.status}</Badge></div>
+            <div className="mt-2"><span className={`state-badge ${stateClass[state]}`}>{STATE_LABELS[state]}</span></div>
           </div>
+
         </div>
       </div>
 
@@ -358,8 +379,17 @@ export default function SalesOrderDetail() {
           </thead>
           <tbody>
             {lines.length === 0 && (
-              <tr><td colSpan={8} className="text-center text-muted-foreground py-6">لا توجد بنود — أضف بنداً جديداً</td></tr>
+              <EmptyState
+                inTable
+                colSpan={8}
+                title="لا توجد بنود"
+                description="ابدأ بإضافة بند جديد لإنشاء أمر البيع."
+                action={canEditLines ? (
+                  <Button size="sm" variant="outline" onClick={addLine}><Plus className="h-4 w-4 ml-1" /> إضافة بند</Button>
+                ) : undefined}
+              />
             )}
+
             {lines.map((l, i) => {
               const onLastKey = (e: React.KeyboardEvent) => {
                 if (e.key === "Enter" && canEditLines && i === lines.length - 1) {
