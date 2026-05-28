@@ -140,13 +140,14 @@ function UnitsTab() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
+      <div className="erp-toolbar">
         <div className="text-sm text-muted-foreground">عرض هرمي للأقسام والوحدات التشغيلية</div>
         <div className="flex-1" />
         <Button size="sm" variant="outline" onClick={()=>setExpanded(new Set(mockDepartments.map(d=>d.id)))}>توسيع الكل</Button>
         <Button size="sm" variant="outline" onClick={()=>setExpanded(new Set())}>طيّ الكل</Button>
         <Button size="sm"><Plus className="h-4 w-4 ml-1" /> وحدة جديدة</Button>
       </div>
+
 
       <div className="bg-card border border-border rounded-lg p-2">
         {mockDepartments.map(d => {
