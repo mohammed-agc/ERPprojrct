@@ -439,6 +439,8 @@ export const purchasingService = {
     const pr = db.prs.find(p => p.id === id); if (!pr) return;
     pr.status = "rejected";
     save(db);
+  },
+
   createPR(input: {
     requester: string; department: string; branch: string;
     urgency: Urgency; justification: string;
