@@ -560,6 +560,15 @@ export const purchasingService = {
     save(db);
   },
 
+  /** Record vehicle inventory ids created from an approved inspection (VIN governance). */
+  recordVehicleIntake(inspectionId: string, vehicleIds: string[]) {
+    const db = load();
+    const i = db.inspections.find(x => x.id === inspectionId); if (!i) return;
+    i.vehicle_ids = [...(i.vehicle_ids ?? []), ...vehicleIds];
+    save(db);
+  },
+
+
   /* dashboards */
   dashboard() {
     const db = load();
