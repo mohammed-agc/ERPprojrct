@@ -12,34 +12,18 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Eye, Car, CheckCircle2, Clock, PackageCheck } from "lucide-react";
+import { Plus, Search, Eye, Car, CheckCircle2, Clock, PackageCheck, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { parseVehicleMeta, serializeVehicleMeta, VehicleMeta } from "@/lib/vehicleMeta";
+import { parseVehicleMeta, serializeVehicleMeta, VehicleMeta, effectiveStatus, reservationDaysLeft, EffectiveStatus } from "@/lib/vehicleMeta";
+import { VEHICLE_STATUS_LABEL, VEHICLE_STATUS_CLASS, VEHICLE_STATUS_OPTIONS, PERSISTED_STATUSES } from "@/lib/vehicleStatus";
 
-type StatusKey = "available" | "reserved" | "sold" | "delivered" | "maintenance" | "transit";
-
-const statusMap: Record<StatusKey, { label: string; variant: any; className?: string }> = {
-  available:   { label: "متوفر",  variant: "default",     className: "bg-success text-success-foreground hover:bg-success/90" },
-  reserved:    { label: "محجوز",  variant: "secondary" },
-  sold:        { label: "مُباع",  variant: "outline" },
-  delivered:   { label: "مُسلَّم", variant: "outline",     className: "border-success/60 text-success" },
-  maintenance: { label: "صيانة",  variant: "outline",     className: "border-warning/60 text-warning" },
-  transit:     { label: "ترانزيت", variant: "outline",    className: "border-primary/60 text-primary" },
-};
+type StatusKey = EffectiveStatus;
 
 const STATUS_FILTERS: { value: StatusKey | "all"; label: string }[] = [
   { value: "all", label: "كل الحالات" },
-  { value: "available", label: "متوفر" },
-  { value: "reserved", label: "محجوز" },
-  { value: "sold", label: "مُباع" },
-  { value: "delivered", label: "مُسلَّم" },
-  { value: "maintenance", label: "صيانة" },
-  { value: "transit", label: "ترانزيت" },
+  ...VEHICLE_STATUS_OPTIONS.map((s) => ({ value: s, label: VEHICLE_STATUS_LABEL[s] })),
 ];
-
-// DB-supported persisted statuses today (vehicle_status enum)
-const PERSISTED_STATUSES: StatusKey[] = ["available", "reserved", "sold"];
 
 const emptyForm = {
   code: "",
@@ -85,7 +69,10 @@ export default function Vehicles() {
   useEffect(() => { load(); }, []);
 
   const enriched = useMemo(
-    () => rows.map((r) => ({ ...r, _meta: parseVehicleMeta(r.notes) })),
+    () => rows.map((r) => {
+      const _meta = parseVehicleMeta(r.notes);
+      return { ...r, _meta, _eff: effectiveStatus(r.status, _meta), _daysLeft: reservationDaysLeft(_meta) };
+    }),
     [rows],
   );
 
@@ -105,7 +92,7 @@ export default function Vehicles() {
   const filtered = useMemo(() => {
     const qv = q.trim().toLowerCase();
     return enriched.filter((r) => {
-      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (statusFilter !== "all" && r._eff !== statusFilter) return false;
       if (brandFilter !== "all" && r.brand !== brandFilter) return false;
       if (yearFilter !== "all" && String(r.year) !== yearFilter) return false;
       if (branchFilter !== "all" && r._meta.branch !== branchFilter) return false;
@@ -113,6 +100,7 @@ export default function Vehicles() {
       const hay = [
         r.code, r.name, r.brand, r.model, r.vin, r.color,
         r._meta.chassis, r._meta.engine, r._meta.trim, r._meta.supplier, r._meta.branch,
+        r._meta.reservation?.customer_name, r._meta.reservation?.sales_order_no,
       ].filter(Boolean).join(" ").toLowerCase();
       return hay.includes(qv);
     });
@@ -120,7 +108,7 @@ export default function Vehicles() {
 
   const kpis = useMemo(() => {
     const total = enriched.length;
-    const count = (s: StatusKey) => enriched.filter((r) => r.status === s).length;
+    const count = (s: StatusKey) => enriched.filter((r) => r._eff === s).length;
     return {
       total,
       available: count("available"),
@@ -236,7 +224,7 @@ export default function Vehicles() {
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {PERSISTED_STATUSES.map((s) => (
-                            <SelectItem key={s} value={s}>{statusMap[s].label}</SelectItem>
+                            <SelectItem key={s} value={s}>{VEHICLE_STATUS_LABEL[s as StatusKey]}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -335,7 +323,9 @@ export default function Vehicles() {
               <tr><td colSpan={10} className="text-center text-muted-foreground py-8">لا توجد مركبات مطابقة</td></tr>
             )}
             {filtered.map((r) => {
-              const s = statusMap[r.status as StatusKey] ?? statusMap.available;
+              const eff = r._eff as EffectiveStatus;
+              const expiringSoon = r._daysLeft !== null && r._daysLeft <= 3;
+              const expired = r._daysLeft !== null && r._daysLeft < 0;
               return (
                 <tr key={r.id} className="cursor-pointer" onClick={() => nav(`/vehicles/${r.id}`)}>
                   <td className="font-mono text-xs">{r.code}</td>
@@ -346,7 +336,20 @@ export default function Vehicles() {
                   <td className="text-xs">{r._meta.branch || "—"}</td>
                   <td>{r.color || "—"}</td>
                   <td className="num text-left font-semibold">{Number(r.sale_price).toLocaleString("ar-SA")}</td>
-                  <td><Badge variant={s.variant} className={s.className}>{s.label}</Badge></td>
+                  <td>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Badge className={VEHICLE_STATUS_CLASS[eff]}>{VEHICLE_STATUS_LABEL[eff]}</Badge>
+                      {eff === "reserved" && r._meta.reservation?.customer_name && (
+                        <span className="text-[10px] text-muted-foreground">{r._meta.reservation.customer_name}</span>
+                      )}
+                      {(expiringSoon || expired) && (
+                        <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium ${expired ? "text-destructive" : "text-warning"}`}>
+                          <AlertTriangle className="h-3 w-3" />
+                          {expired ? "منتهي" : `${r._daysLeft}ي`}
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td onClick={(e)=>e.stopPropagation()}>
                     <Button variant="ghost" size="sm" onClick={()=>nav(`/vehicles/${r.id}`)}>
                       <Eye className="h-4 w-4" />
