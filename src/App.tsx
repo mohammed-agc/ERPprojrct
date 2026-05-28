@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Customers from "./pages/Customers";
 import Vehicles from "./pages/Vehicles";
 import VehicleDetail from "./pages/VehicleDetail";
+import Procurement from "./pages/Procurement";
 import SalesOrders from "./pages/SalesOrders";
 import SalesOrderDetail from "./pages/SalesOrderDetail";
 import Invoices from "./pages/Invoices";
