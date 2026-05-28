@@ -21,7 +21,27 @@ import Permissions from "./pages/Permissions";
 import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+import { ErpAuthError } from "@/services/erp";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Don't hammer the backend on auth failures — let the UI surface a re-login.
+      retry: (failureCount, error) => {
+        if (error instanceof ErpAuthError) return false;
+        return failureCount < 2;
+      },
+      staleTime: 30_000,
+      refetchOnWindowFocus: false,
+    },
+    mutations: {
+      retry: (failureCount, error) => {
+        if (error instanceof ErpAuthError) return false;
+        return failureCount < 1;
+      },
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
