@@ -35,6 +35,7 @@ export default function SalesOrderDetail() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [lines, setLines] = useState<Line[]>([]);
+  const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
@@ -46,6 +47,7 @@ export default function SalesOrderDetail() {
     ]);
     setOrder(o); setCustomers(c ?? []); setVehicles(v ?? []);
     setLines((ls ?? []).map((x: any) => ({ ...x, quantity: Number(x.quantity), unit_price: Number(x.unit_price), discount_pct: Number(x.discount_pct), vat_pct: Number(x.vat_pct), line_total: Number(x.line_total) })));
+    setDeletedIds([]);
   };
   useEffect(() => { load(); }, [id]);
 
@@ -65,6 +67,11 @@ export default function SalesOrderDetail() {
   };
 
   const onPickVehicle = (i: number, vid: string) => {
+    // prevent duplicate vehicle within the same order
+    if (lines.some((l, idx) => idx !== i && l.vehicle_id === vid)) {
+      toast.error("هذه المركبة مُختارة بالفعل في بند آخر");
+      return;
+    }
     const v = vehicles.find(x => x.id === vid);
     if (!v) return;
     updateLine(i, { vehicle_id: vid, description: v.name, unit_price: Number(v.sale_price) });
@@ -77,26 +84,54 @@ export default function SalesOrderDetail() {
     }]);
   };
 
-  const removeLine = (i: number) => setLines(prev => prev.filter((_, idx) => idx !== i));
+  const removeLine = (i: number) => {
+    setLines(prev => {
+      const target = prev[i];
+      if (target?.id) setDeletedIds(d => [...d, target.id!]);
+      return prev.filter((_, idx) => idx !== i);
+    });
+  };
 
   const save = async () => {
     if (!order) return;
     setSaving(true);
-    await supabase.from("sales_order_lines").delete().eq("order_id", id);
-    if (lines.length) {
-      const { error } = await supabase.from("sales_order_lines").insert(
-        lines.map((l, idx) => ({
-          order_id: id, line_no: idx + 1, vehicle_id: l.vehicle_id, description: l.description,
-          quantity: l.quantity, unit_price: l.unit_price, discount_pct: l.discount_pct,
-          vat_pct: l.vat_pct, line_total: l.line_total,
-        }))
-      );
-      if (error) { toast.error(error.message); setSaving(false); return; }
+
+    // 1) delete removed lines (only those that existed in DB)
+    if (deletedIds.length) {
+      const { error: delErr } = await supabase
+        .from("sales_order_lines")
+        .delete()
+        .in("id", deletedIds);
+      if (delErr) { toast.error(delErr.message); setSaving(false); return; }
     }
-    await supabase.from("sales_orders").update({
+
+    // 2) upsert remaining lines — keep ids of existing, generate for new
+    if (lines.length) {
+      const payload = lines.map((l, idx) => ({
+        ...(l.id ? { id: l.id } : {}),
+        order_id: id,
+        line_no: idx + 1,
+        vehicle_id: l.vehicle_id,
+        description: l.description,
+        quantity: l.quantity,
+        unit_price: l.unit_price,
+        discount_pct: l.discount_pct,
+        vat_pct: l.vat_pct,
+        line_total: l.line_total,
+      }));
+      const { error: upErr } = await supabase
+        .from("sales_order_lines")
+        .upsert(payload, { onConflict: "id" });
+      if (upErr) { toast.error(upErr.message); setSaving(false); return; }
+    }
+
+    // 3) update header
+    const { error: hErr } = await supabase.from("sales_orders").update({
       subtotal: totals.subtotal, vat_amount: totals.vat, total: totals.total,
       customer_id: order.customer_id, notes: order.notes ?? null,
     }).eq("id", id);
+    if (hErr) { toast.error(hErr.message); setSaving(false); return; }
+
     setSaving(false);
     toast.success("تم الحفظ");
     load();
