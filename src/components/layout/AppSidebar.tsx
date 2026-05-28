@@ -35,11 +35,19 @@ const groups: { title: string; items: NavItem[] }[] = [
   {
     title: "المبيعات",
     items: [
+      { label: "لوحة المبيعات", to: "/sales", icon: LayoutDashboard, deptCode: "vehicles" },
       { label: "المركبات", to: "/vehicles", icon: Car, deptCode: "vehicles" },
+      { label: "عروض الأسعار", to: "/sales/quotations", icon: FileText, deptCode: "vehicles" },
       { label: "أوامر البيع", to: "/sales-orders", icon: ShoppingCart, deptCode: "vehicles" },
+      { label: "الحجوزات", to: "/sales/reservations", icon: CalendarCheck, deptCode: "vehicles" },
+      { label: "تنسيق التسليم", to: "/sales/deliveries", icon: PackageCheck, deptCode: "vehicles" },
+      { label: "التمويل والتقسيط", to: "/sales/financing", icon: Banknote, deptCode: "vehicles" },
+      { label: "تحليلات المبيعات", to: "/sales/analytics", icon: TrendingUp, deptCode: "vehicles" },
+      { label: "الخط الزمني للعميل", to: "/sales/customer-timeline", icon: Contact2, deptCode: "vehicles" },
       { label: "الفواتير", to: "/invoices", icon: Receipt },
     ],
   },
+
   {
     title: "المشتريات",
     items: [
