@@ -319,6 +319,9 @@ export default function VehicleDetail() {
                 <BookmarkPlus className="h-4 w-4 ml-1" /> حجز
               </Button>
             )}
+            <Button size="sm" variant="outline" onClick={() => setProcOpen(true)}>
+              <ClipboardCheck className="h-4 w-4 ml-1" /> المشتريات
+            </Button>
             <Button size="sm" variant="outline" onClick={() => setStatusOpen(true)}>
               <Settings2 className="h-4 w-4 ml-1" /> تغيير الحالة
             </Button>
