@@ -27,6 +27,8 @@ export default function PurchaseRequests() {
   const refresh = () => setTick(t => t + 1);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<PRStatus | "all">("all");
+  const [createOpen, setCreateOpen] = useState(false);
+
 
   const all = useMemo(() => purchasingService.listPRs(), [tick]);
 
