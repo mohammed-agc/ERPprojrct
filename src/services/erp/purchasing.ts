@@ -1276,6 +1276,96 @@ export const purchasingService = {
     return events.sort((a, b) => b.date.localeCompare(a.date));
   },
 
+  /* ============ Governance v1.3 lifecycle hooks ============ */
+
+  /** Officer confirms a draft PR → moves it into Pending Approval queue. */
+  confirmPR(id: string) {
+    const db = load();
+    const pr = db.prs.find(p => p.id === id); if (!pr) return;
+    if (pr.status !== "draft" && pr.status !== "confirmed") return;
+    pr.status = "pending";
+    save(db);
+  },
+
+  /** Manager records supplier confirmation outcome on a PO. */
+  supplierConfirm(
+    poId: string,
+    outcome: "confirm_all" | "confirm_partial" | "model_change" | "qty_change" | "rejected",
+  ) {
+    const db = load();
+    const po = db.pos.find(p => p.id === poId); if (!po) return;
+    if (outcome === "rejected") {
+      po.status = "cancelled";
+    } else {
+      // partial / model / qty changes still unlock allocation — UI will flag
+      po.status = "ready_for_allocation";
+    }
+    save(db);
+  },
+
+  /** Move an approved PO into awaiting-supplier-confirmation. */
+  moveToAwaitingSupplier(poId: string) {
+    const db = load();
+    const po = db.pos.find(p => p.id === poId); if (!po) return;
+    if (po.status !== "approved") return;
+    po.status = "awaiting_supplier_confirmation";
+    save(db);
+  },
+
+  /** Hook invoked by allocationService.confirmAllocation. */
+  onAllocationConfirmed(poId: string) {
+    const db = load();
+    const po = db.pos.find(p => p.id === poId); if (!po) return;
+    if (po.status === "ready_for_allocation" || po.status === "approved" ||
+        po.status === "allocation_pending" || po.status === "awaiting_supplier_confirmation") {
+      po.status = "allocated";
+      save(db);
+    }
+  },
+
+  /** Hook invoked when an invoice tied to a PO becomes paid/paid-by-credit. */
+  onInvoicePaid(poId: string) {
+    const db = load();
+    const po = db.pos.find(p => p.id === poId); if (!po) return;
+    if (po.status === "allocated" || po.status === "approved") {
+      po.status = "invoiced";
+      save(db);
+    }
+  },
+
+  /** Hook invoked when shipment dispatched. */
+  onShipmentDispatched(poId: string) {
+    const db = load();
+    const po = db.pos.find(p => p.id === poId); if (!po) return;
+    if (["invoiced","allocated","approved","ordered"].includes(po.status)) {
+      po.status = "in_transit";
+      save(db);
+    }
+  },
+
+  /** Close a PO — only after inventory entry completed. */
+  closePO(poId: string): { ok: boolean; reason?: string } {
+    const db = load();
+    const po = db.pos.find(p => p.id === poId);
+    if (!po) return { ok: false, reason: "أمر الشراء غير موجود" };
+    if (po.status !== "inventory_completed" && po.status !== "completed") {
+      return { ok: false, reason: "لا يمكن الإقفال قبل اكتمال الفحص وإدخال المخزون" };
+    }
+    po.status = "closed";
+    po.completed_at = po.completed_at ?? isoNow();
+    save(db);
+    return { ok: true };
+  },
+
+  /** Mark PO inspection-pending (called after GRN handoff). */
+  setPOStatus(poId: string, status: POStatus) {
+    const db = load();
+    const po = db.pos.find(p => p.id === poId); if (!po) return;
+    po.status = status;
+    if (status === "completed" || status === "closed") po.completed_at = isoNow();
+    save(db);
+  },
+
   /* utilities */
   resetSeed() {
     if (typeof window !== "undefined") localStorage.removeItem(LS_KEY);
