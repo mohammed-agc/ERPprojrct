@@ -476,6 +476,44 @@ function save(db: DB) {
   if (typeof window !== "undefined") localStorage.setItem(LS_KEY, JSON.stringify(db));
 }
 
+export const SAPPROVAL_LABEL: Record<SalesApprovalStatus, string> = {
+  pending: "بانتظار الاعتماد", approved: "معتمد", rejected: "مرفوض",
+};
+export const SAPPROVAL_TONE: Record<SalesApprovalStatus, string> = {
+  pending: "bg-warning/10 text-warning border border-warning/40",
+  approved: "bg-success/10 text-success border border-success/40",
+  rejected: "bg-destructive/10 text-destructive border border-destructive/40",
+};
+
+export const SINV_LABEL: Record<SalesInvoiceStatus, string> = {
+  draft: "مسودة", issued: "صادرة", partially_paid: "مدفوعة جزئياً",
+  paid: "مدفوعة", cancelled: "ملغاة",
+};
+export const SINV_TONE: Record<SalesInvoiceStatus, string> = {
+  draft: "bg-muted text-muted-foreground border border-border",
+  issued: "bg-primary/10 text-primary border border-primary/30",
+  partially_paid: "bg-warning/10 text-warning border border-warning/40",
+  paid: "bg-success/10 text-success border border-success/40",
+  cancelled: "bg-destructive/10 text-destructive border border-destructive/40",
+};
+
+export const SPAYMENT_METHOD_LABEL: Record<SalesPaymentMethod, string> = {
+  cash: "نقدي", bank_transfer: "حوالة بنكية", cheque: "شيك",
+  financing_disbursement: "صرف تمويل", card: "بطاقة",
+};
+
+/** ERP sales workflow stages (governance steps). */
+export const SALES_WORKFLOW = [
+  { key: "quote", label: "عرض سعر" },
+  { key: "so", label: "أمر بيع" },
+  { key: "so_approved", label: "اعتماد البيع" },
+  { key: "invoice", label: "فاتورة بيع" },
+  { key: "payment", label: "السداد" },
+  { key: "delivery", label: "التسليم" },
+  { key: "handover", label: "التسليم النهائي" },
+];
+
+
 /* ============================ Labels / tones ============================ */
 
 export const QUOTE_LABEL: Record<QuoteStatus, string> = {
