@@ -47,15 +47,16 @@ function DepartmentsTab() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
+      <div className="erp-toolbar">
         <div className="relative flex-1 max-w-sm">
           <Search className="h-4 w-4 absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input value={q} onChange={e=>setQ(e.target.value)} placeholder="بحث عن قسم..." className="pr-8 h-9" />
         </div>
-        <div className="text-xs text-muted-foreground">{filtered.length} قسم</div>
+        <div className="text-xs text-muted-foreground tabular-nums">{filtered.length} قسم</div>
         <div className="flex-1" />
         <Button size="sm" onClick={startCreate}><Plus className="h-4 w-4 ml-1" /> قسم جديد</Button>
       </div>
+
 
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <table className="erp-table">
