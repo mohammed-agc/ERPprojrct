@@ -145,8 +145,37 @@ export interface InspectionRecord {
   items: { line_id: string; passed: number; failed: number; remarks?: string }[];
   /** vehicle ids created in the `vehicles` table after approval (VIN governance) */
   vehicle_ids?: string[];
+
+export type InvoiceStatus = "draft" | "issued" | "partially_paid" | "paid" | "cancelled";
+export type PaymentMethod = "cash" | "bank_transfer" | "cheque" | "credit_utilization";
+
+export interface PurchaseInvoice {
+  id: string;
+  code: string;            // PINV-2026-0001
+  po_id: string;
+  supplier_id: string;
+  issued_at: string;
+  due_date: string;
+  payment_term: PaymentTerm;
+  subtotal: number;
+  vat_amount: number;
+  total: number;
+  paid: number;
+  status: InvoiceStatus;
+  notes?: string;
 }
 
+export interface PurchasePayment {
+  id: string;
+  code: string;            // PPAY-2026-0001
+  invoice_id: string;
+  supplier_id: string;
+  amount: number;
+  method: PaymentMethod;
+  reference?: string;
+  paid_at: string;
+  notes?: string;
+}
 
 interface DB {
   suppliers: Supplier[];
@@ -155,7 +184,10 @@ interface DB {
   shipments: Shipment[];
   grns: ReceivingNote[];
   inspections: InspectionRecord[];
+  invoices: PurchaseInvoice[];
+  payments: PurchasePayment[];
 }
+
 
 /* ============================ Storage ============================ */
 
