@@ -14,7 +14,9 @@ import { WorkflowStepper } from "@/components/erp/WorkflowStepper";
 import { ActionButton } from "@/components/erp/ActionButton";
 import { RoleSwitcher } from "@/components/erp/RoleSwitcher";
 import { EmptyState } from "@/components/erp/EmptyState";
-import { canPerform, ErpRole, SalesOrderState, STATE_LABELS } from "@/lib/erpPermissions";
+import { SalesOrderState, STATE_LABELS } from "@/lib/erpPermissions";
+import { useErpSession } from "@/contexts/ErpSessionContext";
+import { useSalesActions } from "@/hooks/erp/useSalesActions";
 import { Banknote, Truck, XCircle, Printer } from "lucide-react";
 
 interface Line {
@@ -44,7 +46,8 @@ export default function SalesOrderDetail() {
   const [lines, setLines] = useState<Line[]>([]);
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
-  const [role, setRole] = useState<ErpRole>("sales_manager");
+  const { role, setRole } = useErpSession();
+
 
   const load = async () => {
     const [{ data: o }, { data: c }, { data: v }, { data: ls }] = await Promise.all([
