@@ -18,13 +18,17 @@ import {
 import {
   ArrowRight, Car, Tag, Wrench, Truck, ShoppingCart, ArrowDownToLine, RotateCcw,
   Image as ImageIcon, FileText, Upload, X, AlertTriangle, BookmarkPlus, BookmarkX, Settings2, Trash2,
+  ClipboardCheck, UserCheck, PackageCheck, KeyRound, ShieldCheck,
 } from "lucide-react";
 import {
-  parseVehicleMeta, serializeVehicleMeta, reservationDaysLeft, effectiveStatus, VehicleMeta, EffectiveStatus,
+  parseVehicleMeta, serializeVehicleMeta, reservationDaysLeft, effectiveStatus, deliveryProgress,
+  DELIVERY_CHECKLIST_KEYS, DeliveryChecklistKey, VehicleMeta, EffectiveStatus,
 } from "@/lib/vehicleMeta";
 import {
   VEHICLE_STATUS_LABEL, VEHICLE_STATUS_CLASS, OVERLAY_STATUSES,
 } from "@/lib/vehicleStatus";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -36,12 +40,22 @@ const fmtDate = (s?: string) =>
   s ? new Date(s).toLocaleDateString("ar-SA", { dateStyle: "medium" }) : "—";
 
 type TimelineEvent = {
-  type: "purchase" | "reservation" | "release" | "sale" | "delivery" | "transfer" | "maintenance" | "return";
+  type: "purchase" | "reservation" | "release" | "sale" | "ready" | "delivery" | "transfer" | "maintenance" | "return" | "ownership";
   label: string;
   at: string;
   detail?: string;
   icon: any;
   tone: "default" | "success" | "warning" | "primary" | "destructive";
+};
+
+const CHECKLIST_LABEL: Record<DeliveryChecklistKey, string> = {
+  payment: "تحقق الدفع",
+  id: "تحقق الهوية",
+  insurance: "إكمال التأمين",
+  registration: "إكمال الاستمارة",
+  accessories: "تسليم الإكسسوارات",
+  spare_key: "تسليم المفتاح الاحتياطي",
+  inspection: "إنهاء الفحص",
 };
 
 export default function VehicleDetail() {
