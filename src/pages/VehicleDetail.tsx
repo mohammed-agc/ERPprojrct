@@ -287,6 +287,13 @@ export default function VehicleDetail() {
             <Button size="sm" variant="outline" onClick={() => setStatusOpen(true)}>
               <Settings2 className="h-4 w-4 ml-1" /> تغيير الحالة
             </Button>
+            <Button
+              size="sm"
+              onClick={() => setDeliveryOpen(true)}
+              disabled={eff === "available" || eff === "returned"}
+            >
+              <Truck className="h-4 w-4 ml-1" /> التسليم
+            </Button>
             <Button variant="ghost" size="sm" onClick={()=>nav("/vehicles")}>
               <ArrowRight className="h-4 w-4 ml-1" /> رجوع
             </Button>
