@@ -131,9 +131,17 @@ const App = () => (
               <Route path="/purchasing/shipments" element={<Shipments />} />
               <Route path="/purchasing/receiving" element={<Receiving />} />
               <Route path="/purchasing/inspection" element={<Inspection />} />
+              <Route path="/sales" element={<SalesDashboard />} />
+              <Route path="/sales/quotations" element={<SalesQuotations />} />
+              <Route path="/sales/reservations" element={<SalesReservations />} />
+              <Route path="/sales/deliveries" element={<SalesDeliveries />} />
+              <Route path="/sales/financing" element={<SalesFinancing />} />
+              <Route path="/sales/analytics" element={<SalesAnalytics />} />
+              <Route path="/sales/customer-timeline" element={<CustomerTimeline />} />
               <Route path="/sales-orders" element={<SalesOrders />} />
               <Route path="/sales-orders/:id" element={<SalesOrderDetail />} />
               <Route path="/invoices" element={<Invoices />} />
+
               <Route path="/accounts" element={<Accounts />} />
               <Route path="/accounts/:id" element={<AccountDetail />} />
               <Route path="/finance" element={<FinanceCenter />} />
