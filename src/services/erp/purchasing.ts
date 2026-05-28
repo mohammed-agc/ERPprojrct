@@ -829,12 +829,18 @@ export const purchasingService = {
   setInspectionStatus(id: string, status: InspectionStatus) {
     const db = load();
     const i = db.inspections.find(x => x.id === id); if (!i) return;
+    const wasApproved = i.status === "approved";
     i.status = status;
     if (status === "approved" || status === "rejected") i.completed_at = isoNow();
     // sync GRN inspection status
     const grn = db.grns.find(g => g.id === i.grn_id);
     if (grn) grn.inspection_status = status;
     save(db);
+    // Inventory integration: on first approval, push parts into inventory + log movements
+    if (status === "approved" && !wasApproved) {
+      const po = db.pos.find(p => p.id === i.po_id);
+      try { inventoryIntegration.onInspectionApproved(i, po); } catch (e) { console.warn("inv-integration:", e); }
+    }
   },
 
   /** Record vehicle inventory ids created from an approved inspection (VIN governance). */
