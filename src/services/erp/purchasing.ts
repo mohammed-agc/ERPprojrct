@@ -15,6 +15,8 @@
  *   - Inventory Availability (computed)
  */
 
+import { inventoryIntegration } from "./integration";
+
 const LS_KEY = "sarat.purchasing.v1";
 
 /* ============================ Domain Types ============================ */
