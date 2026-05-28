@@ -58,17 +58,7 @@ export const inventoryIntegration = {
       if (line.kind === "part") {
         const partId = findPartIdForLine(line);
         if (partId) {
-          // Bump on_hand on the matched part
-          const all = inventoryService.listParts();
-          const p = all.find(x => x.id === partId);
-          if (p) {
-            // mutate via direct service path — re-save through a movement
-            // (inventoryService persists movements; on_hand patch is intentional)
-            (p as any).on_hand = p.on_hand + approvedQty;
-            (p as any).last_movement_at = new Date().toISOString();
-            // Persist by re-reading & writing through a private channel:
-            // we leverage logMovement which also reloads/saves.
-          }
+          inventoryService.adjustPartOnHand(partId, approvedQty);
           inventoryService.logMovement({
             kind: "p_receive",
             reference: po.code,
