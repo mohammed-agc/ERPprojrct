@@ -376,6 +376,23 @@ export const inventoryService = {
     }
     return { ok: true };
   },
+  /** Adjust the on_hand quantity of a part (positive=receive, negative=consume). */
+  adjustPartOnHand(partId: string, delta: number) {
+    const db = load();
+    const p = db.parts.find(x => x.id === partId);
+    if (!p) return;
+    p.on_hand = Math.max(0, p.on_hand + delta);
+    p.last_movement_at = isoNow();
+    save(db);
+  },
+  /** Adjust reservation count of a part (used by sales reservations). */
+  adjustPartReserved(partId: string, delta: number) {
+    const db = load();
+    const p = db.parts.find(x => x.id === partId);
+    if (!p) return;
+    p.reserved = Math.max(0, p.reserved + delta);
+    save(db);
+  },
 
   /* ----- Movements ----- */
   listMovements(filter?: { kind?: "vehicle" | "part"; warehouseId?: string }): Movement[] {
