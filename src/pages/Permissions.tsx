@@ -119,7 +119,7 @@ export default function Permissions() {
       />
 
       {/* Filters bar */}
-      <div className="bg-card border border-border rounded-lg p-3 mb-3 flex flex-wrap items-center gap-2">
+      <div className="erp-toolbar mb-3">
         <div className="relative flex-1 max-w-xs min-w-[200px]">
           <Search className="h-4 w-4 absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input value={q} onChange={e=>setQ(e.target.value)} placeholder="بحث عن صلاحية..." className="pr-8 h-9" />
@@ -155,10 +155,12 @@ export default function Permissions() {
           </SelectContent>
         </Select>
 
-        <div className="text-xs text-muted-foreground mr-auto">
+        <div className="text-xs text-muted-foreground mr-auto tabular-nums">
           {visiblePerms.length} صلاحية · {visibleRoles.length} وظيفة
+          {dirty && <span className="mr-2 inline-flex items-center gap-1 text-warning"><span className="h-1.5 w-1.5 rounded-full bg-warning" />تغييرات غير محفوظة</span>}
         </div>
       </div>
+
 
       {/* Type legend */}
       <div className="flex items-center gap-2 mb-2 text-[11px]">
