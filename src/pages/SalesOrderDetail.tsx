@@ -378,8 +378,17 @@ export default function SalesOrderDetail() {
           </thead>
           <tbody>
             {lines.length === 0 && (
-              <tr><td colSpan={8} className="text-center text-muted-foreground py-6">لا توجد بنود — أضف بنداً جديداً</td></tr>
+              <EmptyState
+                inTable
+                colSpan={8}
+                title="لا توجد بنود"
+                description="ابدأ بإضافة بند جديد لإنشاء أمر البيع."
+                action={canEditLines ? (
+                  <Button size="sm" variant="outline" onClick={addLine}><Plus className="h-4 w-4 ml-1" /> إضافة بند</Button>
+                ) : undefined}
+              />
             )}
+
             {lines.map((l, i) => {
               const onLastKey = (e: React.KeyboardEvent) => {
                 if (e.key === "Enter" && canEditLines && i === lines.length - 1) {
