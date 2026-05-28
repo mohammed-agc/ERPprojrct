@@ -16,6 +16,7 @@
  */
 
 import { inventoryIntegration } from "./integration";
+import { makeAudit, makeApproval, type AuditEntry, type ApprovalEntry, type ErpGovRole } from "./erpRoles";
 
 const LS_KEY = "sarat.purchasing.v1";
 
@@ -94,6 +95,8 @@ export interface PurchaseRequest {
   approved_at?: string;
   approver?: string;
   po_id?: string;
+  audit?: AuditEntry[];
+  approvals?: ApprovalEntry[];
 }
 
 export type PaymentTerm = "cash" | "net_30" | "net_60" | "net_90" | "credit_line";
@@ -115,7 +118,14 @@ export interface PurchaseOrder {
   ordered_at?: string;
   completed_at?: string;
   shipment_id?: string;
+  awaiting_supplier_at?: string;
+  supplier_confirmed_at?: string;
+  supplier_confirm_outcome?: "confirm_all" | "confirm_partial" | "model_change" | "qty_change" | "rejected";
+  supplier_confirm_note?: string;
+  audit?: AuditEntry[];
+  approvals?: ApprovalEntry[];
 }
+
 
 export interface Supplier {
   id: string;
@@ -662,15 +672,22 @@ export const purchasingService = {
   approvePR(id: string, approver = "م. عبدالله") {
     const db = load();
     const pr = db.prs.find(p => p.id === id); if (!pr) return;
+    const from = pr.status;
     pr.status = "approved"; pr.approved_at = isoNow(); pr.approver = approver;
+    pr.audit = [...(pr.audit ?? []), makeAudit({ role: "purchasing_manager", actor: approver, action: "اعتماد طلب الشراء", from_status: from, to_status: "approved" })];
+    pr.approvals = [...(pr.approvals ?? []), makeApproval({ role: "purchasing_manager", actor: approver, decision: "approved" })];
     save(db);
   },
-  rejectPR(id: string) {
+  rejectPR(id: string, approver = "م. عبدالله", note?: string) {
     const db = load();
     const pr = db.prs.find(p => p.id === id); if (!pr) return;
+    const from = pr.status;
     pr.status = "rejected";
+    pr.audit = [...(pr.audit ?? []), makeAudit({ role: "purchasing_manager", actor: approver, action: "رفض طلب الشراء", from_status: from, to_status: "rejected", note })];
+    pr.approvals = [...(pr.approvals ?? []), makeApproval({ role: "purchasing_manager", actor: approver, decision: "rejected", note })];
     save(db);
   },
+
 
   createPR(input: {
     requester: string; department: string; branch: string;
@@ -689,9 +706,12 @@ export const purchasingService = {
       items: input.items.map(i => ({ id: uid("li"), ...i })),
       status: input.submit ? "pending" : "draft",
       created_at: isoNow(),
+      audit: [makeAudit({ role: "purchasing_officer", action: "إنشاء طلب الشراء", to_status: input.submit ? "pending" : "draft" })],
+      approvals: [],
     };
     db.prs.unshift(pr); save(db); return pr;
   },
+
 
   /* purchase orders */
   listPOs(): PurchaseOrder[] {
@@ -722,6 +742,8 @@ export const purchasingService = {
       total: items.reduce((s, i) => s + i.qty * i.unit_cost, 0),
       created_at: isoNow(),
       approved_at: input.submit ? isoNow() : undefined,
+      audit: [makeAudit({ role: "purchasing_officer", action: "إنشاء أمر الشراء", to_status: input.submit ? "approved" : "draft" })],
+      approvals: input.submit ? [makeApproval({ role: "purchasing_manager", decision: "approved", note: "اعتماد فوري عند الإنشاء" })] : [],
     };
     db.pos.unshift(po); save(db); return po;
   },
@@ -731,7 +753,6 @@ export const purchasingService = {
     const db = load();
     const po = db.pos.find(p => p.id === id); if (!po) return;
     if (po.status !== "draft") return;
-    // keep status as draft but mark as pending via approved_at undefined; UI uses status==="draft" + flag
     save(db);
   },
   approvePO(id: string, approver = "م. عبدالله") {
@@ -739,14 +760,21 @@ export const purchasingService = {
     const po = db.pos.find(p => p.id === id); if (!po) return;
     if (po.status === "draft") {
       po.status = "approved"; po.approved_at = isoNow();
+      po.audit = [...(po.audit ?? []), makeAudit({ role: "purchasing_manager", actor: approver, action: "اعتماد أمر الشراء", from_status: "draft", to_status: "approved" })];
+      po.approvals = [...(po.approvals ?? []), makeApproval({ role: "purchasing_manager", actor: approver, decision: "approved" })];
       save(db);
     }
   },
-  rejectPO(id: string) {
+  rejectPO(id: string, approver = "م. عبدالله", note?: string) {
     const db = load();
     const po = db.pos.find(p => p.id === id); if (!po) return;
-    po.status = "cancelled"; save(db);
+    const from = po.status;
+    po.status = "cancelled";
+    po.audit = [...(po.audit ?? []), makeAudit({ role: "purchasing_manager", actor: approver, action: "إلغاء أمر الشراء", from_status: from, to_status: "cancelled", note })];
+    po.approvals = [...(po.approvals ?? []), makeApproval({ role: "purchasing_manager", actor: approver, decision: "rejected", note })];
+    save(db);
   },
+
 
   /** Convert an approved PR into a fresh PO (draft state, prefilled). */
   convertPRToPO(prId: string, input: {
@@ -1291,26 +1319,51 @@ export const purchasingService = {
   supplierConfirm(
     poId: string,
     outcome: "confirm_all" | "confirm_partial" | "model_change" | "qty_change" | "rejected",
+    actor = "م. عبدالله",
+    note?: string,
   ) {
     const db = load();
     const po = db.pos.find(p => p.id === poId); if (!po) return;
+    const from = po.status;
     if (outcome === "rejected") {
       po.status = "cancelled";
     } else {
-      // partial / model / qty changes still unlock allocation — UI will flag
       po.status = "ready_for_allocation";
+      po.supplier_confirmed_at = isoNow();
     }
+    po.supplier_confirm_outcome = outcome;
+    po.supplier_confirm_note = note;
+    const outcomeLabel: Record<string, string> = {
+      confirm_all: "تأكيد كامل", confirm_partial: "تأكيد جزئي",
+      model_change: "تغيير في الموديل", qty_change: "تغيير في الكميات", rejected: "رفض",
+    };
+    po.audit = [...(po.audit ?? []), makeAudit({
+      role: "purchasing_manager", actor,
+      action: `تأكيد المورد — ${outcomeLabel[outcome]}`,
+      from_status: from, to_status: po.status, note,
+    })];
+    po.approvals = [...(po.approvals ?? []), makeApproval({
+      role: "purchasing_manager", actor,
+      decision: outcome === "rejected" ? "rejected" : "approved",
+      note: outcomeLabel[outcome] + (note ? " — " + note : ""),
+    })];
     save(db);
   },
 
   /** Move an approved PO into awaiting-supplier-confirmation. */
-  moveToAwaitingSupplier(poId: string) {
+  moveToAwaitingSupplier(poId: string, actor = "موظف المشتريات") {
     const db = load();
     const po = db.pos.find(p => p.id === poId); if (!po) return;
     if (po.status !== "approved") return;
     po.status = "awaiting_supplier_confirmation";
+    po.awaiting_supplier_at = isoNow();
+    po.audit = [...(po.audit ?? []), makeAudit({
+      role: "purchasing_officer", actor,
+      action: "إرسال أمر الشراء للمورد", from_status: "approved", to_status: "awaiting_supplier_confirmation",
+    })];
     save(db);
   },
+
 
   /** Hook invoked by allocationService.confirmAllocation. */
   onAllocationConfirmed(poId: string) {
