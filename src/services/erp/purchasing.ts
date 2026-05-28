@@ -24,10 +24,15 @@ const LS_KEY = "sarat.purchasing.v1";
 export type Urgency = "low" | "normal" | "high" | "critical";
 
 export type PRStatus =
-  | "draft" | "pending" | "approved" | "rejected" | "converted_to_po";
+  | "draft" | "confirmed" | "pending" | "approved" | "rejected" | "converted_to_po";
 
 export type POStatus =
-  | "draft" | "approved" | "ordered" | "partially_received" | "completed" | "cancelled";
+  | "draft" | "approved"
+  | "awaiting_supplier_confirmation" | "allocation_pending" | "ready_for_allocation"
+  | "allocated" | "invoiced"
+  | "ordered" | "partially_received"
+  | "in_transit" | "received" | "inspection_pending" | "inventory_completed"
+  | "completed" | "closed" | "cancelled";
 
 export type ShipmentStatus =
   | "preparing" | "shipped" | "in_transit" | "at_customs" | "cleared" | "arrived";
