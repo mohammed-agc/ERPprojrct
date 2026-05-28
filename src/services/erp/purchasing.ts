@@ -1016,7 +1016,6 @@ export const purchasingService = {
     }
     save(db);
   },
-  },
 
   /** Hand-off GRN to Inspection — auto-creates an inspection record if missing. */
   handoffToInspection(grnId: string, inspector = "م. ناصر") {
