@@ -143,7 +143,10 @@ export interface InspectionRecord {
   completed_at?: string;
   notes?: string;
   items: { line_id: string; passed: number; failed: number; remarks?: string }[];
+  /** vehicle ids created in the `vehicles` table after approval (VIN governance) */
+  vehicle_ids?: string[];
 }
+
 
 interface DB {
   suppliers: Supplier[];
