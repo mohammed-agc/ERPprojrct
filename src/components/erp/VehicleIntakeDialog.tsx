@@ -127,6 +127,12 @@ export function VehicleIntakeDialog({ open, onOpenChange, inspection, po, onCrea
 
   const submit = async () => {
     if (!inspection || !po) return;
+    // Governance v1.3: Inventory creation ONLY when inspection is approved
+    if (inspection.status !== "approved") {
+      toast.error("لا يمكن إدخال المخزون قبل اعتماد الفحص (Inspection Passed)");
+      return;
+    }
+
     if (rows.length === 0) {
       toast.info("لا توجد وحدات بانتظار الإدخال للمخزون");
       return;
