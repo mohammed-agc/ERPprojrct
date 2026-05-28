@@ -192,14 +192,42 @@ export function serializeVehicleMeta(meta: VehicleMeta): string {
   return MARKER + JSON.stringify(clean);
 }
 
-/** Effective ERP status: overlay wins if set, otherwise DB status. */
+/** Effective ERP status: procurement (intake) > overlay > DB status. */
 export type EffectiveStatus =
+  | "requested" | "ordered" | "in_transit" | "received"
+  | "inspection_pending" | "approved" | "rejected"
   | "available" | "reserved" | "sold"
   | "ready_for_delivery" | "delivered" | "maintenance" | "transit" | "returned";
 
 export function effectiveStatus(dbStatus: string, meta: VehicleMeta): EffectiveStatus {
+  const proc = meta.procurement?.state;
+  // Active procurement (anything except empty / approved) takes precedence over inventory state.
+  if (proc && proc !== "" && proc !== "approved") return proc as EffectiveStatus;
   if (meta.status_overlay) return meta.status_overlay;
   return (dbStatus as EffectiveStatus) ?? "available";
+}
+
+/** Procurement helpers */
+export function landedCost(meta: VehicleMeta): number {
+  const p = meta.procurement;
+  if (!p) return 0;
+  return (
+    Number(p.cost_purchase ?? 0) +
+    Number(p.cost_shipping ?? 0) +
+    Number(p.cost_customs ?? 0) +
+    Number(p.cost_inspection ?? 0) +
+    Number(p.cost_repair ?? 0) +
+    Number(p.cost_accessories ?? 0)
+  );
+}
+
+export const PROCUREMENT_STATES: ProcurementState[] = [
+  "requested", "ordered", "in_transit", "received", "inspection_pending", "approved", "rejected",
+];
+
+export function isInProcurement(meta: VehicleMeta): boolean {
+  const s = meta.procurement?.state;
+  return !!s && s !== "" && s !== "approved";
 }
 
 /** Reservation expiry helpers. */
