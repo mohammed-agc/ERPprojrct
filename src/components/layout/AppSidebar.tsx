@@ -6,11 +6,13 @@ import {
   BookText, Scale, HandCoins, Wallet, ClipboardCheck, Contact2,
   TrendingUp, ArrowLeftRight, PieChart, Landmark, ArrowDownCircle, ArrowUpCircle, CheckSquare,
   Vault, Banknote, Target, Layers, GitBranch, Share2, Gauge,
-  Shield, CalendarRange, CalendarCheck, CalendarX, FileSearch, Lock, Hourglass, AlertTriangle
+  Shield, CalendarRange, CalendarCheck, CalendarX, FileSearch, Lock, Hourglass, AlertTriangle,
+  ClipboardList, FileText, Ship, PackageCheck, Trophy, ShoppingBag
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { governanceService } from "@/services/erp/governance";
+import { purchasingService } from "@/services/erp/purchasing";
 
 interface NavItem {
   label: string;
@@ -32,9 +34,22 @@ const groups: { title: string; items: NavItem[] }[] = [
     title: "المبيعات",
     items: [
       { label: "المركبات", to: "/vehicles", icon: Car, deptCode: "vehicles" },
-      { label: "المشتريات والإدخال", to: "/procurement", icon: ClipboardCheck, deptCode: "vehicles" },
       { label: "أوامر البيع", to: "/sales-orders", icon: ShoppingCart, deptCode: "vehicles" },
       { label: "الفواتير", to: "/invoices", icon: Receipt },
+    ],
+  },
+  {
+    title: "المشتريات",
+    items: [
+      { label: "لوحة المشتريات", to: "/purchasing", icon: ShoppingBag, deptCode: "vehicles" },
+      { label: "طلبات الشراء", to: "/purchasing/requests", icon: ClipboardList, deptCode: "vehicles" },
+      { label: "أوامر الشراء", to: "/purchasing/orders", icon: FileText, deptCode: "vehicles" },
+      { label: "ائتمان الموردين", to: "/purchasing/credit", icon: ShieldCheck, deptCode: "vehicles" },
+      { label: "حوافز الموردين", to: "/purchasing/incentives", icon: Trophy, deptCode: "vehicles" },
+      { label: "الشحنات", to: "/purchasing/shipments", icon: Ship, deptCode: "vehicles" },
+      { label: "الاستلام", to: "/purchasing/receiving", icon: PackageCheck, deptCode: "vehicles" },
+      { label: "الفحص والاعتماد", to: "/purchasing/inspection", icon: FileSearch, deptCode: "vehicles" },
+      { label: "المشتريات (قديم)", to: "/procurement", icon: ClipboardCheck, deptCode: "vehicles" },
     ],
   },
   {

@@ -58,6 +58,14 @@ const ApprovalsPage = lazy(() => import("./pages/Approvals"));
 const AuditCenter = lazy(() => import("./pages/AuditCenter"));
 const ComingSoon = lazy(() => import("./pages/ComingSoon"));
 const ActivityFeed = lazy(() => import("./pages/ActivityFeed"));
+const PurchasingDashboard = lazy(() => import("./pages/purchasing/PurchasingDashboard"));
+const PurchaseRequests = lazy(() => import("./pages/purchasing/PurchaseRequests"));
+const PurchaseOrders = lazy(() => import("./pages/purchasing/PurchaseOrders"));
+const SupplierCredit = lazy(() => import("./pages/purchasing/SupplierCredit"));
+const SupplierIncentives = lazy(() => import("./pages/purchasing/SupplierIncentives"));
+const Shipments = lazy(() => import("./pages/purchasing/Shipments"));
+const Receiving = lazy(() => import("./pages/purchasing/Receiving"));
+const Inspection = lazy(() => import("./pages/purchasing/Inspection"));
 
 import { ErpAuthError } from "@/services/erp";
 
@@ -107,6 +115,14 @@ const App = () => (
               <Route path="/vehicles" element={<Vehicles />} />
               <Route path="/vehicles/:id" element={<VehicleDetail />} />
               <Route path="/procurement" element={<Procurement />} />
+              <Route path="/purchasing" element={<PurchasingDashboard />} />
+              <Route path="/purchasing/requests" element={<PurchaseRequests />} />
+              <Route path="/purchasing/orders" element={<PurchaseOrders />} />
+              <Route path="/purchasing/credit" element={<SupplierCredit />} />
+              <Route path="/purchasing/incentives" element={<SupplierIncentives />} />
+              <Route path="/purchasing/shipments" element={<Shipments />} />
+              <Route path="/purchasing/receiving" element={<Receiving />} />
+              <Route path="/purchasing/inspection" element={<Inspection />} />
               <Route path="/sales-orders" element={<SalesOrders />} />
               <Route path="/sales-orders/:id" element={<SalesOrderDetail />} />
               <Route path="/invoices" element={<Invoices />} />
