@@ -383,11 +383,16 @@ function load(): DB {
       localStorage.setItem(LS_KEY, JSON.stringify(s));
       return s;
     }
-    return JSON.parse(raw) as DB;
+    const parsed = JSON.parse(raw) as Partial<DB>;
+    // Backfill new collections for existing local DBs
+    if (!parsed.invoices) parsed.invoices = [];
+    if (!parsed.payments) parsed.payments = [];
+    return parsed as DB;
   } catch {
     return seed();
   }
 }
+
 function save(db: DB) {
   if (typeof window !== "undefined") localStorage.setItem(LS_KEY, JSON.stringify(db));
 }
