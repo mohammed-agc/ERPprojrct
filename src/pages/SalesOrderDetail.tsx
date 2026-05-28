@@ -362,7 +362,7 @@ export default function SalesOrderDetail() {
             )}
             {lines.map((l, i) => {
               const onLastKey = (e: React.KeyboardEvent) => {
-                if (e.key === "Enter" && !isLocked && i === lines.length - 1) {
+                if (e.key === "Enter" && !canEditLines && i === lines.length - 1) {
                   e.preventDefault();
                   addLine();
                 }
@@ -375,7 +375,7 @@ export default function SalesOrderDetail() {
                     items={vehicles as any[]}
                     value={l.vehicle_id}
                     onChange={(vid) => onPickVehicle(i, vid)}
-                    disabled={isLocked}
+                    disabled={!canEditLines}
                     placeholder="اختر مركبة..."
                     searchKeys={["name","brand","model","vin","year"] as any}
                     displayValue={(v: any) => `${v.name} · ${v.year}`}
@@ -389,13 +389,13 @@ export default function SalesOrderDetail() {
                   />
                   {l.description && <div className="text-[11px] text-muted-foreground px-2 truncate">{l.description}</div>}
                 </td>
-                <td className="w-24"><input className="erp-input num text-left" type="number" value={l.quantity} onChange={e=>updateLine(i,{quantity:Number(e.target.value)})} disabled={isLocked} /></td>
-                <td className="w-32"><input className="erp-input num text-left" type="number" value={l.unit_price} onChange={e=>updateLine(i,{unit_price:Number(e.target.value)})} disabled={isLocked} dir="ltr" /></td>
-                <td className="w-20"><input className="erp-input num text-left" type="number" value={l.discount_pct} onChange={e=>updateLine(i,{discount_pct:Number(e.target.value)})} disabled={isLocked} /></td>
-                <td className="w-20"><input className="erp-input num text-left" type="number" value={l.vat_pct} onChange={e=>updateLine(i,{vat_pct:Number(e.target.value)})} disabled={isLocked} onKeyDown={onLastKey} /></td>
+                <td className="w-24"><input className="erp-input num text-left" type="number" value={l.quantity} onChange={e=>updateLine(i,{quantity:Number(e.target.value)})} disabled={!canEditLines} /></td>
+                <td className="w-32"><input className="erp-input num text-left" type="number" value={l.unit_price} onChange={e=>updateLine(i,{unit_price:Number(e.target.value)})} disabled={!canEditLines} dir="ltr" /></td>
+                <td className="w-20"><input className="erp-input num text-left" type="number" value={l.discount_pct} onChange={e=>updateLine(i,{discount_pct:Number(e.target.value)})} disabled={!canEditLines} /></td>
+                <td className="w-20"><input className="erp-input num text-left" type="number" value={l.vat_pct} onChange={e=>updateLine(i,{vat_pct:Number(e.target.value)})} disabled={!canEditLines} onKeyDown={onLastKey} /></td>
                 <td className="num text-left font-semibold w-32">{l.line_total.toLocaleString("ar-SA", { minimumFractionDigits: 2 })}</td>
                 <td className="w-20">
-                  {!isLocked && (
+                  {!canEditLines && (
                     <div className="flex items-center gap-0.5 justify-end">
                       <Button variant="ghost" size="icon" className="h-7 w-7" title="تكرار البند" onClick={()=>duplicateLine(i)}>
                         <Copy className="h-3.5 w-3.5 text-muted-foreground" />
@@ -410,7 +410,7 @@ export default function SalesOrderDetail() {
             );})}
           </tbody>
         </table>
-        {!isLocked && (
+        {!canEditLines && (
           <div className="p-2 border-t border-border bg-muted/30">
             <Button variant="ghost" size="sm" onClick={addLine}><Plus className="h-4 w-4 ml-1" /> إضافة بند</Button>
           </div>
