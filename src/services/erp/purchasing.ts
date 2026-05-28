@@ -145,6 +145,8 @@ export interface InspectionRecord {
   items: { line_id: string; passed: number; failed: number; remarks?: string }[];
   /** vehicle ids created in the `vehicles` table after approval (VIN governance) */
   vehicle_ids?: string[];
+}
+
 
 export type InvoiceStatus = "draft" | "issued" | "partially_paid" | "paid" | "cancelled";
 export type PaymentMethod = "cash" | "bank_transfer" | "cheque" | "credit_utilization";
