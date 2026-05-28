@@ -75,7 +75,11 @@ export default function PurchaseInvoices() {
           <SelectTrigger className="w-[180px] h-9"><SelectValue /></SelectTrigger>
           <SelectContent>{STATUS_OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
         </Select>
+        <Button size="sm" className="h-9" onClick={() => setCreateOpen(true)}>
+          <Plus className="h-4 w-4 ml-1" /> فاتورة جديدة
+        </Button>
         <div className="text-xs text-muted-foreground ml-auto">{filtered.length} نتيجة</div>
+
       </div>
 
       <div className="bg-card border border-border rounded-lg overflow-hidden">
