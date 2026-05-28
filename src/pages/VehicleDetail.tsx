@@ -67,6 +67,7 @@ export default function VehicleDetail() {
   const [loading, setLoading] = useState(true);
   const [reserveOpen, setReserveOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
+  const [deliveryOpen, setDeliveryOpen] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
 
@@ -122,16 +123,38 @@ export default function VehicleDetail() {
     }
     if (meta.status_overlay_at && meta.status_overlay) {
       const labels: Record<string, { l: string; tone: TimelineEvent["tone"]; icon: any; type: TimelineEvent["type"] }> = {
-        delivered:   { l: "تسليم للعميل", tone: "success",     icon: Truck,   type: "delivery" },
-        maintenance: { l: "دخول الصيانة", tone: "warning",     icon: Wrench,  type: "maintenance" },
-        transit:     { l: "حركة ترانزيت", tone: "primary",     icon: Truck,   type: "transfer" },
-        returned:    { l: "ارتجاع",       tone: "destructive", icon: RotateCcw, type: "return" },
+        ready_for_delivery: { l: "تحضير للتسليم", tone: "primary",     icon: ClipboardCheck, type: "ready" },
+        delivered:          { l: "تسليم للعميل",  tone: "success",     icon: Truck,          type: "delivery" },
+        maintenance:        { l: "دخول الصيانة",  tone: "warning",     icon: Wrench,         type: "maintenance" },
+        transit:            { l: "حركة ترانزيت",  tone: "primary",     icon: Truck,          type: "transfer" },
+        returned:           { l: "ارتجاع",        tone: "destructive", icon: RotateCcw,      type: "return" },
       };
       const info = labels[meta.status_overlay];
       if (info) events.push({
         type: info.type, label: info.l, at: meta.status_overlay_at,
         detail: [meta.status_overlay_by, meta.status_overlay_note].filter(Boolean).join(" — "),
         icon: info.icon, tone: info.tone,
+      });
+    }
+    if (meta.delivery?.ready_at) {
+      events.push({
+        type: "ready", label: "جاهز للتسليم", at: meta.delivery.ready_at,
+        detail: [meta.delivery.officer && `الموظف: ${meta.delivery.officer}`, meta.delivery.invoice_no && `فاتورة ${meta.delivery.invoice_no}`].filter(Boolean).join(" · "),
+        icon: ClipboardCheck, tone: "primary",
+      });
+    }
+    if (meta.delivery?.delivered_at) {
+      events.push({
+        type: "delivery", label: "تم التسليم للعميل", at: meta.delivery.delivered_at,
+        detail: [meta.delivery.customer_name, meta.delivery.delivered_by && `بواسطة ${meta.delivery.delivered_by}`].filter(Boolean).join(" · "),
+        icon: Truck, tone: "success",
+      });
+    }
+    if (meta.ownership?.transferred_at) {
+      events.push({
+        type: "ownership", label: "نقل الملكية", at: meta.ownership.transferred_at,
+        detail: `${meta.ownership.previous_owner ?? "—"} → ${meta.ownership.current_owner ?? "—"}`,
+        icon: UserCheck, tone: "success",
       });
     }
     lines.forEach((l) => {
