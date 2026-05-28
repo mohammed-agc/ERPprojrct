@@ -112,6 +112,55 @@ export interface FinancingApplication {
   decided_at?: string;
   required_docs: { label: string; received: boolean }[];
   notes?: string;
+
+export type SalesApprovalStatus = "pending" | "approved" | "rejected";
+export type SalesInvoiceStatus = "draft" | "issued" | "partially_paid" | "paid" | "cancelled";
+export type SalesPaymentMethod = "cash" | "bank_transfer" | "cheque" | "financing_disbursement" | "card";
+
+export interface SalesApproval {
+  id: string;
+  so_id: string;
+  so_code: string;
+  customer: string;
+  vehicle: string;
+  amount: number;
+  discount_pct: number;
+  requested_by: string;
+  requested_at: string;
+  status: SalesApprovalStatus;
+  approver?: string;
+  decided_at?: string;
+  note?: string;
+}
+
+export interface SalesInvoice {
+  id: string;
+  code: string;            // SINV-2026-0001
+  so_id: string;
+  so_code: string;
+  customer: string;
+  vehicle: string;
+  vin?: string;
+  branch: string;
+  issued_at: string;
+  due_date: string;
+  subtotal: number;
+  vat_amount: number;
+  total: number;
+  paid: number;
+  status: SalesInvoiceStatus;
+  notes?: string;
+}
+
+export interface SalesPayment {
+  id: string;
+  code: string;            // SPAY-2026-0001
+  invoice_id: string;
+  amount: number;
+  method: SalesPaymentMethod;
+  reference?: string;
+  paid_at: string;
+  notes?: string;
 }
 
 interface DB {
@@ -120,7 +169,11 @@ interface DB {
   reservations: ReservationRecord[];
   deliveries: DeliveryRecord[];
   financings: FinancingApplication[];
+  approvals: SalesApproval[];
+  invoices: SalesInvoice[];
+  payments: SalesPayment[];
 }
+
 
 /* ============================ Storage ============================ */
 
