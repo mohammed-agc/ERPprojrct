@@ -8,11 +8,11 @@ import { Search, Check, X, Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
   purchasingService, PR_LABEL, PR_TONE, URGENCY_LABEL, URGENCY_TONE,
-import {
-  purchasingService, PR_LABEL, PR_TONE, URGENCY_LABEL, URGENCY_TONE,
   fmtSAR, fmtDate, type PRStatus,
 } from "@/services/erp/purchasing";
 import { PurchaseRequestDialog } from "@/components/erp/PurchaseRequestDialog";
+
+const STATUS_OPTS: { value: PRStatus | "all"; label: string }[] = [
 
   { value: "all", label: "كل الحالات" },
   { value: "draft", label: PR_LABEL.draft },
