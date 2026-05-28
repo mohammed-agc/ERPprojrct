@@ -215,7 +215,7 @@ export default function SalesOrderDetail() {
   const canEditLines = canPerform("edit_lines", state, role).allowed;
 
   const setStatus = async (next: SalesOrderState, msg: string) => {
-    const { error } = await supabase.from("sales_orders").update({ status: next }).eq("id", id);
+    const { error } = await supabase.from("sales_orders").update({ status: next as any }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success(msg);
     load();
