@@ -33,11 +33,33 @@ export default function Invoices() {
   const [activeInvoice, setActiveInvoice] = useState<PaymentInvoiceContext | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const load = () => {
-    supabase.from("invoices").select("*, customers(name)").order("invoice_date", { ascending: false })
-      .then(({ data }) => setRows(data ?? []));
+  const load = async () => {
+    const { data: invs } = await supabase
+      .from("invoices")
+      .select("*, customers(name)")
+      .order("invoice_date", { ascending: false });
+    const list = invs ?? [];
+    // Vehicle enrichment: collect distinct sales_order_ids → lines → vehicles
+    const soIds = Array.from(new Set(list.map(i => i.sales_order_id).filter(Boolean)));
+    let vehiclesByInvoice: Record<string, any[]> = {};
+    if (soIds.length > 0) {
+      const { data: lines } = await supabase
+        .from("sales_order_lines")
+        .select("order_id, vehicle_id, vehicles(id, vin, brand, model, year, color, name)")
+        .in("order_id", soIds);
+      const linesBySo: Record<string, any[]> = {};
+      (lines ?? []).forEach((l: any) => {
+        if (!l.vehicles) return;
+        (linesBySo[l.order_id] ??= []).push(l.vehicles);
+      });
+      list.forEach(i => {
+        if (i.sales_order_id) vehiclesByInvoice[i.id] = linesBySo[i.sales_order_id] ?? [];
+      });
+    }
+    setRows(list.map(i => ({ ...i, _vehicles: vehiclesByInvoice[i.id] ?? [] })));
   };
   useEffect(() => { load(); }, []);
+
 
   const openPayment = (r: any) => {
     setActiveInvoice({
