@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ErpSessionProvider } from "@/contexts/ErpSessionContext";
 import AppLayout from "@/components/layout/AppLayout";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -29,6 +30,7 @@ const App = () => (
       <Sonner position="top-center" dir="rtl" />
       <BrowserRouter>
         <AuthProvider>
+          <ErpSessionProvider>
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route element={<AppLayout />}>
