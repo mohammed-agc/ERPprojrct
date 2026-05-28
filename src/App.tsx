@@ -74,6 +74,13 @@ const SalesDeliveries = lazy(() => import("./pages/sales/Deliveries"));
 const SalesFinancing = lazy(() => import("./pages/sales/Financing"));
 const SalesAnalytics = lazy(() => import("./pages/sales/SalesAnalytics"));
 const CustomerTimeline = lazy(() => import("./pages/sales/CustomerTimeline"));
+const InventoryDashboard = lazy(() => import("./pages/inventory/InventoryDashboard"));
+const InventoryWarehouses = lazy(() => import("./pages/inventory/Warehouses"));
+const InventoryVehicles = lazy(() => import("./pages/inventory/VehicleInventory"));
+const InventoryParts = lazy(() => import("./pages/inventory/PartsInventory"));
+const InventoryMovements = lazy(() => import("./pages/inventory/Movements"));
+const InventoryReservations = lazy(() => import("./pages/inventory/Reservations"));
+const InventoryTransfers = lazy(() => import("./pages/inventory/Transfers"));
 
 
 import { ErpAuthError } from "@/services/erp";
