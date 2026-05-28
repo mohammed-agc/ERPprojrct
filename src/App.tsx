@@ -15,6 +15,9 @@ import SalesOrderDetail from "./pages/SalesOrderDetail";
 import Invoices from "./pages/Invoices";
 import Accounts from "./pages/Accounts";
 import Journals from "./pages/Journals";
+import JournalDetail from "./pages/JournalDetail";
+import GeneralLedger from "./pages/GeneralLedger";
+import TrialBalance from "./pages/TrialBalance";
 import UsersAdmin from "./pages/UsersAdmin";
 import Organization from "./pages/Organization";
 import Permissions from "./pages/Permissions";
@@ -62,6 +65,9 @@ const App = () => (
               <Route path="/invoices" element={<Invoices />} />
               <Route path="/accounts" element={<Accounts />} />
               <Route path="/journals" element={<Journals />} />
+              <Route path="/journals/:id" element={<JournalDetail />} />
+              <Route path="/general-ledger" element={<GeneralLedger />} />
+              <Route path="/trial-balance" element={<TrialBalance />} />
               <Route path="/users" element={<UsersAdmin />} />
               <Route path="/organization" element={<Organization />} />
               <Route path="/permissions" element={<Permissions />} />
