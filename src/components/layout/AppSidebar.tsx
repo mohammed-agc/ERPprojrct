@@ -13,6 +13,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { governanceService } from "@/services/erp/governance";
 import { purchasingService } from "@/services/erp/purchasing";
+import { salesService } from "@/services/erp/sales";
+
 
 interface NavItem {
   label: string;
