@@ -18,15 +18,17 @@ import {
 import {
   ArrowRight, Car, Tag, Wrench, Truck, ShoppingCart, ArrowDownToLine, RotateCcw,
   Image as ImageIcon, FileText, Upload, X, AlertTriangle, BookmarkPlus, BookmarkX, Settings2, Trash2,
-  ClipboardCheck, UserCheck, PackageCheck, KeyRound, ShieldCheck,
+  ClipboardCheck, UserCheck, PackageCheck, KeyRound, ShieldCheck, FileSearch, Wallet, Building2, XCircle, CheckCircle2,
 } from "lucide-react";
 import {
   parseVehicleMeta, serializeVehicleMeta, reservationDaysLeft, effectiveStatus, deliveryProgress,
-  DELIVERY_CHECKLIST_KEYS, DeliveryChecklistKey, VehicleMeta, EffectiveStatus,
+  landedCost, isInProcurement,
+  DELIVERY_CHECKLIST_KEYS, DeliveryChecklistKey, VehicleMeta, EffectiveStatus, ProcurementState,
 } from "@/lib/vehicleMeta";
 import {
-  VEHICLE_STATUS_LABEL, VEHICLE_STATUS_CLASS, OVERLAY_STATUSES,
+  VEHICLE_STATUS_LABEL, VEHICLE_STATUS_CLASS, OVERLAY_STATUSES, PROCUREMENT_STATE_LABEL,
 } from "@/lib/vehicleStatus";
+import { ProcurementWorkflow } from "@/components/erp/ProcurementWorkflow";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
