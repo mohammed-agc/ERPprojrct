@@ -83,6 +83,10 @@ export type ContactMeta = {
   // financial
   payment_terms_days?: number;       // net X days
   credit_limit?: number;
+
+  // supplier linkage (when this contact has the vendor role)
+  supplier_link_id?: string;         // links to purchasingService supplier id
+
   preferred_payment?: PaymentMethod;
   risk_class?: RiskClass;
   opening_balance?: number;
