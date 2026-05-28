@@ -21,7 +21,9 @@ import {
   ADDRESS_KIND_LABELS, parseContactMeta, serializeContactMeta,
   formatSaudiAddress, hasRole, toggleRole, complianceScore,
 } from "@/lib/contactMeta";
+import { SupplierIntelligence } from "@/components/erp/SupplierIntelligence";
 import { cn } from "@/lib/utils";
+
 
 const TYPE_ICONS: Record<ContactType, any> = {
   individual: Users, company: Building2, government: Landmark,
@@ -141,7 +143,14 @@ export default function ContactDetail() {
           <TabsTrigger value="financial" className="text-xs">المالي والائتمان</TabsTrigger>
           <TabsTrigger value="related" className="text-xs">جهات مرتبطة</TabsTrigger>
           <TabsTrigger value="timeline" className="text-xs">السجل ERP</TabsTrigger>
+          {hasRole(meta, "vendor") && (
+            <TabsTrigger value="supplier" className="text-xs gap-1">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              ذكاء المورد
+            </TabsTrigger>
+          )}
         </TabsList>
+
 
         {/* ---------- Overview ---------- */}
         <TabsContent value="overview" className="space-y-3">
@@ -486,7 +495,15 @@ export default function ContactDetail() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* ---------- Supplier Intelligence (vendor role only) ---------- */}
+        {hasRole(meta, "vendor") && (
+          <TabsContent value="supplier">
+            <SupplierIntelligence meta={meta} onChange={setMeta} />
+          </TabsContent>
+        )}
       </Tabs>
+
     </div>
   );
 }
