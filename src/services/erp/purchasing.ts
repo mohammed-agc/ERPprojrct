@@ -742,6 +742,8 @@ export const purchasingService = {
       total: items.reduce((s, i) => s + i.qty * i.unit_cost, 0),
       created_at: isoNow(),
       approved_at: input.submit ? isoNow() : undefined,
+      audit: [makeAudit({ role: "purchasing_officer", action: "إنشاء أمر الشراء", to_status: input.submit ? "approved" : "draft" })],
+      approvals: input.submit ? [makeApproval({ role: "purchasing_manager", decision: "approved", note: "اعتماد فوري عند الإنشاء" })] : [],
     };
     db.pos.unshift(po); save(db); return po;
   },
@@ -751,7 +753,6 @@ export const purchasingService = {
     const db = load();
     const po = db.pos.find(p => p.id === id); if (!po) return;
     if (po.status !== "draft") return;
-    // keep status as draft but mark as pending via approved_at undefined; UI uses status==="draft" + flag
     save(db);
   },
   approvePO(id: string, approver = "م. عبدالله") {
@@ -759,14 +760,21 @@ export const purchasingService = {
     const po = db.pos.find(p => p.id === id); if (!po) return;
     if (po.status === "draft") {
       po.status = "approved"; po.approved_at = isoNow();
+      po.audit = [...(po.audit ?? []), makeAudit({ role: "purchasing_manager", actor: approver, action: "اعتماد أمر الشراء", from_status: "draft", to_status: "approved" })];
+      po.approvals = [...(po.approvals ?? []), makeApproval({ role: "purchasing_manager", actor: approver, decision: "approved" })];
       save(db);
     }
   },
-  rejectPO(id: string) {
+  rejectPO(id: string, approver = "م. عبدالله", note?: string) {
     const db = load();
     const po = db.pos.find(p => p.id === id); if (!po) return;
-    po.status = "cancelled"; save(db);
+    const from = po.status;
+    po.status = "cancelled";
+    po.audit = [...(po.audit ?? []), makeAudit({ role: "purchasing_manager", actor: approver, action: "إلغاء أمر الشراء", from_status: from, to_status: "cancelled", note })];
+    po.approvals = [...(po.approvals ?? []), makeApproval({ role: "purchasing_manager", actor: approver, decision: "rejected", note })];
+    save(db);
   },
+
 
   /** Convert an approved PR into a fresh PO (draft state, prefilled). */
   convertPRToPO(prId: string, input: {
