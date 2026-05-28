@@ -38,10 +38,14 @@ const groups: { title: string; items: NavItem[] }[] = [
   {
     title: "المحاسبة",
     items: [
+      { label: "مركز التقارير", to: "/finance", icon: PieChart, deptCode: "accounting" },
       { label: "دليل الحسابات", to: "/accounts", icon: BookOpen, deptCode: "accounting" },
       { label: "قيود اليومية", to: "/journals", icon: Calculator, deptCode: "accounting" },
       { label: "دفتر الأستاذ", to: "/general-ledger", icon: BookText, deptCode: "accounting" },
       { label: "ميزان المراجعة", to: "/trial-balance", icon: Scale, deptCode: "accounting" },
+      { label: "قائمة الدخل", to: "/income-statement", icon: TrendingUp, deptCode: "accounting" },
+      { label: "الميزانية العمومية", to: "/balance-sheet", icon: Scale, deptCode: "accounting" },
+      { label: "التدفقات النقدية", to: "/cash-flow", icon: ArrowLeftRight, deptCode: "accounting" },
       { label: "الذمم المدينة", to: "/ar", icon: HandCoins, deptCode: "accounting" },
       { label: "الذمم الدائنة", to: "/ap", icon: Wallet, deptCode: "accounting" },
     ],
