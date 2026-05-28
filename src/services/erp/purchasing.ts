@@ -94,6 +94,8 @@ export interface PurchaseRequest {
   approved_at?: string;
   approver?: string;
   po_id?: string;
+  audit?: AuditEntry[];
+  approvals?: ApprovalEntry[];
 }
 
 export type PaymentTerm = "cash" | "net_30" | "net_60" | "net_90" | "credit_line";
@@ -115,7 +117,14 @@ export interface PurchaseOrder {
   ordered_at?: string;
   completed_at?: string;
   shipment_id?: string;
+  awaiting_supplier_at?: string;
+  supplier_confirmed_at?: string;
+  supplier_confirm_outcome?: "confirm_all" | "confirm_partial" | "model_change" | "qty_change" | "rejected";
+  supplier_confirm_note?: string;
+  audit?: AuditEntry[];
+  approvals?: ApprovalEntry[];
 }
+
 
 export interface Supplier {
   id: string;
