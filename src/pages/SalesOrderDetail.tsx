@@ -43,7 +43,7 @@ export default function SalesOrderDetail() {
     const [{ data: o }, { data: c }, { data: v }, { data: ls }] = await Promise.all([
       supabase.from("sales_orders").select("*, customers(name, vat_number)").eq("id", id).maybeSingle(),
       supabase.from("customers").select("id, name, code"),
-      supabase.from("vehicles").select("id, name, sale_price, status").eq("status", "available"),
+      supabase.from("vehicles").select("id, name, brand, model, year, vin, sale_price, status").eq("status", "available"),
       supabase.from("sales_order_lines").select("*").eq("order_id", id).order("line_no"),
     ]);
     setOrder(o); setCustomers(c ?? []); setVehicles(v ?? []);
