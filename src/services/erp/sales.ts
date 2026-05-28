@@ -112,6 +112,8 @@ export interface FinancingApplication {
   decided_at?: string;
   required_docs: { label: string; received: boolean }[];
   notes?: string;
+}
+
 
 export type SalesApprovalStatus = "pending" | "approved" | "rejected";
 export type SalesInvoiceStatus = "draft" | "issued" | "partially_paid" | "paid" | "cancelled";
