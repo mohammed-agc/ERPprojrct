@@ -105,9 +105,54 @@ const groups: { title: string; items: NavItem[] }[] = [
   },
 ];
 
+function BadgeDot({ count, tone }: { count: number; tone: "amber" | "rose" | "emerald" | "slate" }) {
+  if (count <= 0) return null;
+  const toneMap = {
+    amber: "bg-amber-500 text-white",
+    rose: "bg-rose-500 text-white",
+    emerald: "bg-emerald-500 text-white",
+    slate: "bg-slate-500 text-white",
+  };
+  return (
+    <span className={cn("inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full text-[9px] font-bold", toneMap[tone])}>
+      {count > 9 ? "9+" : count}
+    </span>
+  );
+}
+
 export function AppSidebar() {
   const { canAccessDept, isManager } = useAuth();
   const { pathname } = useLocation();
+  const [govCounts, setGovCounts] = useState<{
+    pending_approvals: number;
+    audit_alerts: number;
+    audit_warnings: number;
+    pending_close: number;
+    locked_periods: number;
+  } | null>(null);
+
+  useEffect(() => {
+    governanceService.dashboard().then(d => setGovCounts(d));
+  }, []);
+
+  const itemsWithBadge = (items: NavItem[]): NavItem[] => {
+    if (!govCounts) return items;
+    return items.map(it => {
+      if (it.to === "/governance/approvals") {
+        return { ...it, badge: { count: govCounts.pending_approvals, tone: "amber" as const } };
+      }
+      if (it.to === "/governance/audit") {
+        return { ...it, badge: { count: govCounts.audit_alerts + govCounts.audit_warnings, tone: "rose" as const } };
+      }
+      if (it.to === "/governance/monthly-close") {
+        return { ...it, badge: { count: govCounts.pending_close, tone: "amber" as const } };
+      }
+      if (it.to === "/governance/periods") {
+        return { ...it, badge: { count: govCounts.locked_periods, tone: "slate" as const } };
+      }
+      return it;
+    });
+  };
 
   return (
     <aside className="w-60 bg-sidebar text-sidebar-foreground border-l border-sidebar-border flex flex-col h-screen sticky top-0">
@@ -127,12 +172,15 @@ export function AppSidebar() {
         {groups.map((g) => {
           const visibleItems = g.items.filter(it => !it.deptCode || isManager || canAccessDept(it.deptCode));
           if (!visibleItems.length) return null;
+          const groupItems = g.title === "الحوكمة المالية" ? itemsWithBadge(visibleItems) : visibleItems;
+          const hasAlerts = groupItems.some(it => it.badge && it.badge.count > 0);
           return (
-            <div key={g.title} className="mb-3">
-              <div className="px-4 py-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted">
+            <div key={g.title} className={cn("mb-3", hasAlerts && "border-r-2 border-amber-400/40")}>
+              <div className="px-4 py-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted flex items-center gap-1.5">
                 {g.title}
+                {hasAlerts && <AlertTriangle className="h-3 w-3 text-amber-500" />}
               </div>
-              {visibleItems.map((it) => {
+              {groupItems.map((it) => {
                 const active = pathname === it.to;
                 const Icon = it.icon;
                 return (
@@ -146,7 +194,8 @@ export function AppSidebar() {
                     )}
                   >
                     <Icon className="h-4 w-4 flex-shrink-0" />
-                    <span>{it.label}</span>
+                    <span className="flex-1">{it.label}</span>
+                    {it.badge && <BadgeDot count={it.badge.count} tone={it.badge.tone} />}
                   </NavLink>
                 );
               })}
