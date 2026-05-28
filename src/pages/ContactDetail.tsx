@@ -99,14 +99,10 @@ export default function ContactDetail() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title={
-          <span className="flex items-center gap-2">
-            <TypeIcon className="h-5 w-5 text-primary" />
-            {row.name}
-          </span> as any
-        }
+        title={row.name}
         subtitle={
           <div className="flex flex-wrap items-center gap-2 text-xs">
+            <TypeIcon className="h-3.5 w-3.5 text-primary" />
             <span className="font-mono">{row.code}</span>
             <span>·</span>
             <span>{CONTACT_TYPE_LABELS[meta.contact_type ?? "company"]}</span>
