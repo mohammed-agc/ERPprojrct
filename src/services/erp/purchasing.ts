@@ -484,14 +484,43 @@ export const SHIPMENT_TONE: Record<ShipmentStatus, string> = {
 };
 
 export const RECV_LABEL: Record<ReceivingStatus, string> = {
-  pending: "بانتظار الاستلام", partial: "استلام جزئي",
-  received: "تم الاستلام", with_discrepancy: "بفروقات",
+  draft: "مسودة",
+  receiving: "قيد الاستلام",
+  pending: "بانتظار الاستلام",
+  partial: "استلام جزئي",
+  partially_received: "مستلم جزئياً",
+  received: "تم الاستلام",
+  with_discrepancy: "بفروقات",
+  awaiting_inspection: "بانتظار الفحص",
+  completed: "مكتمل",
+  cancelled: "ملغى",
 };
 export const RECV_TONE: Record<ReceivingStatus, string> = {
+  draft: "bg-muted text-muted-foreground border border-border",
+  receiving: "bg-primary/10 text-primary border border-primary/30",
   pending: "bg-muted text-muted-foreground border border-border",
   partial: "bg-warning/10 text-warning border border-warning/40",
+  partially_received: "bg-warning/10 text-warning border border-warning/40",
   received: "bg-success/10 text-success border border-success/40",
   with_discrepancy: "bg-destructive/10 text-destructive border border-destructive/40",
+  awaiting_inspection: "bg-primary/10 text-primary border border-primary/30",
+  completed: "bg-success/10 text-success border border-success/40",
+  cancelled: "bg-destructive/10 text-destructive border border-destructive/40",
+};
+
+export const DISCREPANCY_LABEL: Record<DiscrepancyKind, string> = {
+  missing: "كمية ناقصة",
+  damaged: "تالف",
+  wrong_item: "صنف خاطئ",
+  extra: "كمية زائدة",
+  supplier_issue: "خطأ من المورد",
+};
+export const DISCREPANCY_TONE: Record<DiscrepancyKind, string> = {
+  missing: "bg-warning/10 text-warning border border-warning/40",
+  damaged: "bg-destructive/10 text-destructive border border-destructive/40",
+  wrong_item: "bg-destructive/10 text-destructive border border-destructive/40",
+  extra: "bg-primary/10 text-primary border border-primary/30",
+  supplier_issue: "bg-destructive/10 text-destructive border border-destructive/40",
 };
 
 export const INSP_LABEL: Record<InspectionStatus, string> = {
