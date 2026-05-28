@@ -994,22 +994,28 @@ export const purchasingService = {
       || grn.items.some(i => i.condition !== "ok");
     grn.status = hasDisc ? "with_discrepancy" : "received";
     grn.completed_at = isoNow();
-    // mirror onto PO line received_qty
+    // mirror onto PO line received_qty (compute inline from in-memory db)
     const po = db.pos.find(p => p.id === grn.po_id);
     if (po) {
-      const totals = this.poReceivingProgress(grn.po_id);
-      totals.lines.forEach(l => {
-        const li = po.items.find(x => x.id === l.line_id);
-        if (li) li.received_qty = l.received;
+      const allGrns = db.grns.filter(g => g.po_id === po.id);
+      let orderedQty = 0, receivedQty = 0;
+      po.items.forEach(li => {
+        const recv = allGrns.reduce((s, g) => s + g.items
+          .filter(it => it.line_id === li.id && it.condition !== "missing" && it.condition !== "wrong_item")
+          .reduce((x, it) => x + (it.qty || 0), 0), 0);
+        li.received_qty = recv;
+        orderedQty += li.qty;
+        receivedQty += recv;
       });
-      if (totals.receivedQty >= totals.orderedQty) {
+      if (receivedQty >= orderedQty) {
         po.status = "completed";
         po.completed_at = isoNow();
-      } else if (totals.receivedQty > 0) {
+      } else if (receivedQty > 0) {
         po.status = "partially_received";
       }
     }
     save(db);
+  },
   },
 
   /** Hand-off GRN to Inspection — auto-creates an inspection record if missing. */
