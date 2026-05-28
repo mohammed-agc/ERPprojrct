@@ -196,15 +196,22 @@ export function AppSidebar() {
         if (it.to === "/governance/audit") return { ...it, badge: { count: govCounts.audit_alerts + govCounts.audit_warnings, tone: "rose" as const } };
         if (it.to === "/governance/monthly-close") return { ...it, badge: { count: govCounts.pending_close, tone: "amber" as const } };
         if (it.to === "/governance/periods") return { ...it, badge: { count: govCounts.locked_periods, tone: "slate" as const } };
-      }
       if (purCounts) {
         if (it.to === "/purchasing/requests") return { ...it, badge: { count: purCounts.pending_prs, tone: "amber" as const } };
         if (it.to === "/purchasing/inspection") return { ...it, badge: { count: purCounts.awaiting_inspection, tone: "amber" as const } };
         if (it.to === "/purchasing/shipments") return { ...it, badge: { count: purCounts.in_transit, tone: "slate" as const } };
         if (it.to === "/purchasing/credit") return { ...it, badge: { count: purCounts.over_limit, tone: "rose" as const } };
       }
+      if (salesCounts) {
+        if (it.to === "/sales/quotations") return { ...it, badge: { count: salesCounts.expiring_quotes + salesCounts.discount_pending, tone: "amber" as const } };
+        if (it.to === "/sales/reservations") return { ...it, badge: { count: salesCounts.reserved, tone: "amber" as const } };
+        if (it.to === "/sales/deliveries") return { ...it, badge: { count: salesCounts.pending_deliveries, tone: "slate" as const } };
+        if (it.to === "/sales/financing") return { ...it, badge: { count: salesCounts.fin_review, tone: "amber" as const } };
+      }
       return it;
     });
+  };
+
   };
 
   return (
