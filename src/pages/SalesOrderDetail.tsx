@@ -362,7 +362,7 @@ export default function SalesOrderDetail() {
             )}
             {lines.map((l, i) => {
               const onLastKey = (e: React.KeyboardEvent) => {
-                if (e.key === "Enter" && !canEditLines && i === lines.length - 1) {
+                if (e.key === "Enter" && canEditLines && i === lines.length - 1) {
                   e.preventDefault();
                   addLine();
                 }
@@ -395,7 +395,7 @@ export default function SalesOrderDetail() {
                 <td className="w-20"><input className="erp-input num text-left" type="number" value={l.vat_pct} onChange={e=>updateLine(i,{vat_pct:Number(e.target.value)})} disabled={!canEditLines} onKeyDown={onLastKey} /></td>
                 <td className="num text-left font-semibold w-32">{l.line_total.toLocaleString("ar-SA", { minimumFractionDigits: 2 })}</td>
                 <td className="w-20">
-                  {!canEditLines && (
+                  {canEditLines && (
                     <div className="flex items-center gap-0.5 justify-end">
                       <Button variant="ghost" size="icon" className="h-7 w-7" title="تكرار البند" onClick={()=>duplicateLine(i)}>
                         <Copy className="h-3.5 w-3.5 text-muted-foreground" />
@@ -410,7 +410,7 @@ export default function SalesOrderDetail() {
             );})}
           </tbody>
         </table>
-        {!canEditLines && (
+        {canEditLines && (
           <div className="p-2 border-t border-border bg-muted/30">
             <Button variant="ghost" size="sm" onClick={addLine}><Plus className="h-4 w-4 ml-1" /> إضافة بند</Button>
           </div>
