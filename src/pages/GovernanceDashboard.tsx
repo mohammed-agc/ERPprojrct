@@ -26,8 +26,8 @@ export default function GovernanceDashboard() {
     { label: "فترات مفتوحة", value: k.open_periods, icon: CalendarRange, tone: "text-emerald-600", to: "/governance/periods" },
     { label: "قيد الإقفال", value: k.pending_close, icon: Hourglass, tone: "text-amber-600", to: "/governance/monthly-close" },
     { label: "فترات مغلقة نهائياً", value: k.locked_periods, icon: Lock, tone: "text-rose-600", to: "/governance/periods" },
-    { label: "موافقات معلقة", value: k.pending_approvals, icon: ClipboardCheck, tone: "text-amber-600", to: "/governance/journal-approvals" },
-    { label: "موافقات مرفوضة", value: k.rejected_approvals, icon: FileWarning, tone: "text-rose-600", to: "/governance/journal-approvals" },
+    { label: "موافقات معلقة", value: k.pending_approvals, icon: ClipboardCheck, tone: "text-amber-600", to: "/governance/approvals" },
+    { label: "موافقات مرفوضة", value: k.rejected_approvals, icon: FileWarning, tone: "text-rose-600", to: "/governance/approvals" },
     { label: "تنبيهات حرجة", value: k.audit_alerts, icon: ShieldAlert, tone: "text-rose-600", to: "/governance/audit" },
     { label: "تحذيرات تدقيق", value: k.audit_warnings, icon: FileWarning, tone: "text-amber-600", to: "/governance/audit" },
     { label: "مهام متأخرة", value: k.overdue_tasks, icon: Hourglass, tone: "text-rose-600", to: "/governance/monthly-close" },
@@ -54,7 +54,7 @@ export default function GovernanceDashboard() {
         <div className="border rounded-lg bg-card overflow-hidden">
           <div className="px-4 py-2 border-b bg-muted/40 text-sm font-bold flex items-center justify-between">
             <span>أحدث طلبات الاعتماد</span>
-            <Link to="/governance/journal-approvals" className="text-xs text-primary">عرض الكل</Link>
+            <Link to="/governance/approvals" className="text-xs text-primary">عرض الكل</Link>
           </div>
           <ul className="divide-y">
             {approvals.length === 0 && <li className="p-4 text-sm text-muted-foreground text-center">لا توجد طلبات معلقة</li>}
