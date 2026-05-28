@@ -24,8 +24,9 @@ export type VehicleMeta = {
   supplier?: string;
   purchase_source?: string;
 
-  // ERP virtual status overlay (extends DB enum: delivered / maintenance / transit / returned)
-  status_overlay?: "delivered" | "maintenance" | "transit" | "returned" | "";
+  // ERP virtual status overlay
+  // Extends DB enum with: ready_for_delivery / delivered / maintenance / transit / returned
+  status_overlay?: "ready_for_delivery" | "delivered" | "maintenance" | "transit" | "returned" | "";
   status_overlay_at?: string;
   status_overlay_by?: string;
   status_overlay_note?: string;
@@ -42,9 +43,41 @@ export type VehicleMeta = {
     created_at?: string;
   };
 
+  // delivery workflow (UX contract for delivery & ownership)
+  delivery?: {
+    ready_at?: string;
+    ready_by?: string;
+    officer?: string;              // assigned delivery officer
+    invoice_no?: string;
+    payment_verified?: boolean;
+    checklist?: {
+      payment?: boolean;
+      id?: boolean;
+      insurance?: boolean;
+      registration?: boolean;
+      accessories?: boolean;
+      spare_key?: boolean;
+      inspection?: boolean;
+    };
+    customer_name?: string;
+    customer_id_number?: string;
+    customer_signature_name?: string;  // typed signature placeholder
+    delivered_at?: string;
+    delivered_by?: string;
+    note?: string;
+  };
+
+  // ownership transfer history
+  ownership?: {
+    current_owner?: string;
+    previous_owner?: string;
+    transferred_at?: string;
+    customer_id?: string;
+  };
+
   // media
   photos?: string[];            // public URLs in vehicle-media bucket
-  documents?: { name: string; url: string; size?: number; type?: string }[];
+  documents?: { name: string; url: string; size?: number; type?: string; kind?: "delivery_form" | "id_copy" | "insurance" | "registration" | "other" }[];
 
   note?: string;
 };
@@ -83,7 +116,7 @@ export function serializeVehicleMeta(meta: VehicleMeta): string {
 /** Effective ERP status: overlay wins if set, otherwise DB status. */
 export type EffectiveStatus =
   | "available" | "reserved" | "sold"
-  | "delivered" | "maintenance" | "transit" | "returned";
+  | "ready_for_delivery" | "delivered" | "maintenance" | "transit" | "returned";
 
 export function effectiveStatus(dbStatus: string, meta: VehicleMeta): EffectiveStatus {
   if (meta.status_overlay) return meta.status_overlay;
@@ -96,4 +129,17 @@ export function reservationDaysLeft(meta: VehicleMeta): number | null {
   if (!exp) return null;
   const ms = new Date(exp).getTime() - Date.now();
   return Math.ceil(ms / (1000 * 60 * 60 * 24));
+}
+
+/** Delivery checklist completion (0..1). */
+export const DELIVERY_CHECKLIST_KEYS = [
+  "payment", "id", "insurance", "registration", "accessories", "spare_key", "inspection",
+] as const;
+export type DeliveryChecklistKey = (typeof DELIVERY_CHECKLIST_KEYS)[number];
+
+export function deliveryProgress(meta: VehicleMeta): { done: number; total: number; pct: number } {
+  const cl = meta.delivery?.checklist ?? {};
+  const total = DELIVERY_CHECKLIST_KEYS.length;
+  const done = DELIVERY_CHECKLIST_KEYS.filter((k) => cl[k]).length;
+  return { done, total, pct: Math.round((done / total) * 100) };
 }

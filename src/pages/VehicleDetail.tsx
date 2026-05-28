@@ -18,13 +18,17 @@ import {
 import {
   ArrowRight, Car, Tag, Wrench, Truck, ShoppingCart, ArrowDownToLine, RotateCcw,
   Image as ImageIcon, FileText, Upload, X, AlertTriangle, BookmarkPlus, BookmarkX, Settings2, Trash2,
+  ClipboardCheck, UserCheck, PackageCheck, KeyRound, ShieldCheck,
 } from "lucide-react";
 import {
-  parseVehicleMeta, serializeVehicleMeta, reservationDaysLeft, effectiveStatus, VehicleMeta, EffectiveStatus,
+  parseVehicleMeta, serializeVehicleMeta, reservationDaysLeft, effectiveStatus, deliveryProgress,
+  DELIVERY_CHECKLIST_KEYS, DeliveryChecklistKey, VehicleMeta, EffectiveStatus,
 } from "@/lib/vehicleMeta";
 import {
   VEHICLE_STATUS_LABEL, VEHICLE_STATUS_CLASS, OVERLAY_STATUSES,
 } from "@/lib/vehicleStatus";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -36,12 +40,22 @@ const fmtDate = (s?: string) =>
   s ? new Date(s).toLocaleDateString("ar-SA", { dateStyle: "medium" }) : "—";
 
 type TimelineEvent = {
-  type: "purchase" | "reservation" | "release" | "sale" | "delivery" | "transfer" | "maintenance" | "return";
+  type: "purchase" | "reservation" | "release" | "sale" | "ready" | "delivery" | "transfer" | "maintenance" | "return" | "ownership";
   label: string;
   at: string;
   detail?: string;
   icon: any;
   tone: "default" | "success" | "warning" | "primary" | "destructive";
+};
+
+const CHECKLIST_LABEL: Record<DeliveryChecklistKey, string> = {
+  payment: "تحقق الدفع",
+  id: "تحقق الهوية",
+  insurance: "إكمال التأمين",
+  registration: "إكمال الاستمارة",
+  accessories: "تسليم الإكسسوارات",
+  spare_key: "تسليم المفتاح الاحتياطي",
+  inspection: "إنهاء الفحص",
 };
 
 export default function VehicleDetail() {
@@ -53,6 +67,7 @@ export default function VehicleDetail() {
   const [loading, setLoading] = useState(true);
   const [reserveOpen, setReserveOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
+  const [deliveryOpen, setDeliveryOpen] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
 
@@ -108,16 +123,38 @@ export default function VehicleDetail() {
     }
     if (meta.status_overlay_at && meta.status_overlay) {
       const labels: Record<string, { l: string; tone: TimelineEvent["tone"]; icon: any; type: TimelineEvent["type"] }> = {
-        delivered:   { l: "تسليم للعميل", tone: "success",     icon: Truck,   type: "delivery" },
-        maintenance: { l: "دخول الصيانة", tone: "warning",     icon: Wrench,  type: "maintenance" },
-        transit:     { l: "حركة ترانزيت", tone: "primary",     icon: Truck,   type: "transfer" },
-        returned:    { l: "ارتجاع",       tone: "destructive", icon: RotateCcw, type: "return" },
+        ready_for_delivery: { l: "تحضير للتسليم", tone: "primary",     icon: ClipboardCheck, type: "ready" },
+        delivered:          { l: "تسليم للعميل",  tone: "success",     icon: Truck,          type: "delivery" },
+        maintenance:        { l: "دخول الصيانة",  tone: "warning",     icon: Wrench,         type: "maintenance" },
+        transit:            { l: "حركة ترانزيت",  tone: "primary",     icon: Truck,          type: "transfer" },
+        returned:           { l: "ارتجاع",        tone: "destructive", icon: RotateCcw,      type: "return" },
       };
       const info = labels[meta.status_overlay];
       if (info) events.push({
         type: info.type, label: info.l, at: meta.status_overlay_at,
         detail: [meta.status_overlay_by, meta.status_overlay_note].filter(Boolean).join(" — "),
         icon: info.icon, tone: info.tone,
+      });
+    }
+    if (meta.delivery?.ready_at) {
+      events.push({
+        type: "ready", label: "جاهز للتسليم", at: meta.delivery.ready_at,
+        detail: [meta.delivery.officer && `الموظف: ${meta.delivery.officer}`, meta.delivery.invoice_no && `فاتورة ${meta.delivery.invoice_no}`].filter(Boolean).join(" · "),
+        icon: ClipboardCheck, tone: "primary",
+      });
+    }
+    if (meta.delivery?.delivered_at) {
+      events.push({
+        type: "delivery", label: "تم التسليم للعميل", at: meta.delivery.delivered_at,
+        detail: [meta.delivery.customer_name, meta.delivery.delivered_by && `بواسطة ${meta.delivery.delivered_by}`].filter(Boolean).join(" · "),
+        icon: Truck, tone: "success",
+      });
+    }
+    if (meta.ownership?.transferred_at) {
+      events.push({
+        type: "ownership", label: "نقل الملكية", at: meta.ownership.transferred_at,
+        detail: `${meta.ownership.previous_owner ?? "—"} → ${meta.ownership.current_owner ?? "—"}`,
+        icon: UserCheck, tone: "success",
       });
     }
     lines.forEach((l) => {
@@ -249,6 +286,13 @@ export default function VehicleDetail() {
             )}
             <Button size="sm" variant="outline" onClick={() => setStatusOpen(true)}>
               <Settings2 className="h-4 w-4 ml-1" /> تغيير الحالة
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => setDeliveryOpen(true)}
+              disabled={eff === "available" || eff === "returned"}
+            >
+              <Truck className="h-4 w-4 ml-1" /> التسليم
             </Button>
             <Button variant="ghost" size="sm" onClick={()=>nav("/vehicles")}>
               <ArrowRight className="h-4 w-4 ml-1" /> رجوع
@@ -429,6 +473,88 @@ export default function VehicleDetail() {
             )}
           </Card>
 
+          {/* Delivery panel */}
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-sm font-semibold flex items-center gap-2">
+                <ClipboardCheck className="h-4 w-4 text-primary" /> التسليم
+              </div>
+              <Button size="sm" variant="ghost" onClick={() => setDeliveryOpen(true)} disabled={eff === "available" || eff === "returned"}>
+                إدارة
+              </Button>
+            </div>
+            {(() => {
+              const d = meta.delivery;
+              const prog = deliveryProgress(meta);
+              if (!d && eff !== "ready_for_delivery" && eff !== "delivered") {
+                return (
+                  <div className="text-xs text-muted-foreground py-3 text-center border border-dashed border-border rounded-md">
+                    لم تبدأ عملية التسليم بعد.
+                  </div>
+                );
+              }
+              return (
+                <div className="space-y-3 text-sm">
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">قائمة التحقق</span>
+                      <span className="font-medium">{prog.done}/{prog.total}</span>
+                    </div>
+                    <Progress value={prog.pct} className="h-2" />
+                  </div>
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {DELIVERY_CHECKLIST_KEYS.map((k) => {
+                      const checked = !!d?.checklist?.[k];
+                      return (
+                        <div key={k} className="flex items-center gap-2 text-xs">
+                          {checked
+                            ? <ShieldCheck className="h-3.5 w-3.5 text-success" />
+                            : <span className="h-3.5 w-3.5 rounded-full border border-border" />}
+                          <span className={checked ? "text-foreground" : "text-muted-foreground"}>
+                            {CHECKLIST_LABEL[k]}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {d?.officer && <Row label="موظف التسليم" value={d.officer} />}
+                  {d?.invoice_no && <Row label="الفاتورة" value={d.invoice_no} mono />}
+                  {d?.ready_at && <Row label="جاهز منذ" value={fmtDateTime(d.ready_at)} />}
+                  {d?.delivered_at && <Row label="تم التسليم" value={fmtDateTime(d.delivered_at)} />}
+                  {d?.customer_signature_name && (
+                    <div className="border border-dashed border-border rounded-md p-2 text-xs">
+                      <div className="text-muted-foreground mb-0.5">توقيع العميل (مدخل اسمياً)</div>
+                      <div className="font-medium" style={{ fontFamily: "cursive" }}>{d.customer_signature_name}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </Card>
+
+          {/* Ownership panel */}
+          <Card className="p-4">
+            <div className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <UserCheck className="h-4 w-4 text-primary" /> الملكية
+            </div>
+            {meta.ownership?.current_owner ? (
+              <div className="space-y-2 text-sm">
+                <Row label="المالك الحالي" value={meta.ownership.current_owner} />
+                {meta.ownership.previous_owner && (
+                  <Row label="المالك السابق" value={meta.ownership.previous_owner} />
+                )}
+                {meta.ownership.transferred_at && (
+                  <Row label="تاريخ النقل" value={fmtDate(meta.ownership.transferred_at)} />
+                )}
+              </div>
+            ) : (
+              <div className="text-xs text-muted-foreground py-3 text-center border border-dashed border-border rounded-md">
+                المركبة ما زالت بملكية المعرض.
+              </div>
+            )}
+          </Card>
+
+
           {/* Timeline */}
           <Card className="p-4">
             <div className="text-sm font-semibold mb-3 flex items-center gap-2">
@@ -517,6 +643,74 @@ export default function VehicleDetail() {
           }
           const ok = await patchMeta(overlayPatch, dbStatus);
           if (ok) { toast.success("تم تحديث الحالة"); setStatusOpen(false); }
+        }}
+      />
+
+      {/* Delivery dialog */}
+      <DeliveryDialog
+        open={deliveryOpen}
+        onOpenChange={setDeliveryOpen}
+        meta={meta}
+        currentUser={profile?.full_name ?? ""}
+        defaultCustomerName={meta.reservation?.customer_name ?? linkedCustomer?.name ?? ""}
+        defaultInvoiceNo={meta.reservation?.sales_order_no ?? ""}
+        onMarkReady={async (payload) => {
+          const ok = await patchMeta(
+            {
+              delivery: {
+                ...(meta.delivery ?? {}),
+                ...payload,
+                ready_at: meta.delivery?.ready_at ?? new Date().toISOString(),
+                ready_by: profile?.full_name ?? "",
+              },
+              status_overlay: "ready_for_delivery",
+              status_overlay_at: new Date().toISOString(),
+              status_overlay_by: profile?.full_name ?? "",
+              status_overlay_note: undefined,
+            },
+            "sold",
+          );
+          if (ok) toast.success("المركبة جاهزة للتسليم");
+        }}
+        onComplete={async (payload) => {
+          const now = new Date().toISOString();
+          const ok = await patchMeta(
+            {
+              delivery: {
+                ...(meta.delivery ?? {}),
+                ...payload,
+                delivered_at: now,
+                delivered_by: profile?.full_name ?? "",
+              },
+              ownership: {
+                current_owner: payload.customer_name ?? meta.delivery?.customer_name ?? "",
+                previous_owner: meta.ownership?.current_owner ?? "المعرض",
+                transferred_at: now,
+              },
+              status_overlay: "delivered",
+              status_overlay_at: now,
+              status_overlay_by: profile?.full_name ?? "",
+              status_overlay_note: "تم التسليم",
+            },
+            "sold",
+          );
+          if (ok) { toast.success("تم تسليم المركبة ونقل الملكية"); setDeliveryOpen(false); }
+        }}
+        onReturn={async (note) => {
+          const now = new Date().toISOString();
+          const ok = await patchMeta(
+            {
+              status_overlay: "returned",
+              status_overlay_at: now,
+              status_overlay_by: profile?.full_name ?? "",
+              status_overlay_note: note,
+              ownership: meta.ownership
+                ? { ...meta.ownership, previous_owner: meta.ownership.current_owner, current_owner: "المعرض", transferred_at: now }
+                : undefined,
+            },
+            "available",
+          );
+          if (ok) { toast.success("تم تسجيل ارتجاع المركبة"); setDeliveryOpen(false); }
         }}
       />
     </div>
@@ -707,4 +901,187 @@ function orderStatusLabel(s: string) {
   if (s === "invoiced") return "مفوتر";
   if (s === "cancelled") return "ملغي";
   return s;
+}
+
+/* ---------------- Delivery dialog ---------------- */
+
+type DeliveryPayload = {
+  officer?: string;
+  invoice_no?: string;
+  customer_name?: string;
+  customer_id_number?: string;
+  customer_signature_name?: string;
+  checklist?: VehicleMeta["delivery"]["checklist"];
+  payment_verified?: boolean;
+  note?: string;
+};
+
+function DeliveryDialog({
+  open, onOpenChange, meta, currentUser, defaultCustomerName, defaultInvoiceNo,
+  onMarkReady, onComplete, onReturn,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  meta: VehicleMeta;
+  currentUser: string;
+  defaultCustomerName: string;
+  defaultInvoiceNo: string;
+  onMarkReady: (p: DeliveryPayload) => void;
+  onComplete: (p: DeliveryPayload) => void;
+  onReturn: (note?: string) => void;
+}) {
+  const existing = meta.delivery;
+  const [officer, setOfficer] = useState(existing?.officer ?? currentUser);
+  const [invoiceNo, setInvoiceNo] = useState(existing?.invoice_no ?? defaultInvoiceNo);
+  const [customerName, setCustomerName] = useState(existing?.customer_name ?? defaultCustomerName);
+  const [customerId, setCustomerId] = useState(existing?.customer_id_number ?? "");
+  const [signature, setSignature] = useState(existing?.customer_signature_name ?? "");
+  const [note, setNote] = useState(existing?.note ?? "");
+  const [returnNote, setReturnNote] = useState("");
+  const [checklist, setChecklist] = useState<NonNullable<VehicleMeta["delivery"]>["checklist"]>(
+    existing?.checklist ?? {},
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    setOfficer(existing?.officer ?? currentUser);
+    setInvoiceNo(existing?.invoice_no ?? defaultInvoiceNo);
+    setCustomerName(existing?.customer_name ?? defaultCustomerName);
+    setCustomerId(existing?.customer_id_number ?? "");
+    setSignature(existing?.customer_signature_name ?? "");
+    setNote(existing?.note ?? "");
+    setChecklist(existing?.checklist ?? {});
+    setReturnNote("");
+  }, [open, existing, currentUser, defaultCustomerName, defaultInvoiceNo]);
+
+  const buildPayload = (): DeliveryPayload => ({
+    officer: officer.trim(),
+    invoice_no: invoiceNo.trim(),
+    customer_name: customerName.trim(),
+    customer_id_number: customerId.trim(),
+    customer_signature_name: signature.trim(),
+    checklist,
+    payment_verified: !!checklist?.payment,
+    note: note.trim() || undefined,
+  });
+
+  const done = DELIVERY_CHECKLIST_KEYS.filter((k) => checklist?.[k]).length;
+  const ready = checklist?.payment && checklist?.id && customerName.trim().length > 0;
+  const canComplete = done === DELIVERY_CHECKLIST_KEYS.length && customerName.trim() && signature.trim();
+
+  const toggle = (k: DeliveryChecklistKey) =>
+    setChecklist((c) => ({ ...c, [k]: !c?.[k] }));
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>سير عمل التسليم</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Authorization */}
+          <section>
+            <div className="text-xs font-semibold text-muted-foreground mb-2">الترخيص والمسؤول</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>موظف التسليم</Label>
+                <Input value={officer} onChange={(e) => setOfficer(e.target.value)} />
+              </div>
+              <div>
+                <Label>رقم الفاتورة</Label>
+                <Input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} dir="ltr" />
+              </div>
+            </div>
+          </section>
+
+          {/* Customer */}
+          <section>
+            <div className="text-xs font-semibold text-muted-foreground mb-2">العميل المستلم</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>اسم العميل</Label>
+                <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+              </div>
+              <div>
+                <Label>رقم الهوية</Label>
+                <Input value={customerId} onChange={(e) => setCustomerId(e.target.value)} dir="ltr" />
+              </div>
+            </div>
+          </section>
+
+          {/* Checklist */}
+          <section>
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                <ClipboardCheck className="h-3.5 w-3.5" /> قائمة التحقق التشغيلية
+              </div>
+              <div className="text-xs text-muted-foreground">{done}/{DELIVERY_CHECKLIST_KEYS.length}</div>
+            </div>
+            <Progress value={(done / DELIVERY_CHECKLIST_KEYS.length) * 100} className="h-1.5 mb-2" />
+            <div className="grid grid-cols-2 gap-2">
+              {DELIVERY_CHECKLIST_KEYS.map((k) => (
+                <label
+                  key={k}
+                  className="flex items-center gap-2 px-3 py-2 border border-border rounded-md text-sm cursor-pointer hover:bg-accent/50"
+                >
+                  <Checkbox checked={!!checklist?.[k]} onCheckedChange={() => toggle(k)} />
+                  <span>{CHECKLIST_LABEL[k]}</span>
+                  {k === "spare_key" && <KeyRound className="h-3.5 w-3.5 text-muted-foreground mr-auto" />}
+                  {k === "payment" && <PackageCheck className="h-3.5 w-3.5 text-muted-foreground mr-auto" />}
+                </label>
+              ))}
+            </div>
+          </section>
+
+          {/* Signature */}
+          <section>
+            <div className="text-xs font-semibold text-muted-foreground mb-2">توقيع العميل</div>
+            <Input
+              value={signature}
+              onChange={(e) => setSignature(e.target.value)}
+              placeholder="اكتب اسم العميل كتوقيع رقمي"
+              className="font-medium"
+              style={{ fontFamily: "cursive" }}
+            />
+            <div className="text-[11px] text-muted-foreground mt-1">
+              التوقيع الفعلي على المستند الورقي يُرفع في قسم المستندات.
+            </div>
+          </section>
+
+          <section>
+            <Label>ملاحظات التسليم</Label>
+            <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
+          </section>
+
+          {/* Return action (advanced) */}
+          <section className="border border-destructive/30 bg-destructive/5 rounded-md p-3">
+            <div className="text-xs font-semibold text-destructive mb-2">ارتجاع</div>
+            <div className="flex gap-2">
+              <Input
+                value={returnNote}
+                onChange={(e) => setReturnNote(e.target.value)}
+                placeholder="سبب الارتجاع (اختياري)"
+              />
+              <Button variant="destructive" size="sm" onClick={() => onReturn(returnNote.trim() || undefined)}>
+                <RotateCcw className="h-4 w-4 ml-1" /> ارتجاع
+              </Button>
+            </div>
+          </section>
+        </div>
+
+        <DialogFooter className="flex justify-between sm:justify-between">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>إغلاق</Button>
+          <div className="flex gap-2">
+            <Button variant="outline" disabled={!ready} onClick={() => onMarkReady(buildPayload())}>
+              <ClipboardCheck className="h-4 w-4 ml-1" /> جاهز للتسليم
+            </Button>
+            <Button disabled={!canComplete} onClick={() => onComplete(buildPayload())}>
+              <Truck className="h-4 w-4 ml-1" /> إتمام التسليم
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
