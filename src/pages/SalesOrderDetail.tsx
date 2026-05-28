@@ -13,6 +13,7 @@ import { ProductCombobox } from "@/components/erp/ProductCombobox";
 import { WorkflowStepper } from "@/components/erp/WorkflowStepper";
 import { ActionButton } from "@/components/erp/ActionButton";
 import { RoleSwitcher } from "@/components/erp/RoleSwitcher";
+import { EmptyState } from "@/components/erp/EmptyState";
 import { canPerform, ErpRole, SalesOrderState, STATE_LABELS } from "@/lib/erpPermissions";
 import { Banknote, Truck, XCircle, Printer } from "lucide-react";
 
