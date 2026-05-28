@@ -33,11 +33,33 @@ export default function Invoices() {
   const [activeInvoice, setActiveInvoice] = useState<PaymentInvoiceContext | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const load = () => {
-    supabase.from("invoices").select("*, customers(name)").order("invoice_date", { ascending: false })
-      .then(({ data }) => setRows(data ?? []));
+  const load = async () => {
+    const { data: invs } = await supabase
+      .from("invoices")
+      .select("*, customers(name)")
+      .order("invoice_date", { ascending: false });
+    const list = invs ?? [];
+    // Vehicle enrichment: collect distinct sales_order_ids → lines → vehicles
+    const soIds = Array.from(new Set(list.map(i => i.sales_order_id).filter(Boolean)));
+    let vehiclesByInvoice: Record<string, any[]> = {};
+    if (soIds.length > 0) {
+      const { data: lines } = await supabase
+        .from("sales_order_lines")
+        .select("order_id, vehicle_id, vehicles(id, vin, brand, model, year, color, name)")
+        .in("order_id", soIds);
+      const linesBySo: Record<string, any[]> = {};
+      (lines ?? []).forEach((l: any) => {
+        if (!l.vehicles) return;
+        (linesBySo[l.order_id] ??= []).push(l.vehicles);
+      });
+      list.forEach(i => {
+        if (i.sales_order_id) vehiclesByInvoice[i.id] = linesBySo[i.sales_order_id] ?? [];
+      });
+    }
+    setRows(list.map(i => ({ ...i, _vehicles: vehiclesByInvoice[i.id] ?? [] })));
   };
   useEffect(() => { load(); }, []);
+
 
   const openPayment = (r: any) => {
     setActiveInvoice({
@@ -84,6 +106,7 @@ export default function Invoices() {
               <th>رقم الفاتورة</th>
               <th>التاريخ</th>
               <th>العميل</th>
+              <th>المركبة / VIN</th>
               <th className="text-left">قبل الضريبة</th>
               <th className="text-left">VAT 15%</th>
               <th className="text-left">الإجمالي</th>
@@ -95,7 +118,7 @@ export default function Invoices() {
           </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td colSpan={10} className="text-center text-muted-foreground py-8">لا توجد فواتير</td></tr>
+              <tr><td colSpan={11} className="text-center text-muted-foreground py-8">لا توجد فواتير</td></tr>
             )}
             {rows.map(r => {
               const woState = r.status === "paid" ? "paid" : "invoiced";
@@ -104,11 +127,32 @@ export default function Invoices() {
               const paidSoFar = r.status === "paid" ? total : (paymentLedger[r.id] ?? 0);
               const payStatus: "unpaid" | "partial" | "paid" =
                 paidSoFar <= 0 ? "unpaid" : paidSoFar >= total ? "paid" : "partial";
+              const vehs: any[] = r._vehicles ?? [];
               return (
                 <tr key={r.id}>
                   <td className="font-mono">{r.invoice_no}</td>
                   <td className="num">{r.invoice_date}</td>
                   <td>{r.customers?.name ?? "—"}</td>
+                  <td className="text-xs">
+                    {vehs.length === 0 ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : vehs.length === 1 ? (
+                      <div>
+                        <div className="font-medium">{vehs[0].brand} {vehs[0].model} <span className="num text-muted-foreground">{vehs[0].year}</span></div>
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                          <span className="font-mono" dir="ltr">VIN: {vehs[0].vin || "—"}</span>
+                          {vehs[0].color && <span>· {vehs[0].color}</span>}
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="font-medium">{vehs.length} مركبات</div>
+                        <div className="text-[10px] text-muted-foreground truncate max-w-[180px]" title={vehs.map(v => v.vin).join(", ")}>
+                          {vehs.slice(0, 2).map(v => v.vin || v.brand).join(" · ")}{vehs.length > 2 && " ..."}
+                        </div>
+                      </div>
+                    )}
+                  </td>
                   <td className="num text-left">{Number(r.subtotal).toLocaleString("ar-SA", {minimumFractionDigits:2})}</td>
                   <td className="num text-left">{Number(r.vat_amount).toLocaleString("ar-SA", {minimumFractionDigits:2})}</td>
                   <td className="num text-left font-bold">{total.toLocaleString("ar-SA", {minimumFractionDigits:2})}</td>
@@ -130,6 +174,7 @@ export default function Invoices() {
                 </tr>
               );
             })}
+
           </tbody>
         </table>
       </div>

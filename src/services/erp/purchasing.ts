@@ -143,7 +143,10 @@ export interface InspectionRecord {
   completed_at?: string;
   notes?: string;
   items: { line_id: string; passed: number; failed: number; remarks?: string }[];
+  /** vehicle ids created in the `vehicles` table after approval (VIN governance) */
+  vehicle_ids?: string[];
 }
+
 
 interface DB {
   suppliers: Supplier[];
@@ -556,6 +559,15 @@ export const purchasingService = {
     if (grn) grn.inspection_status = status;
     save(db);
   },
+
+  /** Record vehicle inventory ids created from an approved inspection (VIN governance). */
+  recordVehicleIntake(inspectionId: string, vehicleIds: string[]) {
+    const db = load();
+    const i = db.inspections.find(x => x.id === inspectionId); if (!i) return;
+    i.vehicle_ids = [...(i.vehicle_ids ?? []), ...vehicleIds];
+    save(db);
+  },
+
 
   /* dashboards */
   dashboard() {

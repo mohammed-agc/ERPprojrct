@@ -3,15 +3,18 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, ShieldCheck, X, FileSearch, Info } from "lucide-react";
+import { Search, ShieldCheck, X, FileSearch, Info, Car, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  purchasingService, INSP_LABEL, INSP_TONE, fmtDate,
+  purchasingService, INSP_LABEL, INSP_TONE, fmtDate, type InspectionRecord, type PurchaseOrder,
 } from "@/services/erp/purchasing";
+import { VehicleIntakeDialog } from "@/components/erp/VehicleIntakeDialog";
 
 export default function Inspection() {
   const [tick, setTick] = useState(0);
   const [q, setQ] = useState("");
+  const [intakeOpen, setIntakeOpen] = useState(false);
+  const [intakeCtx, setIntakeCtx] = useState<{ ins: InspectionRecord; po: PurchaseOrder } | null>(null);
   const refresh = () => setTick(t => t + 1);
 
   const inspections = useMemo(() => purchasingService.listInspections(), [tick]);
@@ -33,6 +36,11 @@ export default function Inspection() {
     rejected: inspections.filter(i => i.status === "rejected").length,
   };
 
+  const openIntake = (ins: InspectionRecord, po: PurchaseOrder) => {
+    setIntakeCtx({ ins, po });
+    setIntakeOpen(true);
+  };
+
   return (
     <div>
       <PageHeader title="الفحص والاعتماد" subtitle="فحص البضائع المستلمة قبل إتاحتها للبيع" />
@@ -40,8 +48,8 @@ export default function Inspection() {
       <div className="bg-warning/5 border border-warning/30 rounded-lg p-3 mb-4 flex items-start gap-2 text-xs">
         <Info className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
         <div>
-          الأصناف لا تصبح <span className="font-semibold">متاحة للبيع</span> إلا بعد:
-          الاستلام → الفحص → الاعتماد → دخول المخزون.
+          المركبات لا تصبح <span className="font-semibold">متاحة للبيع</span> إلا بعد:
+          الاستلام → الفحص → الاعتماد → <span className="font-semibold">إدخال سجل المركبة بـ VIN فريد</span>.
         </div>
       </div>
 
@@ -69,18 +77,28 @@ export default function Inspection() {
               <th>تاريخ البدء</th>
               <th>نتائج الفحص</th>
               <th>الحالة</th>
+              <th>إدخال المخزون</th>
               <th>إجراءات</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={6} className="text-center text-muted-foreground py-8">لا توجد سجلات</td></tr>
+              <tr><td colSpan={7} className="text-center text-muted-foreground py-8">لا توجد سجلات</td></tr>
             )}
             {filtered.map(i => {
               const po = pos.find(p => p.id === i.po_id);
               const passed = i.items.reduce((s, x) => s + x.passed, 0);
               const failed = i.items.reduce((s, x) => s + x.failed, 0);
               const canDecide = i.status === "in_progress" || i.status === "pending";
+              const vehicleApproved = po
+                ? i.items.reduce((s, it) => {
+                    const line = po.items.find(l => l.id === it.line_id);
+                    return s + (line?.kind === "vehicle" ? (it.passed ?? 0) : 0);
+                  }, 0)
+                : 0;
+              const intaked = i.vehicle_ids?.length ?? 0;
+              const remaining = Math.max(0, vehicleApproved - intaked);
+              const canIntake = i.status === "approved" && po && remaining > 0;
               return (
                 <tr key={i.id}>
                   <td className="font-mono text-[11px]">
@@ -95,19 +113,42 @@ export default function Inspection() {
                     <span className="text-destructive font-semibold num">{failed}</span> راسب
                   </td>
                   <td><Badge className={INSP_TONE[i.status]}>{INSP_LABEL[i.status]}</Badge></td>
-                  <td>
-                    {canDecide && (
-                      <div className="flex gap-1">
-                        <Button size="sm" variant="ghost" className="h-7 px-2 text-success"
-                          onClick={() => { purchasingService.setInspectionStatus(i.id, "approved"); toast.success("تم اعتماد الفحص — الأصناف متاحة للبيع"); refresh(); }}>
-                          <ShieldCheck className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive"
-                          onClick={() => { purchasingService.setInspectionStatus(i.id, "rejected"); toast.error("تم رفض الفحص"); refresh(); }}>
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+                  <td className="text-xs">
+                    {vehicleApproved === 0 ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : intaked >= vehicleApproved ? (
+                      <span className="text-success inline-flex items-center gap-1">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        تم ({intaked}/{vehicleApproved})
+                      </span>
+                    ) : (
+                      <span className="text-warning inline-flex items-center gap-1">
+                        <Car className="h-3.5 w-3.5" />
+                        {intaked}/{vehicleApproved} — بانتظار {remaining}
+                      </span>
                     )}
+                  </td>
+                  <td>
+                    <div className="flex gap-1">
+                      {canDecide && (
+                        <>
+                          <Button size="sm" variant="ghost" className="h-7 px-2 text-success" title="اعتماد"
+                            onClick={() => { purchasingService.setInspectionStatus(i.id, "approved"); toast.success("تم اعتماد الفحص"); refresh(); }}>
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive" title="رفض"
+                            onClick={() => { purchasingService.setInspectionStatus(i.id, "rejected"); toast.error("تم رفض الفحص"); refresh(); }}>
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
+                      {canIntake && po && (
+                        <Button size="sm" variant="default" className="h-7 px-2 text-[11px]"
+                          onClick={() => openIntake(i, po)}>
+                          <Car className="h-3.5 w-3.5 ml-1" /> إدخال المخزون
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
@@ -115,6 +156,14 @@ export default function Inspection() {
           </tbody>
         </table>
       </div>
+
+      <VehicleIntakeDialog
+        open={intakeOpen}
+        onOpenChange={setIntakeOpen}
+        inspection={intakeCtx?.ins ?? null}
+        po={intakeCtx?.po ?? null}
+        onCreated={refresh}
+      />
     </div>
   );
 }
