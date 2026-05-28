@@ -631,6 +631,184 @@ export const purchasingService = {
     db.pos.unshift(po); save(db); return po;
   },
 
+  /** Submit a draft PO into the approval queue */
+  submitPOForApproval(id: string) {
+    const db = load();
+    const po = db.pos.find(p => p.id === id); if (!po) return;
+    if (po.status !== "draft") return;
+    // keep status as draft but mark as pending via approved_at undefined; UI uses status==="draft" + flag
+    save(db);
+  },
+  approvePO(id: string, approver = "م. عبدالله") {
+    const db = load();
+    const po = db.pos.find(p => p.id === id); if (!po) return;
+    if (po.status === "draft") {
+      po.status = "approved"; po.approved_at = isoNow();
+      save(db);
+    }
+  },
+  rejectPO(id: string) {
+    const db = load();
+    const po = db.pos.find(p => p.id === id); if (!po) return;
+    po.status = "cancelled"; save(db);
+  },
+
+  /** Convert an approved PR into a fresh PO (draft state, prefilled). */
+  convertPRToPO(prId: string, input: {
+    supplier_id: string; branch_destination?: string; expected_delivery?: string;
+    payment_term?: PaymentTerm; agreement_type?: "spot" | "framework" | "consignment";
+    submit?: boolean;
+  }): PurchaseOrder | undefined {
+    const db = load();
+    const pr = db.prs.find(p => p.id === prId);
+    if (!pr || pr.status !== "approved") return undefined;
+    const po = this.createPO({
+      supplier_id: input.supplier_id,
+      branch_destination: input.branch_destination ?? pr.branch,
+      expected_delivery: input.expected_delivery ?? addDays(14),
+      payment_term: input.payment_term ?? "net_30",
+      agreement_type: input.agreement_type ?? "spot",
+      items: pr.items.map(i => ({ kind: i.kind, description: i.description, qty: i.qty, unit_cost: i.unit_cost })),
+      pr_id: pr.id, submit: input.submit,
+    });
+    // mark PR as converted
+    const fresh = load();
+    const prx = fresh.prs.find(x => x.id === prId);
+    if (prx) { prx.status = "converted_to_po"; prx.po_id = po.id; save(fresh); }
+    return po;
+  },
+
+  /* ============ Purchase Invoices ============ */
+  listPurchaseInvoices(): PurchaseInvoice[] {
+    return load().invoices.slice().sort((a, b) => b.issued_at.localeCompare(a.issued_at));
+  },
+  getPurchaseInvoice(id: string) { return load().invoices.find(i => i.id === id); },
+  invoicesForPO(poId: string) { return load().invoices.filter(i => i.po_id === poId); },
+
+  /** Create a purchase invoice from an approved PO. */
+  createPurchaseInvoice(input: {
+    po_id: string; vat_pct?: number; due_date?: string; notes?: string;
+  }): PurchaseInvoice | undefined {
+    const db = load();
+    const po = db.pos.find(p => p.id === input.po_id);
+    if (!po) return undefined;
+    if (!["approved", "ordered", "partially_received", "completed"].includes(po.status)) return undefined;
+    const year = new Date().getFullYear();
+    const seq = db.invoices.filter(i => i.code.startsWith(`PINV-${year}`)).length + 44;
+    const vatPct = input.vat_pct ?? 15;
+    const subtotal = po.total;
+    const vat = Math.round(subtotal * (vatPct / 100));
+    const inv: PurchaseInvoice = {
+      id: uid("pinv"),
+      code: `PINV-${year}-${String(seq).padStart(4, "0")}`,
+      po_id: po.id, supplier_id: po.supplier_id,
+      issued_at: isoNow(),
+      due_date: input.due_date ?? addDays(po.payment_term === "cash" ? 0 : po.payment_term === "net_60" ? 60 : po.payment_term === "net_90" ? 90 : 30),
+      payment_term: po.payment_term,
+      subtotal, vat_amount: vat, total: subtotal + vat,
+      paid: 0, status: "issued", notes: input.notes,
+    };
+    db.invoices.unshift(inv);
+    // Advance PO into ordered state once invoice issued
+    if (po.status === "approved") po.status = "ordered", po.ordered_at = isoNow();
+    save(db);
+    return inv;
+  },
+
+  /* ============ Purchase Payments ============ */
+  listPurchasePayments(): PurchasePayment[] {
+    return load().payments.slice().sort((a, b) => b.paid_at.localeCompare(a.paid_at));
+  },
+  paymentsForInvoice(invoiceId: string) {
+    return load().payments.filter(p => p.invoice_id === invoiceId);
+  },
+  recordPurchasePayment(input: {
+    invoice_id: string; amount: number; method: PaymentMethod;
+    reference?: string; notes?: string;
+  }): PurchasePayment | undefined {
+    const db = load();
+    const inv = db.invoices.find(i => i.id === input.invoice_id);
+    if (!inv) return undefined;
+    if (inv.status === "paid" || inv.status === "cancelled") return undefined;
+    const remaining = inv.total - inv.paid;
+    const amount = Math.min(input.amount, remaining);
+    const year = new Date().getFullYear();
+    const seq = db.payments.filter(p => p.code.startsWith(`PPAY-${year}`)).length + 33;
+    const pay: PurchasePayment = {
+      id: uid("ppay"),
+      code: `PPAY-${year}-${String(seq).padStart(4, "0")}`,
+      invoice_id: inv.id, supplier_id: inv.supplier_id,
+      amount, method: input.method, reference: input.reference,
+      paid_at: isoNow(), notes: input.notes,
+    };
+    db.payments.unshift(pay);
+    inv.paid += amount;
+    inv.status = inv.paid >= inv.total ? "paid" : "partially_paid";
+    // Credit utilization affects supplier balance
+    if (input.method === "credit_utilization") {
+      const sup = db.suppliers.find(s => s.id === inv.supplier_id);
+      if (sup) sup.utilized = Math.max(0, sup.utilized - amount);
+    }
+    save(db);
+    return pay;
+  },
+
+  /** Aggregate paid total for a PO across all its invoices. */
+  poPaymentSummary(poId: string) {
+    const invs = this.invoicesForPO(poId);
+    const billed = invs.reduce((s, i) => s + i.total, 0);
+    const paid = invs.reduce((s, i) => s + i.paid, 0);
+    const fullyPaid = invs.length > 0 && invs.every(i => i.status === "paid");
+    const anyIssued = invs.some(i => i.status !== "draft" && i.status !== "cancelled");
+    return { billed, paid, fullyPaid, anyIssued, remaining: billed - paid };
+  },
+
+  /* ============ Workflow Gates ============ */
+  /** Receiving is allowed only after the PO is approved and an invoice is issued. */
+  canCreateGRN(poId: string): { allowed: boolean; reason?: string } {
+    const po = this.getPO(poId);
+    if (!po) return { allowed: false, reason: "أمر شراء غير موجود" };
+    if (po.status === "draft") return { allowed: false, reason: "الأمر بمسودة — لم يتم اعتماده بعد" };
+    if (po.status === "cancelled") return { allowed: false, reason: "الأمر ملغى" };
+    const inv = this.invoicesForPO(poId);
+    if (inv.length === 0) return { allowed: false, reason: "لم تُصدر فاتورة شراء لهذا الأمر بعد" };
+    return { allowed: true };
+  },
+  /** Inventory intake is allowed only after inspection is approved AND payment terms satisfied. */
+  canIntake(inspectionId: string): { allowed: boolean; reason?: string } {
+    const db = load();
+    const i = db.inspections.find(x => x.id === inspectionId);
+    if (!i) return { allowed: false, reason: "سجل الفحص غير موجود" };
+    if (i.status !== "approved") return { allowed: false, reason: "الفحص غير معتمد" };
+    const ps = this.poPaymentSummary(i.po_id);
+    const po = this.getPO(i.po_id);
+    // For cash/credit_line terms require full payment; for net terms allow on issued invoice.
+    if (po?.payment_term === "cash" && !ps.fullyPaid) {
+      return { allowed: false, reason: "شروط الدفع نقدي — يجب السداد الكامل قبل الإدخال" };
+    }
+    if (!ps.anyIssued) return { allowed: false, reason: "لم تُصدر فاتورة شراء بعد" };
+    return { allowed: true };
+  },
+
+  /** Determine the current workflow stage key for a PO. */
+  currentStage(poId: string): string {
+    const po = this.getPO(poId); if (!po) return "pr";
+    if (po.status === "cancelled") return "cancelled";
+    const insp = load().inspections.find(i => i.po_id === poId);
+    if (insp?.vehicle_ids && insp.vehicle_ids.length > 0) return "intake";
+    if (insp?.status === "approved") return "inspection";
+    if (insp) return "inspection";
+    const grn = load().grns.find(g => g.po_id === poId);
+    if (grn) return "receiving";
+    const ps = this.poPaymentSummary(poId);
+    if (ps.paid > 0) return "payment";
+    if (ps.anyIssued) return "invoice";
+    if (po.status === "approved" || po.status === "ordered") return "po_approved";
+    if (po.status === "draft") return "po";
+    return "po";
+  },
+
+
 
   /* shipments */
   listShipments(): Shipment[] {
