@@ -7,7 +7,7 @@ import {
   TrendingUp, ArrowLeftRight, PieChart, Landmark, ArrowDownCircle, ArrowUpCircle, CheckSquare,
   Vault, Banknote, Target, Layers, GitBranch, Share2, Gauge,
   Shield, CalendarRange, CalendarCheck, CalendarX, FileSearch, Lock, Hourglass, AlertTriangle,
-  ClipboardList, FileText, Ship, PackageCheck, Trophy, ShoppingBag
+  ClipboardList, FileText, Ship, PackageCheck, Trophy, ShoppingBag, Warehouse
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
