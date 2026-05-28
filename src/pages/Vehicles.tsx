@@ -132,7 +132,7 @@ export default function Vehicles() {
       supplier: form.supplier,
       note: form.note,
     };
-    const persistedStatus: StatusKey = PERSISTED_STATUSES.includes(form.status) ? form.status : "available";
+    const persistedStatus = (PERSISTED_STATUSES as readonly string[]).includes(form.status) ? form.status : "available";
     const { error } = await supabase.from("vehicles").insert({
       code: form.code,
       name: form.name,
