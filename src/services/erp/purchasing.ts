@@ -451,11 +451,12 @@ export const URGENCY_TONE: Record<Urgency, string> = {
 };
 
 export const PR_LABEL: Record<PRStatus, string> = {
-  draft: "مسودة", pending: "بانتظار الاعتماد", approved: "معتمد",
+  draft: "مسودة", confirmed: "مؤكد", pending: "بانتظار الاعتماد", approved: "معتمد",
   rejected: "مرفوض", converted_to_po: "تم تحويلها لأمر شراء",
 };
 export const PR_TONE: Record<PRStatus, string> = {
   draft: "bg-muted text-muted-foreground border border-border",
+  confirmed: "bg-primary/10 text-primary border border-primary/30",
   pending: "bg-warning/10 text-warning border border-warning/40",
   approved: "bg-success/10 text-success border border-success/40",
   rejected: "bg-destructive/10 text-destructive border border-destructive/40",
@@ -463,15 +464,39 @@ export const PR_TONE: Record<PRStatus, string> = {
 };
 
 export const PO_LABEL: Record<POStatus, string> = {
-  draft: "مسودة", approved: "معتمد", ordered: "تم الطلب",
-  partially_received: "مستلم جزئياً", completed: "مكتمل", cancelled: "ملغى",
+  draft: "مسودة",
+  approved: "معتمد",
+  awaiting_supplier_confirmation: "بانتظار تأكيد المورد",
+  allocation_pending: "بانتظار التخصيص",
+  ready_for_allocation: "جاهز للتخصيص",
+  allocated: "تم التخصيص",
+  invoiced: "مفوتر",
+  ordered: "تم الطلب",
+  partially_received: "مستلم جزئياً",
+  in_transit: "في الطريق",
+  received: "تم الاستلام",
+  inspection_pending: "بانتظار الفحص",
+  inventory_completed: "تم الإدخال للمخزون",
+  completed: "مكتمل",
+  closed: "مُقفل",
+  cancelled: "ملغى",
 };
 export const PO_TONE: Record<POStatus, string> = {
   draft: "bg-muted text-muted-foreground border border-border",
   approved: "bg-primary/10 text-primary border border-primary/30",
+  awaiting_supplier_confirmation: "bg-warning/10 text-warning border border-warning/40",
+  allocation_pending: "bg-warning/10 text-warning border border-warning/40",
+  ready_for_allocation: "bg-primary/10 text-primary border border-primary/30",
+  allocated: "bg-primary/10 text-primary border border-primary/30",
+  invoiced: "bg-primary/10 text-primary border border-primary/30",
   ordered: "bg-primary/10 text-primary border border-primary/30",
   partially_received: "bg-warning/10 text-warning border border-warning/40",
+  in_transit: "bg-warning/10 text-warning border border-warning/40",
+  received: "bg-success/10 text-success border border-success/40",
+  inspection_pending: "bg-warning/10 text-warning border border-warning/40",
+  inventory_completed: "bg-success/10 text-success border border-success/40",
   completed: "bg-success/10 text-success border border-success/40",
+  closed: "bg-muted text-muted-foreground border border-border",
   cancelled: "bg-destructive/10 text-destructive border border-destructive/40",
 };
 
