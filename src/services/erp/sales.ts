@@ -405,12 +405,55 @@ function seed(): DB {
     ],
   };
 
+  // Seed sample sales approvals + invoices for governance demo
+  const ap1: SalesApproval = {
+    id: "sap_1", so_id: "so_legacy_2", so_code: "SO-2026-1020",
+    customer: "شركة الأمل للنقل", vehicle: "Toyota Hilux 2026 DLX",
+    amount: 145_000, discount_pct: 4.6, requested_by: sp1.name,
+    requested_at: addHours(-12), status: "pending",
+  };
+  const ap2: SalesApproval = {
+    id: "sap_2", so_id: "so_legacy_4", so_code: "SO-2026-1018",
+    customer: "سعد الحربي", vehicle: "Nissan Patrol 2026",
+    amount: 260_000, discount_pct: 3.0, requested_by: sp4.name,
+    requested_at: addHours(-60), status: "approved",
+    approver: "م. عبدالله", decided_at: addHours(-48),
+  };
+
+  const sinv1: SalesInvoice = {
+    id: "sinv_1", code: "SINV-2026-0218", so_id: "so_legacy_4", so_code: "SO-2026-1018",
+    customer: "سعد الحربي", vehicle: "Nissan Patrol 2026", vin: "JN1TDNT32U0123456",
+    branch: "الدمام", issued_at: addHours(-44), due_date: addDays(0),
+    subtotal: 260_000, vat_amount: 39_000, total: 299_000,
+    paid: 299_000, status: "paid",
+  };
+  const spay1: SalesPayment = {
+    id: "spay_1", code: "SPAY-2026-0181", invoice_id: "sinv_1",
+    amount: 299_000, method: "financing_disbursement", reference: "RJH-DSB-882",
+    paid_at: addHours(-30),
+  };
+  const sinv2: SalesInvoice = {
+    id: "sinv_2", code: "SINV-2026-0219", so_id: "so_legacy_5", so_code: "SO-2026-1017",
+    customer: "مؤسسة الجود", vehicle: "Toyota Camry 2026 GLE", vin: "4T1B11HK1KU742918",
+    branch: "الرياض الرئيسي", issued_at: addHours(-72), due_date: addDays(7),
+    subtotal: 115_000, vat_amount: 17_250, total: 132_250,
+    paid: 50_000, status: "partially_paid",
+  };
+  const spay2: SalesPayment = {
+    id: "spay_2", code: "SPAY-2026-0182", invoice_id: "sinv_2",
+    amount: 50_000, method: "bank_transfer", reference: "TRX-22118",
+    paid_at: addHours(-60),
+  };
+
   return {
     salespeople: [sp1, sp2, sp3, sp4],
     quotations: [q1, q2, q3, q4, q5, q6],
     reservations: [r1, r2, r3, r4],
     deliveries: [d1, d2, d3, d4, d5],
     financings: [f1, f2, f3, f4, f5],
+    approvals: [ap1, ap2],
+    invoices: [sinv1, sinv2],
+    payments: [spay1, spay2],
   };
 }
 
@@ -419,11 +462,16 @@ function load(): DB {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) { const s = seed(); localStorage.setItem(LS_KEY, JSON.stringify(s)); return s; }
-    return JSON.parse(raw) as DB;
+    const parsed = JSON.parse(raw) as Partial<DB>;
+    if (!parsed.approvals) parsed.approvals = [];
+    if (!parsed.invoices) parsed.invoices = [];
+    if (!parsed.payments) parsed.payments = [];
+    return parsed as DB;
   } catch {
     return seed();
   }
 }
+
 function save(db: DB) {
   if (typeof window !== "undefined") localStorage.setItem(LS_KEY, JSON.stringify(db));
 }
