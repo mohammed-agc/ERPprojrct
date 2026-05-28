@@ -296,7 +296,7 @@ export default function SalesOrderDetail() {
                 items={customers as any[]}
                 value={order.customer_id}
                 onChange={(cid) => setOrder({ ...order, customer_id: cid })}
-                disabled={isLocked}
+                disabled={!canEditHeader}
                 placeholder="اختر عميلاً..."
                 searchKeys={["name", "code", "vat_number", "phone"] as any}
                 displayValue={(c: any) => c.name}
