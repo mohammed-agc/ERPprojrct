@@ -85,17 +85,18 @@ export function SupplierIntelligence({
           <span className="text-muted-foreground">· {agreementLabel}</span>
         </div>
         <Select
-          value={meta.supplier_link_id ?? ""}
-          onValueChange={v => onChange({ ...meta, supplier_link_id: v || undefined })}
+          value={meta.supplier_link_id ?? "__none__"}
+          onValueChange={v => onChange({ ...meta, supplier_link_id: v === "__none__" ? undefined : v })}
         >
           <SelectTrigger className="h-7 text-[11px] w-40"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">— إلغاء الربط —</SelectItem>
+            <SelectItem value="__none__">— إلغاء الربط —</SelectItem>
             {suppliers.map(s => (
               <SelectItem key={s.id} value={s.id} className="text-xs">{s.code} · {s.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
+
       </div>
 
       {/* Credit agreement */}
