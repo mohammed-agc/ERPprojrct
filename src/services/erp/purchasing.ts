@@ -372,7 +372,7 @@ function seed(): DB {
   };
 }
 
-}
+
 
 function load(): DB {
   if (typeof window === "undefined") return seed();
