@@ -52,6 +52,7 @@ const App = () => (
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </ErpSessionProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
