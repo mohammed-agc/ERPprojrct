@@ -475,6 +475,110 @@ export default function VehicleDetail() {
 
         {/* Right col */}
         <div className="space-y-4">
+          {/* Procurement / Intake panel */}
+          {(meta.procurement?.state || isInProcurement(meta)) && (
+            <Card className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-sm font-semibold flex items-center gap-2">
+                  <ClipboardCheck className="h-4 w-4 text-primary" /> المشتريات والإدخال
+                </div>
+                <Button size="sm" variant="ghost" onClick={() => setProcOpen(true)}>إدارة</Button>
+              </div>
+              {(() => {
+                const p = meta.procurement!;
+                const s = p.state as ProcurementState | undefined;
+                return (
+                  <div className="space-y-2 text-sm">
+                    {s && (
+                      <Row
+                        label="الحالة"
+                        value={<Badge className={VEHICLE_STATUS_CLASS[s as EffectiveStatus]}>{PROCUREMENT_STATE_LABEL[s as Exclude<ProcurementState,"">]}</Badge>}
+                      />
+                    )}
+                    {p.request_no && <Row label="رقم الطلب" value={p.request_no} mono />}
+                    {p.po_reference && <Row label="أمر الشراء" value={p.po_reference} mono />}
+                    {p.supplier && <Row label="المورد" value={p.supplier} />}
+                    {p.source_country && <Row label="بلد المصدر" value={p.source_country} />}
+                    {p.branch_destination && <Row label="فرع الوجهة" value={p.branch_destination} />}
+                    {p.expected_arrival && <Row label="الوصول المتوقع" value={fmtDate(p.expected_arrival)} />}
+                    {p.buyer && <Row label="المشتري" value={p.buyer} />}
+                    {p.inspection_result && (
+                      <Row
+                        label="الفحص"
+                        value={
+                          <span className={p.inspection_result === "rejected" ? "text-destructive" :
+                            p.inspection_result === "passed" ? "text-success" : "text-warning"}>
+                            {inspectionResultLabel(p.inspection_result)}
+                          </span>
+                        }
+                      />
+                    )}
+                    {p.rejection_reason && (
+                      <div className="text-xs text-destructive border-r-2 border-destructive/40 pr-2 mt-1">
+                        {p.rejection_reason}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </Card>
+          )}
+
+          {/* Landed cost panel */}
+          {meta.procurement && (
+            <Card className="p-4">
+              <div className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-primary" /> التكلفة المُحمَّلة
+              </div>
+              {(() => {
+                const p = meta.procurement!;
+                const total = landedCost(meta);
+                const items: [string, number | undefined][] = [
+                  ["الشراء", p.cost_purchase],
+                  ["الشحن", p.cost_shipping],
+                  ["الجمارك", p.cost_customs],
+                  ["الفحص", p.cost_inspection],
+                  ["الإصلاحات", p.cost_repair],
+                  ["الإكسسوارات", p.cost_accessories],
+                ];
+                return (
+                  <div className="space-y-1.5 text-sm">
+                    {items.map(([l, v]) =>
+                      v ? <Row key={l} label={l} value={Number(v).toLocaleString("ar-SA")} /> : null
+                    )}
+                    <Separator className="my-2" />
+                    <div className="flex items-center justify-between font-semibold">
+                      <span className="text-muted-foreground">الإجمالي</span>
+                      <span className="text-primary num">{total.toLocaleString("ar-SA", { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    {p.target_sale_price ? (
+                      <div className="flex items-center justify-between text-xs pt-1">
+                        <span className="text-muted-foreground">سعر البيع المستهدف</span>
+                        <span className="num">{Number(p.target_sale_price).toLocaleString("ar-SA")}</span>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })()}
+            </Card>
+          )}
+
+          {/* Supplier panel */}
+          {(meta.procurement?.supplier || meta.supplier) && (
+            <Card className="p-4">
+              <div className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-primary" /> المورد
+              </div>
+              <div className="space-y-2 text-sm">
+                <Row label="الاسم" value={meta.procurement?.supplier ?? meta.supplier} />
+                {meta.procurement?.purchase_source && <Row label="مصدر الشراء" value={meta.procurement.purchase_source} />}
+                {meta.procurement?.source_country && <Row label="البلد" value={meta.procurement.source_country} />}
+                {meta.procurement?.transit_carrier && <Row label="الناقل" value={meta.procurement.transit_carrier} />}
+                {meta.procurement?.transit_tracking && <Row label="رقم التتبع" value={meta.procurement.transit_tracking} mono />}
+              </div>
+            </Card>
+          )}
+
           {/* Reservation panel */}
           <Card className="p-4">
             <div className="text-sm font-semibold mb-3 flex items-center gap-2">
