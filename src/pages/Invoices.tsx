@@ -106,6 +106,7 @@ export default function Invoices() {
               <th>رقم الفاتورة</th>
               <th>التاريخ</th>
               <th>العميل</th>
+              <th>المركبة / VIN</th>
               <th className="text-left">قبل الضريبة</th>
               <th className="text-left">VAT 15%</th>
               <th className="text-left">الإجمالي</th>
@@ -117,7 +118,7 @@ export default function Invoices() {
           </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td colSpan={10} className="text-center text-muted-foreground py-8">لا توجد فواتير</td></tr>
+              <tr><td colSpan={11} className="text-center text-muted-foreground py-8">لا توجد فواتير</td></tr>
             )}
             {rows.map(r => {
               const woState = r.status === "paid" ? "paid" : "invoiced";
@@ -126,11 +127,32 @@ export default function Invoices() {
               const paidSoFar = r.status === "paid" ? total : (paymentLedger[r.id] ?? 0);
               const payStatus: "unpaid" | "partial" | "paid" =
                 paidSoFar <= 0 ? "unpaid" : paidSoFar >= total ? "paid" : "partial";
+              const vehs: any[] = r._vehicles ?? [];
               return (
                 <tr key={r.id}>
                   <td className="font-mono">{r.invoice_no}</td>
                   <td className="num">{r.invoice_date}</td>
                   <td>{r.customers?.name ?? "—"}</td>
+                  <td className="text-xs">
+                    {vehs.length === 0 ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : vehs.length === 1 ? (
+                      <div>
+                        <div className="font-medium">{vehs[0].brand} {vehs[0].model} <span className="num text-muted-foreground">{vehs[0].year}</span></div>
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                          <span className="font-mono" dir="ltr">VIN: {vehs[0].vin || "—"}</span>
+                          {vehs[0].color && <span>· {vehs[0].color}</span>}
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="font-medium">{vehs.length} مركبات</div>
+                        <div className="text-[10px] text-muted-foreground truncate max-w-[180px]" title={vehs.map(v => v.vin).join(", ")}>
+                          {vehs.slice(0, 2).map(v => v.vin || v.brand).join(" · ")}{vehs.length > 2 && " ..."}
+                        </div>
+                      </div>
+                    )}
+                  </td>
                   <td className="num text-left">{Number(r.subtotal).toLocaleString("ar-SA", {minimumFractionDigits:2})}</td>
                   <td className="num text-left">{Number(r.vat_amount).toLocaleString("ar-SA", {minimumFractionDigits:2})}</td>
                   <td className="num text-left font-bold">{total.toLocaleString("ar-SA", {minimumFractionDigits:2})}</td>
@@ -152,6 +174,7 @@ export default function Invoices() {
                 </tr>
               );
             })}
+
           </tbody>
         </table>
       </div>
