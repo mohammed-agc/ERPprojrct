@@ -712,7 +712,6 @@ export const purchasingService = {
     db.prs.unshift(pr); save(db); return pr;
   },
 
-  },
 
   /* purchase orders */
   listPOs(): PurchaseOrder[] {
