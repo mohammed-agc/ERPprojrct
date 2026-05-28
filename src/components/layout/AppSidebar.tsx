@@ -145,25 +145,37 @@ export function AppSidebar() {
     pending_close: number;
     locked_periods: number;
   } | null>(null);
+  const [purCounts, setPurCounts] = useState<{
+    pending_prs: number;
+    awaiting_inspection: number;
+    in_transit: number;
+    over_limit: number;
+  } | null>(null);
 
   useEffect(() => {
     governanceService.dashboard().then(d => setGovCounts(d));
+    const d = purchasingService.dashboard();
+    setPurCounts({
+      pending_prs: d.pending_prs,
+      awaiting_inspection: d.awaiting_inspection,
+      in_transit: d.in_transit,
+      over_limit: d.over_limit,
+    });
   }, []);
 
   const itemsWithBadge = (items: NavItem[]): NavItem[] => {
-    if (!govCounts) return items;
     return items.map(it => {
-      if (it.to === "/governance/approvals") {
-        return { ...it, badge: { count: govCounts.pending_approvals, tone: "amber" as const } };
+      if (govCounts) {
+        if (it.to === "/governance/approvals") return { ...it, badge: { count: govCounts.pending_approvals, tone: "amber" as const } };
+        if (it.to === "/governance/audit") return { ...it, badge: { count: govCounts.audit_alerts + govCounts.audit_warnings, tone: "rose" as const } };
+        if (it.to === "/governance/monthly-close") return { ...it, badge: { count: govCounts.pending_close, tone: "amber" as const } };
+        if (it.to === "/governance/periods") return { ...it, badge: { count: govCounts.locked_periods, tone: "slate" as const } };
       }
-      if (it.to === "/governance/audit") {
-        return { ...it, badge: { count: govCounts.audit_alerts + govCounts.audit_warnings, tone: "rose" as const } };
-      }
-      if (it.to === "/governance/monthly-close") {
-        return { ...it, badge: { count: govCounts.pending_close, tone: "amber" as const } };
-      }
-      if (it.to === "/governance/periods") {
-        return { ...it, badge: { count: govCounts.locked_periods, tone: "slate" as const } };
+      if (purCounts) {
+        if (it.to === "/purchasing/requests") return { ...it, badge: { count: purCounts.pending_prs, tone: "amber" as const } };
+        if (it.to === "/purchasing/inspection") return { ...it, badge: { count: purCounts.awaiting_inspection, tone: "amber" as const } };
+        if (it.to === "/purchasing/shipments") return { ...it, badge: { count: purCounts.in_transit, tone: "slate" as const } };
+        if (it.to === "/purchasing/credit") return { ...it, badge: { count: purCounts.over_limit, tone: "rose" as const } };
       }
       return it;
     });
@@ -187,7 +199,7 @@ export function AppSidebar() {
         {groups.map((g) => {
           const visibleItems = g.items.filter(it => !it.deptCode || isManager || canAccessDept(it.deptCode));
           if (!visibleItems.length) return null;
-          const groupItems = g.title === "الحوكمة المالية" ? itemsWithBadge(visibleItems) : visibleItems;
+          const groupItems = (g.title === "الحوكمة المالية" || g.title === "المشتريات") ? itemsWithBadge(visibleItems) : visibleItems;
           const hasAlerts = groupItems.some(it => it.badge && it.badge.count > 0);
           return (
             <div key={g.title} className={cn("mb-3", hasAlerts && "border-r-2 border-amber-400/40")}>
