@@ -495,7 +495,15 @@ export default function ContactDetail() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* ---------- Supplier Intelligence (vendor role only) ---------- */}
+        {hasRole(meta, "vendor") && (
+          <TabsContent value="supplier">
+            <SupplierIntelligence meta={meta} onChange={setMeta} />
+          </TabsContent>
+        )}
       </Tabs>
+
     </div>
   );
 }
