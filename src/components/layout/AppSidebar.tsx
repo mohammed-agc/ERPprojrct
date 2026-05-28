@@ -1,13 +1,16 @@
+import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   Car, Wrench, Package, Calculator, Boxes, ShoppingCart,
   Users, BarChart3, LayoutDashboard, Receipt, BookOpen, UserCog, Building2, ShieldCheck,
   BookText, Scale, HandCoins, Wallet, ClipboardCheck, Contact2,
   TrendingUp, ArrowLeftRight, PieChart, Landmark, ArrowDownCircle, ArrowUpCircle, CheckSquare,
-  Vault, Banknote, Target, Layers, GitBranch, Share2, Gauge
+  Vault, Banknote, Target, Layers, GitBranch, Share2, Gauge,
+  Shield, CalendarRange, CalendarCheck, CalendarX, FileSearch, Lock, Hourglass, AlertTriangle
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { governanceService } from "@/services/erp/governance";
 
 interface NavItem { label: string; to: string; icon: any; deptCode?: string; }
 
