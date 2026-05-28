@@ -256,7 +256,7 @@ export default function SalesOrderDetail() {
               <th className="w-20">خصم %</th>
               <th className="w-20">VAT %</th>
               <th className="w-32 text-left">المجموع</th>
-              <th className="w-10"></th>
+              <th className="w-20"></th>
             </tr>
           </thead>
           <tbody>
