@@ -10,8 +10,10 @@ import {
   purchasingService, PR_LABEL, PR_TONE, URGENCY_LABEL, URGENCY_TONE,
   fmtSAR, fmtDate, type PRStatus,
 } from "@/services/erp/purchasing";
+import { PurchaseRequestDialog } from "@/components/erp/PurchaseRequestDialog";
 
 const STATUS_OPTS: { value: PRStatus | "all"; label: string }[] = [
+
   { value: "all", label: "كل الحالات" },
   { value: "draft", label: PR_LABEL.draft },
   { value: "pending", label: PR_LABEL.pending },
@@ -25,6 +27,8 @@ export default function PurchaseRequests() {
   const refresh = () => setTick(t => t + 1);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<PRStatus | "all">("all");
+  const [createOpen, setCreateOpen] = useState(false);
+
 
   const all = useMemo(() => purchasingService.listPRs(), [tick]);
 
@@ -52,8 +56,10 @@ export default function PurchaseRequests() {
       <PageHeader
         title="طلبات الشراء"
         subtitle={`${counts.total} طلب · ${counts.pending} بانتظار اعتماد · ${counts.approved} معتمد`}
-        actions={<Button size="sm"><Plus className="h-4 w-4 ml-1" /> طلب جديد</Button>}
+        actions={<Button size="sm" onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4 ml-1" /> طلب جديد</Button>}
       />
+      <PurchaseRequestDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={refresh} />
+
 
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border border-border rounded-lg p-3 mb-3 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[240px] max-w-md">

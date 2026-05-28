@@ -441,11 +441,60 @@ export const purchasingService = {
     save(db);
   },
 
+  createPR(input: {
+    requester: string; department: string; branch: string;
+    urgency: Urgency; justification: string;
+    items: { kind: ItemKind; description: string; qty: number; unit_cost: number }[];
+    submit?: boolean;
+  }): PurchaseRequest {
+    const db = load();
+    const year = new Date().getFullYear();
+    const seq = db.prs.filter(p => p.code.startsWith(`PR-${year}`)).length + 143;
+    const pr: PurchaseRequest = {
+      id: uid("pr"),
+      code: `PR-${year}-${String(seq).padStart(4, "0")}`,
+      requester: input.requester, department: input.department, branch: input.branch,
+      urgency: input.urgency, justification: input.justification,
+      items: input.items.map(i => ({ id: uid("li"), ...i })),
+      status: input.submit ? "pending" : "draft",
+      created_at: isoNow(),
+    };
+    db.prs.unshift(pr); save(db); return pr;
+  },
+
   /* purchase orders */
   listPOs(): PurchaseOrder[] {
     return load().pos.slice().sort((a, b) => b.created_at.localeCompare(a.created_at));
   },
   getPO(id: string) { return load().pos.find(p => p.id === id); },
+  createPO(input: {
+    supplier_id: string; branch_destination: string; expected_delivery: string;
+    payment_term: PaymentTerm; agreement_type: "spot" | "framework" | "consignment";
+    items: { kind: ItemKind; description: string; qty: number; unit_cost: number }[];
+    pr_id?: string; submit?: boolean;
+  }): PurchaseOrder {
+    const db = load();
+    const year = new Date().getFullYear();
+    const seq = db.pos.filter(p => p.code.startsWith(`PO-${year}`)).length + 233;
+    const items = input.items.map(i => ({ id: uid("li"), ...i }));
+    const po: PurchaseOrder = {
+      id: uid("po"),
+      code: `PO-${year}-${String(seq).padStart(4, "0")}`,
+      supplier_id: input.supplier_id,
+      pr_id: input.pr_id,
+      branch_destination: input.branch_destination,
+      expected_delivery: input.expected_delivery,
+      payment_term: input.payment_term,
+      agreement_type: input.agreement_type,
+      items,
+      status: input.submit ? "approved" : "draft",
+      total: items.reduce((s, i) => s + i.qty * i.unit_cost, 0),
+      created_at: isoNow(),
+      approved_at: input.submit ? isoNow() : undefined,
+    };
+    db.pos.unshift(po); save(db); return po;
+  },
+
 
   /* shipments */
   listShipments(): Shipment[] {

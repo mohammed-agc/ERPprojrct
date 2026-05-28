@@ -8,10 +8,12 @@ import { Search, Plus, FileText } from "lucide-react";
 import {
   purchasingService, PO_LABEL, PO_TONE, fmtSAR, fmtDate, type POStatus,
 } from "@/services/erp/purchasing";
+import { PurchaseOrderDialog } from "@/components/erp/PurchaseOrderDialog";
 
 const PAYMENT_LABEL: Record<string, string> = {
   cash: "نقدي", net_30: "30 يوم", net_60: "60 يوم", net_90: "90 يوم", credit_line: "حد ائتماني",
 };
+
 
 const STATUS_OPTS: { value: POStatus | "all" | "open"; label: string }[] = [
   { value: "open", label: "المفتوحة" },
@@ -28,8 +30,11 @@ export default function PurchaseOrders() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<POStatus | "all" | "open">("open");
   const [supplier, setSupplier] = useState<string>("all");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [tick, setTick] = useState(0);
 
-  const pos = useMemo(() => purchasingService.listPOs(), []);
+  const pos = useMemo(() => purchasingService.listPOs(), [tick]);
+
   const suppliers = useMemo(() => purchasingService.listSuppliers(), []);
 
   const filtered = useMemo(() => {
@@ -56,8 +61,10 @@ export default function PurchaseOrders() {
       <PageHeader
         title="أوامر الشراء"
         subtitle={`${totals.count} أمر · إجمالي ${fmtSAR(totals.value)}`}
-        actions={<Button size="sm"><Plus className="h-4 w-4 ml-1" /> أمر شراء جديد</Button>}
+        actions={<Button size="sm" onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4 ml-1" /> أمر شراء جديد</Button>}
       />
+      <PurchaseOrderDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={() => setTick(t => t + 1)} />
+
 
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border border-border rounded-lg p-3 mb-3 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[240px] max-w-md">
