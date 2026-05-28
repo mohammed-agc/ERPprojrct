@@ -144,6 +144,12 @@ const App = () => (
               <Route path="/purchasing/requests" element={<PurchaseRequests />} />
               <Route path="/purchasing/orders" element={<PurchaseOrders />} />
               <Route path="/purchasing/invoices" element={<PurchaseInvoices />} />
+              <Route path="/purchasing/invoices/:id" element={<PurchaseInvoiceDetail />} />
+              <Route path="/purchasing/allocations" element={<Allocations />} />
+              <Route path="/purchasing/allocations/:id" element={<AllocationDetail />} />
+              <Route path="/purchasing/allocation-confirmations" element={<AllocationConfirmations />} />
+              <Route path="/purchasing/allocation-confirmations/:id" element={<AllocationConfirmationDetail />} />
+
               <Route path="/purchasing/credit" element={<SupplierCredit />} />
               <Route path="/purchasing/incentives" element={<SupplierIncentives />} />
               <Route path="/purchasing/shipments" element={<Shipments />} />
