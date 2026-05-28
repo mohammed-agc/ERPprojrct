@@ -18,6 +18,7 @@ import SalesOrders from "./pages/SalesOrders";
 import SalesOrderDetail from "./pages/SalesOrderDetail";
 import Invoices from "./pages/Invoices";
 import Accounts from "./pages/Accounts";
+import AccountDetail from "./pages/AccountDetail";
 import Journals from "./pages/Journals";
 import JournalDetail from "./pages/JournalDetail";
 import GeneralLedger from "./pages/GeneralLedger";
@@ -25,6 +26,10 @@ import TrialBalance from "./pages/TrialBalance";
 import AccountsReceivable from "./pages/AccountsReceivable";
 import CustomerStatement from "./pages/CustomerStatement";
 import AccountsPayable from "./pages/AccountsPayable";
+import FinanceCenter from "./pages/FinanceCenter";
+import IncomeStatementPage from "./pages/IncomeStatement";
+import BalanceSheetPage from "./pages/BalanceSheet";
+import CashFlow from "./pages/CashFlow";
 import UsersAdmin from "./pages/UsersAdmin";
 import Organization from "./pages/Organization";
 import Permissions from "./pages/Permissions";
@@ -75,6 +80,11 @@ const App = () => (
               <Route path="/sales-orders/:id" element={<SalesOrderDetail />} />
               <Route path="/invoices" element={<Invoices />} />
               <Route path="/accounts" element={<Accounts />} />
+              <Route path="/accounts/:id" element={<AccountDetail />} />
+              <Route path="/finance" element={<FinanceCenter />} />
+              <Route path="/income-statement" element={<IncomeStatementPage />} />
+              <Route path="/balance-sheet" element={<BalanceSheetPage />} />
+              <Route path="/cash-flow" element={<CashFlow />} />
               <Route path="/journals" element={<Journals />} />
               <Route path="/journals/:id" element={<JournalDetail />} />
               <Route path="/general-ledger" element={<GeneralLedger />} />
