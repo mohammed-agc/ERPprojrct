@@ -7,7 +7,7 @@ import {
   TrendingUp, ArrowLeftRight, PieChart, Landmark, ArrowDownCircle, ArrowUpCircle, CheckSquare,
   Vault, Banknote, Target, Layers, GitBranch, Share2, Gauge,
   Shield, CalendarRange, CalendarCheck, CalendarX, FileSearch, Lock, Hourglass, AlertTriangle,
-  ClipboardList, FileText, Ship, PackageCheck, Trophy, ShoppingBag
+  ClipboardList, FileText, Ship, PackageCheck, Trophy, ShoppingBag, Warehouse
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -64,11 +64,22 @@ const groups: { title: string; items: NavItem[] }[] = [
     ],
   },
   {
+    title: "المخزون والمستودعات",
+    items: [
+      { label: "لوحة المخزون", to: "/inventory", icon: LayoutDashboard, deptCode: "inventory" },
+      { label: "المستودعات", to: "/inventory/warehouses", icon: Warehouse, deptCode: "inventory" },
+      { label: "مخزون المركبات", to: "/inventory/vehicles", icon: Car, deptCode: "inventory" },
+      { label: "مخزون قطع الغيار", to: "/inventory/parts", icon: Package, deptCode: "inventory" },
+      { label: "حركات المخزون", to: "/inventory/movements", icon: ArrowLeftRight, deptCode: "inventory" },
+      { label: "الحجوزات", to: "/inventory/reservations", icon: CalendarCheck, deptCode: "inventory" },
+      { label: "التحويلات", to: "/inventory/transfers", icon: ArrowLeftRight, deptCode: "inventory" },
+    ],
+  },
+  {
     title: "العمليات",
     items: [
       { label: "قطع الغيار", to: "/spare-parts", icon: Package, deptCode: "spare_parts" },
       { label: "الورشة", to: "/workshop", icon: Wrench, deptCode: "workshop" },
-      { label: "المخزون", to: "/inventory", icon: Boxes, deptCode: "inventory" },
     ],
   },
   {
