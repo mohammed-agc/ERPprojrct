@@ -122,6 +122,19 @@ export default function Vehicles() {
       toast.error("الكود والاسم والصانع مطلوبة");
       return;
     }
+    // VIN governance: globally unique + format check
+    const vin = form.vin.trim().toUpperCase();
+    if (vin) {
+      if (!/^[A-HJ-NPR-Z0-9]{11,17}$/i.test(vin)) {
+        toast.error("VIN غير صالح", { description: "11–17 خانة، بدون I/O/Q" });
+        return;
+      }
+      const { data: dup } = await supabase.from("vehicles").select("id,code").eq("vin", vin).maybeSingle();
+      if (dup) {
+        toast.error("VIN موجود مسبقاً", { description: `مرتبط بالمركبة ${dup.code} — لا يمكن تكرار VIN` });
+        return;
+      }
+    }
     const meta: VehicleMeta = {
       chassis: form.chassis,
       engine: form.engine,
@@ -139,7 +152,7 @@ export default function Vehicles() {
       brand: form.brand,
       model: form.model,
       year: Number(form.year),
-      vin: form.vin || null,
+      vin: vin || null,
       color: form.color,
       mileage: Number(form.mileage),
       cost_price: Number(form.cost_price),
@@ -148,12 +161,20 @@ export default function Vehicles() {
       notes: serializeVehicleMeta(meta) || null,
       created_by: (await supabase.auth.getUser()).data.user?.id,
     });
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      if (error.code === "23505" && error.message.includes("vin")) {
+        toast.error("VIN موجود مسبقاً — يجب أن يكون فريداً");
+      } else {
+        toast.error(error.message);
+      }
+      return;
+    }
     toast.success("تم إضافة المركبة");
     setForm(emptyForm);
     setOpen(false);
     load();
   };
+
 
   return (
     <div>
