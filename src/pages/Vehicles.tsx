@@ -156,7 +156,7 @@ export default function Vehicles() {
       mileage: Number(form.mileage),
       cost_price: Number(form.cost_price),
       sale_price: Number(form.sale_price),
-      status: persistedStatus,
+      status: persistedStatus as "available" | "reserved" | "sold",
       notes: serializeVehicleMeta(meta) || null,
       created_by: (await supabase.auth.getUser()).data.user?.id,
     });
