@@ -14,6 +14,8 @@
  *  - Customer sales timeline
  */
 
+import { inventoryIntegration } from "./integration";
+
 const LS_KEY = "sarat.sales.v1";
 
 /* ============================ Types ============================ */
@@ -658,6 +660,7 @@ export const salesService = {
     const db = load(); const r = db.reservations.find(x => x.id === id); if (!r) return;
     r.status = "released"; r.released_reason = reason;
     save(db);
+    try { inventoryIntegration.onSalesReservationReleased(r.code); } catch (e) { console.warn("inv-integration:", e); }
   },
   extendReservation(id: string, hours: number) {
     const db = load(); const r = db.reservations.find(x => x.id === id); if (!r) return;
@@ -688,7 +691,16 @@ export const salesService = {
   },
   setDeliveryStatus(id: string, status: DeliveryStatus) {
     const db = load(); const d = db.deliveries.find(x => x.id === id); if (!d) return;
+    const wasCompleted = d.status === "completed";
     d.status = status; save(db);
+    if (status === "completed" && !wasCompleted) {
+      try {
+        inventoryIntegration.onDeliveryCompleted({
+          delivery_code: d.code, so_code: d.so_code,
+          vehicle_label: d.vehicle, delivery_officer: d.delivery_officer, branch: d.branch,
+        });
+      } catch (e) { console.warn("inv-integration:", e); }
+    }
   },
   confirmCustomer(id: string) {
     const db = load(); const d = db.deliveries.find(x => x.id === id); if (!d) return;
