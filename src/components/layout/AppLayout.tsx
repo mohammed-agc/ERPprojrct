@@ -57,21 +57,33 @@ export default function AppLayout({ children }: { children?: ReactNode }) {
             <FavoritesMenu />
             <ActivityCenter />
             <NotificationsCenter />
+            <ShortcutsDialog />
             <div className="h-5 w-px bg-border mx-1" />
             <div className="text-sm text-left hidden sm:block">
               <div className="font-medium text-foreground leading-tight text-xs">{profile?.full_name || user.email}</div>
               <div className="text-[10px] text-muted-foreground">{roles.join(" • ") || "موظف"}</div>
             </div>
-            <Button variant="ghost" size="sm" onClick={signOut} title="تسجيل الخروج" className="h-8 w-8 p-0">
+            <Button variant="ghost" size="sm" onClick={signOut} title="تسجيل الخروج" aria-label="تسجيل الخروج" className="h-8 w-8 p-0">
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
         </header>
-        <main className="flex-1 overflow-auto p-6 animate-fade-in">
-          {children ?? <Outlet />}
+        <main className="flex-1 overflow-auto p-4 md:p-6 animate-fade-in">
+          <ErrorBoundary scope="page">
+            <Suspense fallback={
+              <div className="flex items-center justify-center py-20" aria-busy="true">
+                <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            }>
+              {children ?? <Outlet />}
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      <OnlineStatusBanner />
     </div>
+  );
+}
   );
 }
