@@ -412,8 +412,270 @@ Object.assign(accountingService, {
   },
 });
 
-// Typed accessor — Object.assign extends `accountingService` at runtime, this
-// re-exposes it with full typings so consumers get autocomplete and type safety.
+// ============================================================================
+// Chart of Accounts hierarchy + Financial Reports + Executive KPIs
+// ============================================================================
+
+export interface AccountNode extends AccountRow {
+  parent_code: string | null;
+  depth: number;
+  is_posting: boolean;
+  debit: number;
+  credit: number;
+  balance: number;
+  rollup: number;
+  children: AccountNode[];
+}
+
+export interface FinancialKpis {
+  cash: number; bank: number; liquidity: number;
+  receivables: number; payables: number; vat_payable: number;
+  revenue_ytd: number; expense_ytd: number; net_income_ytd: number;
+  revenue_mtd: number; expense_mtd: number; net_income_mtd: number;
+}
+
+export interface ReportSection {
+  key: string; label: string; total: number;
+  rows: { code: string; name_ar: string; amount: number; account_id: string }[];
+}
+export interface IncomeStatement {
+  from: string; to: string;
+  revenue: ReportSection; expense: ReportSection;
+  gross_profit: number; net_income: number;
+}
+export interface BalanceSheet {
+  as_of: string;
+  assets: ReportSection; liabilities: ReportSection; equity: ReportSection;
+  retained_earnings: number;
+  total_assets: number; total_liab_equity: number;
+  balanced: boolean;
+}
+export interface CashFlowReport {
+  from: string; to: string;
+  opening: number; closing: number; net_change: number;
+  inflows: { code: string; name_ar: string; amount: number }[];
+  outflows: { code: string; name_ar: string; amount: number }[];
+}
+
+const todayStr = () => new Date().toISOString().slice(0, 10);
+const startOfYear = () => `${new Date().getFullYear()}-01-01`;
+const startOfMonth = () => {
+  const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+};
+function _prevDay(iso: string): string {
+  const d = new Date(iso); d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+const naturalBalance = (type: AccountRow["type"], d: number, c: number) =>
+  (type === "asset" || type === "expense") ? d - c : c - d;
+
+Object.assign(accountingService, {
+  async accountBalances(from?: string, to?: string): Promise<Map<string, { debit: number; credit: number }>> {
+    const { data, error } = await supabase
+      .from("journal_entry_lines")
+      .select("account_id, debit, credit, journal_entries!inner(entry_date, is_posted)");
+    if (error) throw error;
+    const m = new Map<string, { debit: number; credit: number }>();
+    for (const l of (data ?? []) as any[]) {
+      const je = l.journal_entries;
+      if (!je?.is_posted) continue;
+      if (from && je.entry_date < from) continue;
+      if (to && je.entry_date > to) continue;
+      const cur = m.get(l.account_id) ?? { debit: 0, credit: 0 };
+      cur.debit += Number(l.debit || 0);
+      cur.credit += Number(l.credit || 0);
+      m.set(l.account_id, cur);
+    }
+    return m;
+  },
+
+  async chartTree(asOf?: string): Promise<AccountNode[]> {
+    const accounts = await (accountingService as any).listAccounts();
+    const balances: Map<string, { debit: number; credit: number }> =
+      await (accountingService as any).accountBalances(undefined, asOf);
+    const sorted = [...accounts].sort((a: AccountRow, b: AccountRow) => a.code.localeCompare(b.code));
+    const byCode = new Map<string, AccountNode>();
+    const findParentCode = (code: string): string | null => {
+      for (let len = code.length - 1; len >= 1; len--) {
+        const p = code.slice(0, len);
+        if (byCode.has(p)) return p;
+      }
+      return null;
+    };
+    const nodes: AccountNode[] = sorted.map((a: AccountRow) => {
+      const v = balances.get(a.id) ?? { debit: 0, credit: 0 };
+      const bal = naturalBalance(a.type, v.debit, v.credit);
+      return {
+        ...a, parent_code: null, depth: 0, is_posting: true,
+        debit: v.debit, credit: v.credit, balance: bal, rollup: bal, children: [],
+      };
+    });
+    for (const n of nodes) byCode.set(n.code, n);
+    const roots: AccountNode[] = [];
+    for (const n of nodes) {
+      const p = findParentCode(n.code);
+      if (p) {
+        n.parent_code = p;
+        const parent = byCode.get(p)!;
+        parent.children.push(n);
+        parent.is_posting = false;
+      } else roots.push(n);
+    }
+    const setDepth = (n: AccountNode, d: number) => { n.depth = d; for (const c of n.children) setDepth(c, d + 1); };
+    const rollup = (n: AccountNode): number => {
+      let s = n.is_posting ? n.balance : 0;
+      for (const c of n.children) s += rollup(c);
+      n.rollup = s; return s;
+    };
+    roots.forEach(r => { setDepth(r, 0); rollup(r); });
+    return roots;
+  },
+
+  async incomeStatement(from?: string, to?: string): Promise<IncomeStatement> {
+    const f = from || startOfYear();
+    const t = to || todayStr();
+    const accounts = await (accountingService as any).listAccounts();
+    const balances = await (accountingService as any).accountBalances(f, t);
+    const build = (type: AccountRow["type"], label: string): ReportSection => {
+      const rows = (accounts as AccountRow[])
+        .filter(a => a.type === type && a.is_active)
+        .map(a => {
+          const v = balances.get(a.id) ?? { debit: 0, credit: 0 };
+          return { code: a.code, name_ar: a.name_ar, amount: naturalBalance(type, v.debit, v.credit), account_id: a.id };
+        })
+        .filter(r => Math.abs(r.amount) > 0.005)
+        .sort((a, b) => a.code.localeCompare(b.code));
+      return { key: type, label, total: rows.reduce((s, r) => s + r.amount, 0), rows };
+    };
+    const revenue = build("revenue", "الإيرادات");
+    const expense = build("expense", "المصروفات");
+    return { from: f, to: t, revenue, expense, gross_profit: revenue.total, net_income: revenue.total - expense.total };
+  },
+
+  async balanceSheet(asOf?: string): Promise<BalanceSheet> {
+    const t = asOf || todayStr();
+    const accounts = await (accountingService as any).listAccounts();
+    const balances = await (accountingService as any).accountBalances(undefined, t);
+    const build = (type: AccountRow["type"], label: string): ReportSection => {
+      const rows = (accounts as AccountRow[])
+        .filter(a => a.type === type && a.is_active)
+        .map(a => {
+          const v = balances.get(a.id) ?? { debit: 0, credit: 0 };
+          return { code: a.code, name_ar: a.name_ar, amount: naturalBalance(type, v.debit, v.credit), account_id: a.id };
+        })
+        .filter(r => Math.abs(r.amount) > 0.005)
+        .sort((a, b) => a.code.localeCompare(b.code));
+      return { key: type, label, total: rows.reduce((s, r) => s + r.amount, 0), rows };
+    };
+    const assets = build("asset", "الأصول");
+    const liabilities = build("liability", "الالتزامات");
+    const equity = build("equity", "حقوق الملكية");
+    let rev = 0, exp = 0;
+    for (const a of accounts as AccountRow[]) {
+      const v = balances.get(a.id) ?? { debit: 0, credit: 0 };
+      if (a.type === "revenue") rev += naturalBalance("revenue", v.debit, v.credit);
+      if (a.type === "expense") exp += naturalBalance("expense", v.debit, v.credit);
+    }
+    const retained_earnings = rev - exp;
+    const total_assets = assets.total;
+    const total_liab_equity = liabilities.total + equity.total + retained_earnings;
+    return { as_of: t, assets, liabilities, equity, retained_earnings, total_assets, total_liab_equity,
+      balanced: Math.abs(total_assets - total_liab_equity) < 0.01 };
+  },
+
+  async cashFlow(from?: string, to?: string): Promise<CashFlowReport> {
+    const f = from || startOfYear();
+    const t = to || todayStr();
+    const accounts: AccountRow[] = await (accountingService as any).listAccounts();
+    const cashAccounts = accounts.filter(a => a.type === "asset" && (
+      a.name_ar.includes("نقد") || a.name_ar.includes("بنك") || a.name_ar.includes("صندوق") ||
+      /cash|bank/i.test(a.name_en || "") || a.code.startsWith("1101") || a.code.startsWith("1102")
+    ));
+    const ids = new Set(cashAccounts.map(a => a.id));
+    const openingMap = await (accountingService as any).accountBalances(undefined, _prevDay(f));
+    let opening = 0;
+    for (const a of cashAccounts) {
+      const v = openingMap.get(a.id) ?? { debit: 0, credit: 0 };
+      opening += naturalBalance("asset", v.debit, v.credit);
+    }
+    const { data, error } = await supabase
+      .from("journal_entry_lines")
+      .select("entry_id, account_id, debit, credit, accounts(code, name_ar), journal_entries!inner(entry_date, is_posted)");
+    if (error) throw error;
+    const byEntry = new Map<string, any[]>();
+    for (const l of (data ?? []) as any[]) {
+      const je = l.journal_entries;
+      if (!je?.is_posted) continue;
+      if (je.entry_date < f || je.entry_date > t) continue;
+      const arr = byEntry.get(l.entry_id) ?? [];
+      arr.push(l); byEntry.set(l.entry_id, arr);
+    }
+    const counterIn = new Map<string, { code: string; name_ar: string; amount: number }>();
+    const counterOut = new Map<string, { code: string; name_ar: string; amount: number }>();
+    let netChange = 0;
+    for (const lines of byEntry.values()) {
+      const cashLines = lines.filter(l => ids.has(l.account_id));
+      const otherLines = lines.filter(l => !ids.has(l.account_id));
+      if (!cashLines.length || !otherLines.length) continue;
+      const cashDelta = cashLines.reduce((s, l) => s + Number(l.debit || 0) - Number(l.credit || 0), 0);
+      netChange += cashDelta;
+      const otherTotal = otherLines.reduce((s, l) => s + Math.abs(Number(l.debit || 0) - Number(l.credit || 0)), 0) || 1;
+      for (const ol of otherLines) {
+        const w = Math.abs(Number(ol.debit || 0) - Number(ol.credit || 0)) / otherTotal;
+        const share = cashDelta * w;
+        const key = ol.account_id;
+        const meta = { code: ol.accounts?.code ?? "—", name_ar: ol.accounts?.name_ar ?? "—" };
+        if (share > 0) {
+          const cur = counterIn.get(key) ?? { ...meta, amount: 0 }; cur.amount += share; counterIn.set(key, cur);
+        } else if (share < 0) {
+          const cur = counterOut.get(key) ?? { ...meta, amount: 0 }; cur.amount += -share; counterOut.set(key, cur);
+        }
+      }
+    }
+    return {
+      from: f, to: t, opening, closing: opening + netChange, net_change: netChange,
+      inflows: [...counterIn.values()].sort((a, b) => b.amount - a.amount),
+      outflows: [...counterOut.values()].sort((a, b) => b.amount - a.amount),
+    };
+  },
+
+  async financialKpis(): Promise<FinancialKpis> {
+    const accounts: AccountRow[] = await (accountingService as any).listAccounts();
+    const [balAll, balYtd, balMtd, recv] = await Promise.all([
+      (accountingService as any).accountBalances(),
+      (accountingService as any).accountBalances(startOfYear(), todayStr()),
+      (accountingService as any).accountBalances(startOfMonth(), todayStr()),
+      (accountingService as any).listReceivables() as Promise<ARCustomerBalance[]>,
+    ]);
+    const sumByMatch = (m: Map<string, { debit: number; credit: number }>, pred: (a: AccountRow) => boolean) => {
+      let s = 0;
+      for (const a of accounts) if (pred(a)) {
+        const v = m.get(a.id) ?? { debit: 0, credit: 0 };
+        s += naturalBalance(a.type, v.debit, v.credit);
+      }
+      return s;
+    };
+    const isCash = (a: AccountRow) => a.type === "asset" && (a.name_ar.includes("نقد") || a.name_ar.includes("صندوق") || a.code.startsWith("1101"));
+    const isBank = (a: AccountRow) => a.type === "asset" && (a.name_ar.includes("بنك") || a.code.startsWith("1102"));
+    const isVat = (a: AccountRow) => a.type === "liability" && (a.name_ar.includes("ضريبة") || /vat/i.test(a.name_en || "") || a.code.startsWith("22"));
+    const cash = sumByMatch(balAll, isCash);
+    const bank = sumByMatch(balAll, isBank);
+    const revYtd = sumByMatch(balYtd, a => a.type === "revenue");
+    const expYtd = sumByMatch(balYtd, a => a.type === "expense");
+    const revMtd = sumByMatch(balMtd, a => a.type === "revenue");
+    const expMtd = sumByMatch(balMtd, a => a.type === "expense");
+    return {
+      cash, bank, liquidity: cash + bank,
+      receivables: (recv as ARCustomerBalance[]).reduce((s, r) => s + r.remaining_balance, 0),
+      payables: 0,
+      vat_payable: sumByMatch(balAll, isVat),
+      revenue_ytd: revYtd, expense_ytd: expYtd, net_income_ytd: revYtd - expYtd,
+      revenue_mtd: revMtd, expense_mtd: expMtd, net_income_mtd: revMtd - expMtd,
+    };
+  },
+});
+
+// Typed accessor — Object.assign extends `accountingService` at runtime.
 export interface AccountingServiceExt {
   listEntries: typeof accountingService.listEntries;
   getEntry: typeof accountingService.getEntry;
@@ -432,6 +694,12 @@ export interface AccountingServiceExt {
     lines: VendorStatementLine[];
     totals: { debit: number; credit: number; balance: number };
   }>;
+  accountBalances: (from?: string, to?: string) => Promise<Map<string, { debit: number; credit: number }>>;
+  chartTree: (asOf?: string) => Promise<AccountNode[]>;
+  incomeStatement: (from?: string, to?: string) => Promise<IncomeStatement>;
+  balanceSheet: (asOf?: string) => Promise<BalanceSheet>;
+  cashFlow: (from?: string, to?: string) => Promise<CashFlowReport>;
+  financialKpis: () => Promise<FinancialKpis>;
 }
 
 export const accounting = accountingService as unknown as AccountingServiceExt;
