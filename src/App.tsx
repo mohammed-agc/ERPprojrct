@@ -39,6 +39,11 @@ import TreasuryAccountDetail from "./pages/TreasuryAccountDetail";
 import VouchersPage from "./pages/Vouchers";
 import Transfers from "./pages/Transfers";
 import BankReconciliation from "./pages/BankReconciliation";
+import CostCenters from "./pages/CostCenters";
+import FinancialDimensions from "./pages/FinancialDimensions";
+import { DepartmentProfitability, BranchProfitability } from "./pages/CenterProfitability";
+import FinancialAnalysis from "./pages/FinancialAnalysis";
+import CostAllocation from "./pages/CostAllocation";
 import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
 
@@ -105,6 +110,12 @@ const App = () => (
               <Route path="/treasury/payments" element={<VouchersPage type="payment" />} />
               <Route path="/treasury/transfers" element={<Transfers />} />
               <Route path="/treasury/reconciliation" element={<BankReconciliation />} />
+              <Route path="/costing" element={<FinancialAnalysis />} />
+              <Route path="/costing/centers" element={<CostCenters />} />
+              <Route path="/costing/dimensions" element={<FinancialDimensions />} />
+              <Route path="/costing/departments" element={<DepartmentProfitability />} />
+              <Route path="/costing/branches" element={<BranchProfitability />} />
+              <Route path="/costing/allocation" element={<CostAllocation />} />
               <Route path="/users" element={<UsersAdmin />} />
               <Route path="/organization" element={<Organization />} />
               <Route path="/permissions" element={<Permissions />} />
