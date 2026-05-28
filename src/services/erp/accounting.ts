@@ -412,8 +412,9 @@ Object.assign(accountingService, {
   },
 });
 
-// Re-export with full typing so consumers get autocomplete
-export interface AccountingService {
+// Typed accessor — Object.assign extends `accountingService` at runtime, this
+// re-exposes it with full typings so consumers get autocomplete and type safety.
+export interface AccountingServiceExt {
   listEntries: typeof accountingService.listEntries;
   getEntry: typeof accountingService.getEntry;
   listAccounts: typeof accountingService.listAccounts;
@@ -432,4 +433,6 @@ export interface AccountingService {
     totals: { debit: number; credit: number; balance: number };
   }>;
 }
+
+export const accounting = accountingService as unknown as AccountingServiceExt;
 
