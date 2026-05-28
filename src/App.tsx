@@ -190,6 +190,13 @@ const App = () => (
               <Route path="/spare-parts" element={<ComingSoon title="قطع الغيار" />} />
               <Route path="/workshop" element={<ComingSoon title="الورشة والصيانة" />} />
               <Route path="/inventory" element={<ComingSoon title="المخزون" />} />
+              <Route path="/inventory" element={<InventoryDashboard />} />
+              <Route path="/inventory/warehouses" element={<InventoryWarehouses />} />
+              <Route path="/inventory/vehicles" element={<InventoryVehicles />} />
+              <Route path="/inventory/parts" element={<InventoryParts />} />
+              <Route path="/inventory/movements" element={<InventoryMovements />} />
+              <Route path="/inventory/reservations" element={<InventoryReservations />} />
+              <Route path="/inventory/transfers" element={<InventoryTransfers />} />
               <Route path="/reports" element={<ComingSoon title="التقارير والإحصاءات" />} />
             </Route>
             <Route path="*" element={<NotFound />} />
