@@ -114,13 +114,68 @@ export interface FinancingApplication {
   notes?: string;
 }
 
+
+export type SalesApprovalStatus = "pending" | "approved" | "rejected";
+export type SalesInvoiceStatus = "draft" | "issued" | "partially_paid" | "paid" | "cancelled";
+export type SalesPaymentMethod = "cash" | "bank_transfer" | "cheque" | "financing_disbursement" | "card";
+
+export interface SalesApproval {
+  id: string;
+  so_id: string;
+  so_code: string;
+  customer: string;
+  vehicle: string;
+  amount: number;
+  discount_pct: number;
+  requested_by: string;
+  requested_at: string;
+  status: SalesApprovalStatus;
+  approver?: string;
+  decided_at?: string;
+  note?: string;
+}
+
+export interface SalesInvoice {
+  id: string;
+  code: string;            // SINV-2026-0001
+  so_id: string;
+  so_code: string;
+  customer: string;
+  vehicle: string;
+  vin?: string;
+  branch: string;
+  issued_at: string;
+  due_date: string;
+  subtotal: number;
+  vat_amount: number;
+  total: number;
+  paid: number;
+  status: SalesInvoiceStatus;
+  notes?: string;
+}
+
+export interface SalesPayment {
+  id: string;
+  code: string;            // SPAY-2026-0001
+  invoice_id: string;
+  amount: number;
+  method: SalesPaymentMethod;
+  reference?: string;
+  paid_at: string;
+  notes?: string;
+}
+
 interface DB {
   salespeople: Salesperson[];
   quotations: Quotation[];
   reservations: ReservationRecord[];
   deliveries: DeliveryRecord[];
   financings: FinancingApplication[];
+  approvals: SalesApproval[];
+  invoices: SalesInvoice[];
+  payments: SalesPayment[];
 }
+
 
 /* ============================ Storage ============================ */
 
@@ -350,12 +405,55 @@ function seed(): DB {
     ],
   };
 
+  // Seed sample sales approvals + invoices for governance demo
+  const ap1: SalesApproval = {
+    id: "sap_1", so_id: "so_legacy_2", so_code: "SO-2026-1020",
+    customer: "شركة الأمل للنقل", vehicle: "Toyota Hilux 2026 DLX",
+    amount: 145_000, discount_pct: 4.6, requested_by: sp1.name,
+    requested_at: addHours(-12), status: "pending",
+  };
+  const ap2: SalesApproval = {
+    id: "sap_2", so_id: "so_legacy_4", so_code: "SO-2026-1018",
+    customer: "سعد الحربي", vehicle: "Nissan Patrol 2026",
+    amount: 260_000, discount_pct: 3.0, requested_by: sp4.name,
+    requested_at: addHours(-60), status: "approved",
+    approver: "م. عبدالله", decided_at: addHours(-48),
+  };
+
+  const sinv1: SalesInvoice = {
+    id: "sinv_1", code: "SINV-2026-0218", so_id: "so_legacy_4", so_code: "SO-2026-1018",
+    customer: "سعد الحربي", vehicle: "Nissan Patrol 2026", vin: "JN1TDNT32U0123456",
+    branch: "الدمام", issued_at: addHours(-44), due_date: addDays(0),
+    subtotal: 260_000, vat_amount: 39_000, total: 299_000,
+    paid: 299_000, status: "paid",
+  };
+  const spay1: SalesPayment = {
+    id: "spay_1", code: "SPAY-2026-0181", invoice_id: "sinv_1",
+    amount: 299_000, method: "financing_disbursement", reference: "RJH-DSB-882",
+    paid_at: addHours(-30),
+  };
+  const sinv2: SalesInvoice = {
+    id: "sinv_2", code: "SINV-2026-0219", so_id: "so_legacy_5", so_code: "SO-2026-1017",
+    customer: "مؤسسة الجود", vehicle: "Toyota Camry 2026 GLE", vin: "4T1B11HK1KU742918",
+    branch: "الرياض الرئيسي", issued_at: addHours(-72), due_date: addDays(7),
+    subtotal: 115_000, vat_amount: 17_250, total: 132_250,
+    paid: 50_000, status: "partially_paid",
+  };
+  const spay2: SalesPayment = {
+    id: "spay_2", code: "SPAY-2026-0182", invoice_id: "sinv_2",
+    amount: 50_000, method: "bank_transfer", reference: "TRX-22118",
+    paid_at: addHours(-60),
+  };
+
   return {
     salespeople: [sp1, sp2, sp3, sp4],
     quotations: [q1, q2, q3, q4, q5, q6],
     reservations: [r1, r2, r3, r4],
     deliveries: [d1, d2, d3, d4, d5],
     financings: [f1, f2, f3, f4, f5],
+    approvals: [ap1, ap2],
+    invoices: [sinv1, sinv2],
+    payments: [spay1, spay2],
   };
 }
 
@@ -364,14 +462,57 @@ function load(): DB {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) { const s = seed(); localStorage.setItem(LS_KEY, JSON.stringify(s)); return s; }
-    return JSON.parse(raw) as DB;
+    const parsed = JSON.parse(raw) as Partial<DB>;
+    if (!parsed.approvals) parsed.approvals = [];
+    if (!parsed.invoices) parsed.invoices = [];
+    if (!parsed.payments) parsed.payments = [];
+    return parsed as DB;
   } catch {
     return seed();
   }
 }
+
 function save(db: DB) {
   if (typeof window !== "undefined") localStorage.setItem(LS_KEY, JSON.stringify(db));
 }
+
+export const SAPPROVAL_LABEL: Record<SalesApprovalStatus, string> = {
+  pending: "بانتظار الاعتماد", approved: "معتمد", rejected: "مرفوض",
+};
+export const SAPPROVAL_TONE: Record<SalesApprovalStatus, string> = {
+  pending: "bg-warning/10 text-warning border border-warning/40",
+  approved: "bg-success/10 text-success border border-success/40",
+  rejected: "bg-destructive/10 text-destructive border border-destructive/40",
+};
+
+export const SINV_LABEL: Record<SalesInvoiceStatus, string> = {
+  draft: "مسودة", issued: "صادرة", partially_paid: "مدفوعة جزئياً",
+  paid: "مدفوعة", cancelled: "ملغاة",
+};
+export const SINV_TONE: Record<SalesInvoiceStatus, string> = {
+  draft: "bg-muted text-muted-foreground border border-border",
+  issued: "bg-primary/10 text-primary border border-primary/30",
+  partially_paid: "bg-warning/10 text-warning border border-warning/40",
+  paid: "bg-success/10 text-success border border-success/40",
+  cancelled: "bg-destructive/10 text-destructive border border-destructive/40",
+};
+
+export const SPAYMENT_METHOD_LABEL: Record<SalesPaymentMethod, string> = {
+  cash: "نقدي", bank_transfer: "حوالة بنكية", cheque: "شيك",
+  financing_disbursement: "صرف تمويل", card: "بطاقة",
+};
+
+/** ERP sales workflow stages (governance steps). */
+export const SALES_WORKFLOW = [
+  { key: "quote", label: "عرض سعر" },
+  { key: "so", label: "أمر بيع" },
+  { key: "so_approved", label: "اعتماد البيع" },
+  { key: "invoice", label: "فاتورة بيع" },
+  { key: "payment", label: "السداد" },
+  { key: "delivery", label: "التسليم" },
+  { key: "handover", label: "التسليم النهائي" },
+];
+
 
 /* ============================ Labels / tones ============================ */
 
@@ -665,5 +806,107 @@ export const salesService = {
     return Array.from(map.values()).sort((a, b) => b.last.localeCompare(a.last));
   },
 
+
+  /* ============ Sales Approvals ============ */
+  listApprovals(): SalesApproval[] {
+    return load().approvals.slice().sort((a, b) => b.requested_at.localeCompare(a.requested_at));
+  },
+  submitSOForApproval(input: Omit<SalesApproval, "id" | "status" | "requested_at">): SalesApproval {
+    const db = load();
+    const ap: SalesApproval = {
+      ...input, id: uid("sap"), status: "pending", requested_at: isoNow(),
+    };
+    db.approvals.unshift(ap); save(db); return ap;
+  },
+  approveSO(id: string, approver = "م. عبدالله", note?: string) {
+    const db = load(); const ap = db.approvals.find(a => a.id === id); if (!ap) return;
+    ap.status = "approved"; ap.approver = approver; ap.decided_at = isoNow(); ap.note = note;
+    save(db);
+  },
+  rejectSO(id: string, note?: string) {
+    const db = load(); const ap = db.approvals.find(a => a.id === id); if (!ap) return;
+    ap.status = "rejected"; ap.decided_at = isoNow(); ap.note = note;
+    save(db);
+  },
+  soApprovalStatus(soId: string): SalesApprovalStatus | "not_required" {
+    const ap = load().approvals.find(a => a.so_id === soId);
+    return ap?.status ?? "not_required";
+  },
+
+  /* ============ Sales Invoices ============ */
+  listSalesInvoices(): SalesInvoice[] {
+    return load().invoices.slice().sort((a, b) => b.issued_at.localeCompare(a.issued_at));
+  },
+  invoicesForSO(soId: string) { return load().invoices.filter(i => i.so_id === soId); },
+  createSalesInvoice(input: {
+    so_id: string; so_code: string; customer: string; vehicle: string;
+    vin?: string; branch: string; subtotal: number; vat_pct?: number;
+    due_date?: string; notes?: string;
+  }): SalesInvoice | undefined {
+    const db = load();
+    // Gate: SO must be approved (if approval record exists) — else allowed
+    const ap = db.approvals.find(a => a.so_id === input.so_id);
+    if (ap && ap.status !== "approved") return undefined;
+    const year = new Date().getFullYear();
+    const seq = db.invoices.filter(i => i.code.startsWith(`SINV-${year}`)).length + 220;
+    const vatPct = input.vat_pct ?? 15;
+    const vat = Math.round(input.subtotal * (vatPct / 100));
+    const inv: SalesInvoice = {
+      id: uid("sinv"), code: `SINV-${year}-${String(seq).padStart(4, "0")}`,
+      so_id: input.so_id, so_code: input.so_code, customer: input.customer,
+      vehicle: input.vehicle, vin: input.vin, branch: input.branch,
+      issued_at: isoNow(),
+      due_date: input.due_date ?? addDays(7),
+      subtotal: input.subtotal, vat_amount: vat, total: input.subtotal + vat,
+      paid: 0, status: "issued", notes: input.notes,
+    };
+    db.invoices.unshift(inv); save(db); return inv;
+  },
+
+  /* ============ Sales Payments ============ */
+  recordSalesPayment(input: {
+    invoice_id: string; amount: number; method: SalesPaymentMethod;
+    reference?: string; notes?: string;
+  }): SalesPayment | undefined {
+    const db = load();
+    const inv = db.invoices.find(i => i.id === input.invoice_id);
+    if (!inv) return undefined;
+    if (inv.status === "paid" || inv.status === "cancelled") return undefined;
+    const remaining = inv.total - inv.paid;
+    const amount = Math.min(input.amount, remaining);
+    const year = new Date().getFullYear();
+    const seq = db.payments.filter(p => p.code.startsWith(`SPAY-${year}`)).length + 183;
+    const pay: SalesPayment = {
+      id: uid("spay"), code: `SPAY-${year}-${String(seq).padStart(4, "0")}`,
+      invoice_id: inv.id, amount, method: input.method, reference: input.reference,
+      paid_at: isoNow(), notes: input.notes,
+    };
+    db.payments.unshift(pay);
+    inv.paid += amount;
+    inv.status = inv.paid >= inv.total ? "paid" : "partially_paid";
+    save(db); return pay;
+  },
+  paymentsForInvoice(invoiceId: string) {
+    return load().payments.filter(p => p.invoice_id === invoiceId);
+  },
+  soPaymentSummary(soId: string) {
+    const invs = this.invoicesForSO(soId);
+    const billed = invs.reduce((s, i) => s + i.total, 0);
+    const paid = invs.reduce((s, i) => s + i.paid, 0);
+    return { billed, paid, fullyPaid: invs.length > 0 && invs.every(i => i.status === "paid"), anyIssued: invs.length > 0, remaining: billed - paid };
+  },
+
+  /* ============ Delivery Gate ============ */
+  canDeliver(soId: string): { allowed: boolean; reason?: string } {
+    const ap = this.soApprovalStatus(soId);
+    if (ap === "pending") return { allowed: false, reason: "اعتماد أمر البيع مطلوب" };
+    if (ap === "rejected") return { allowed: false, reason: "اعتماد أمر البيع مرفوض" };
+    const ps = this.soPaymentSummary(soId);
+    if (!ps.anyIssued) return { allowed: false, reason: "لم تُصدر فاتورة بيع بعد" };
+    if (!ps.fullyPaid) return { allowed: false, reason: `السداد غير مكتمل — متبقي ${Math.round(ps.remaining).toLocaleString("ar-SA")} ر.س` };
+    return { allowed: true };
+  },
+
   resetSeed() { if (typeof window !== "undefined") localStorage.removeItem(LS_KEY); },
 };
+
