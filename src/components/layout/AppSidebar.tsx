@@ -54,6 +54,7 @@ const groups: { title: string; items: NavItem[] }[] = [
       { label: "لوحة المشتريات", to: "/purchasing", icon: ShoppingBag, deptCode: "vehicles" },
       { label: "طلبات الشراء", to: "/purchasing/requests", icon: ClipboardList, deptCode: "vehicles" },
       { label: "أوامر الشراء", to: "/purchasing/orders", icon: FileText, deptCode: "vehicles" },
+      { label: "فواتير الشراء", to: "/purchasing/invoices", icon: Receipt, deptCode: "vehicles" },
       { label: "ائتمان الموردين", to: "/purchasing/credit", icon: ShieldCheck, deptCode: "vehicles" },
       { label: "حوافز الموردين", to: "/purchasing/incentives", icon: Trophy, deptCode: "vehicles" },
       { label: "الشحنات", to: "/purchasing/shipments", icon: Ship, deptCode: "vehicles" },
