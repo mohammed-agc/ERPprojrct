@@ -122,15 +122,63 @@ export default function PurchaseInvoiceDetail() {
         </div>
       </div>
 
-      {payOpen && (
-        <PaymentDialog
-          open={payOpen}
-          onOpenChange={setPayOpen}
-          invoiceId={inv.id}
-          remaining={remaining}
-          onPaid={() => { refresh(); toast.success("تم تسجيل الدفعة"); }}
-        />
-      )}
+      <PayDialog
+        open={payOpen}
+        onClose={() => setPayOpen(false)}
+        invoiceId={inv.id}
+        invoiceCode={inv.code}
+        remaining={remaining}
+        onPaid={() => { setPayOpen(false); refresh(); toast.success("تم تسجيل الدفعة"); }}
+      />
     </div>
   );
 }
+
+function PayDialog({ open, onClose, invoiceId, invoiceCode, remaining, onPaid }: {
+  open: boolean; onClose: () => void; invoiceId: string; invoiceCode: string;
+  remaining: number; onPaid: () => void;
+}) {
+  const [amount, setAmount] = useState(remaining);
+  const [method, setMethod] = useState<PaymentMethod>("bank_transfer");
+  const [reference, setReference] = useState("");
+
+  const submit = () => {
+    if (amount <= 0) return toast.error("أدخل مبلغاً صحيحاً");
+    const p = purchasingService.recordPurchasePayment({
+      invoice_id: invoiceId, amount, method, reference: reference || undefined,
+    });
+    if (!p) return toast.error("تعذر تسجيل الدفعة");
+    onPaid();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent dir="rtl" className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>تسجيل دفعة — {invoiceCode}</DialogTitle>
+          <DialogDescription>متبقي: <span className="font-semibold">{fmtSAR(remaining)}</span></DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 text-xs">
+          <div><Label className="text-xs">المبلغ</Label><Input type="number" value={amount} onChange={e => setAmount(Number(e.target.value))} className="h-9" /></div>
+          <div>
+            <Label className="text-xs">طريقة الدفع</Label>
+            <Select value={method} onValueChange={(v) => setMethod(v as PaymentMethod)}>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {(Object.keys(PAYMENT_METHOD_LABEL) as PaymentMethod[]).map(m => (
+                  <SelectItem key={m} value={m}>{PAYMENT_METHOD_LABEL[m]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div><Label className="text-xs">المرجع</Label><Input value={reference} onChange={e => setReference(e.target.value)} className="h-9" /></div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>إلغاء</Button>
+          <Button onClick={submit}>تسجيل</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
