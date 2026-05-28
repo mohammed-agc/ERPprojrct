@@ -122,6 +122,12 @@ const App = () => (
               <Route path="/costing/departments" element={<DepartmentProfitability />} />
               <Route path="/costing/branches" element={<BranchProfitability />} />
               <Route path="/costing/allocation" element={<CostAllocation />} />
+              <Route path="/governance" element={<GovernanceDashboard />} />
+              <Route path="/governance/periods" element={<FinancialPeriods />} />
+              <Route path="/governance/monthly-close" element={<MonthlyClosing />} />
+              <Route path="/governance/year-end-close" element={<YearEndClosing />} />
+              <Route path="/governance/approvals" element={<ApprovalsPage scope="journal" />} />
+              <Route path="/governance/audit" element={<AuditCenter />} />
               <Route path="/users" element={<UsersAdmin />} />
               <Route path="/organization" element={<Organization />} />
               <Route path="/permissions" element={<Permissions />} />
