@@ -14,6 +14,8 @@
  *  - Customer sales timeline
  */
 
+import { inventoryIntegration } from "./integration";
+
 const LS_KEY = "sarat.sales.v1";
 
 /* ============================ Types ============================ */
