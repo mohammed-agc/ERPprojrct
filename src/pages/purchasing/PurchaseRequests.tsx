@@ -55,8 +55,10 @@ export default function PurchaseRequests() {
     <div>
       <PageHeader
         title="طلبات الشراء"
-        subtitle={`${counts.total} طلب · ${counts.pending} بانتظار اعتماد · ${counts.approved} معتمد`}
-        actions={<Button size="sm"><Plus className="h-4 w-4 ml-1" /> طلب جديد</Button>}
+        actions={<Button size="sm" onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4 ml-1" /> طلب جديد</Button>}
+      />
+      <PurchaseRequestDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={refresh} />
+
       />
 
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border border-border rounded-lg p-3 mb-3 flex flex-wrap items-center gap-2">
