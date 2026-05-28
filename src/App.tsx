@@ -98,6 +98,13 @@ const App = () => (
               <Route path="/ar" element={<AccountsReceivable />} />
               <Route path="/ar/:id" element={<CustomerStatement />} />
               <Route path="/ap" element={<AccountsPayable />} />
+              <Route path="/treasury" element={<Treasury />} />
+              <Route path="/treasury/accounts" element={<TreasuryAccounts />} />
+              <Route path="/treasury/accounts/:id" element={<TreasuryAccountDetail />} />
+              <Route path="/treasury/receipts" element={<VouchersPage type="receipt" />} />
+              <Route path="/treasury/payments" element={<VouchersPage type="payment" />} />
+              <Route path="/treasury/transfers" element={<Transfers />} />
+              <Route path="/treasury/reconciliation" element={<BankReconciliation />} />
               <Route path="/users" element={<UsersAdmin />} />
               <Route path="/organization" element={<Organization />} />
               <Route path="/permissions" element={<Permissions />} />
