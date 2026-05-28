@@ -61,8 +61,10 @@ export default function PurchaseOrders() {
       <PageHeader
         title="أوامر الشراء"
         subtitle={`${totals.count} أمر · إجمالي ${fmtSAR(totals.value)}`}
-        actions={<Button size="sm"><Plus className="h-4 w-4 ml-1" /> أمر شراء جديد</Button>}
+        actions={<Button size="sm" onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4 ml-1" /> أمر شراء جديد</Button>}
       />
+      <PurchaseOrderDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={() => setTick(t => t + 1)} />
+
 
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border border-border rounded-lg p-3 mb-3 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[240px] max-w-md">
