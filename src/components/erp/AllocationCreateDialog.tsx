@@ -25,7 +25,8 @@ export function AllocationCreateDialog({ open, onOpenChange, defaultPoId, onCrea
   const [lines, setLines] = useState<Draft[]>([blankLine()]);
 
   const eligiblePOs = purchasingService.listPOs().filter(p =>
-    ["approved","awaiting_supplier_confirmation","allocation_pending","ready_for_allocation","ordered"].includes(p.status)
+  const eligiblePOs = purchasingService.listPOs().filter(p =>
+    ["ready_for_allocation","allocation_pending"].includes(p.status)
   );
 
   const updateLine = (idx: number, patch: Partial<Draft>) =>
