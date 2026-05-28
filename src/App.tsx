@@ -33,6 +33,12 @@ import CashFlow from "./pages/CashFlow";
 import UsersAdmin from "./pages/UsersAdmin";
 import Organization from "./pages/Organization";
 import Permissions from "./pages/Permissions";
+import Treasury from "./pages/Treasury";
+import TreasuryAccounts from "./pages/TreasuryAccounts";
+import TreasuryAccountDetail from "./pages/TreasuryAccountDetail";
+import VouchersPage from "./pages/Vouchers";
+import Transfers from "./pages/Transfers";
+import BankReconciliation from "./pages/BankReconciliation";
 import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
 
@@ -92,6 +98,13 @@ const App = () => (
               <Route path="/ar" element={<AccountsReceivable />} />
               <Route path="/ar/:id" element={<CustomerStatement />} />
               <Route path="/ap" element={<AccountsPayable />} />
+              <Route path="/treasury" element={<Treasury />} />
+              <Route path="/treasury/accounts" element={<TreasuryAccounts />} />
+              <Route path="/treasury/accounts/:id" element={<TreasuryAccountDetail />} />
+              <Route path="/treasury/receipts" element={<VouchersPage type="receipt" />} />
+              <Route path="/treasury/payments" element={<VouchersPage type="payment" />} />
+              <Route path="/treasury/transfers" element={<Transfers />} />
+              <Route path="/treasury/reconciliation" element={<BankReconciliation />} />
               <Route path="/users" element={<UsersAdmin />} />
               <Route path="/organization" element={<Organization />} />
               <Route path="/permissions" element={<Permissions />} />
