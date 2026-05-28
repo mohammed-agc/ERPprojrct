@@ -660,6 +660,7 @@ export const salesService = {
     const db = load(); const r = db.reservations.find(x => x.id === id); if (!r) return;
     r.status = "released"; r.released_reason = reason;
     save(db);
+    try { inventoryIntegration.onSalesReservationReleased(r.code); } catch (e) { console.warn("inv-integration:", e); }
   },
   extendReservation(id: string, hours: number) {
     const db = load(); const r = db.reservations.find(x => x.id === id); if (!r) return;
