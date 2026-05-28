@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, Suspense, useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,7 +9,9 @@ import { NotificationsCenter } from "@/components/erp/NotificationsCenter";
 import { ActivityCenter } from "@/components/erp/ActivityCenter";
 import { QuickActionsMenu } from "@/components/erp/QuickActionsMenu";
 import { FavoritesMenu } from "@/components/erp/FavoritesMenu";
-
+import { ShortcutsDialog } from "@/components/erp/ShortcutsDialog";
+import { ErrorBoundary } from "@/components/erp/ErrorBoundary";
+import { OnlineStatusBanner } from "@/components/erp/OnlineStatusBanner";
 export default function AppLayout({ children }: { children?: ReactNode }) {
   const { user, loading, profile, department, signOut, roles } = useAuth();
   const [paletteOpen, setPaletteOpen] = useState(false);
