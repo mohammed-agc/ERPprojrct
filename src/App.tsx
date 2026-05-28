@@ -44,6 +44,12 @@ import FinancialDimensions from "./pages/FinancialDimensions";
 import { DepartmentProfitability, BranchProfitability } from "./pages/CenterProfitability";
 import FinancialAnalysis from "./pages/FinancialAnalysis";
 import CostAllocation from "./pages/CostAllocation";
+import GovernanceDashboard from "./pages/GovernanceDashboard";
+import FinancialPeriods from "./pages/FinancialPeriods";
+import MonthlyClosing from "./pages/MonthlyClosing";
+import YearEndClosing from "./pages/YearEndClosing";
+import ApprovalsPage from "./pages/Approvals";
+import AuditCenter from "./pages/AuditCenter";
 import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
 
