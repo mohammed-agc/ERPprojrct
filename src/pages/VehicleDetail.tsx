@@ -18,15 +18,17 @@ import {
 import {
   ArrowRight, Car, Tag, Wrench, Truck, ShoppingCart, ArrowDownToLine, RotateCcw,
   Image as ImageIcon, FileText, Upload, X, AlertTriangle, BookmarkPlus, BookmarkX, Settings2, Trash2,
-  ClipboardCheck, UserCheck, PackageCheck, KeyRound, ShieldCheck,
+  ClipboardCheck, UserCheck, PackageCheck, KeyRound, ShieldCheck, FileSearch, Wallet, Building2, XCircle, CheckCircle2,
 } from "lucide-react";
 import {
   parseVehicleMeta, serializeVehicleMeta, reservationDaysLeft, effectiveStatus, deliveryProgress,
-  DELIVERY_CHECKLIST_KEYS, DeliveryChecklistKey, VehicleMeta, EffectiveStatus,
+  landedCost, isInProcurement,
+  DELIVERY_CHECKLIST_KEYS, DeliveryChecklistKey, VehicleMeta, EffectiveStatus, ProcurementState,
 } from "@/lib/vehicleMeta";
 import {
-  VEHICLE_STATUS_LABEL, VEHICLE_STATUS_CLASS, OVERLAY_STATUSES,
+  VEHICLE_STATUS_LABEL, VEHICLE_STATUS_CLASS, OVERLAY_STATUSES, PROCUREMENT_STATE_LABEL,
 } from "@/lib/vehicleStatus";
+import { ProcurementWorkflow } from "@/components/erp/ProcurementWorkflow";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
@@ -40,7 +42,9 @@ const fmtDate = (s?: string) =>
   s ? new Date(s).toLocaleDateString("ar-SA", { dateStyle: "medium" }) : "—";
 
 type TimelineEvent = {
-  type: "purchase" | "reservation" | "release" | "sale" | "ready" | "delivery" | "transfer" | "maintenance" | "return" | "ownership";
+  type: "purchase" | "reservation" | "release" | "sale" | "ready" | "delivery" | "transfer" | "maintenance" | "return" | "ownership"
+       | "procurement_request" | "procurement_ordered" | "procurement_transit" | "procurement_received"
+       | "procurement_inspected" | "procurement_approved" | "procurement_rejected";
   label: string;
   at: string;
   detail?: string;
@@ -68,6 +72,7 @@ export default function VehicleDetail() {
   const [reserveOpen, setReserveOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const [deliveryOpen, setDeliveryOpen] = useState(false);
+  const [procOpen, setProcOpen] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
 
@@ -106,9 +111,39 @@ export default function VehicleDetail() {
 
   const timeline = useMemo<TimelineEvent[]>(() => {
     const events: TimelineEvent[] = [];
+    // Procurement events
+    const p = meta.procurement;
+    if (p?.requested_at)
+      events.push({ type: "procurement_request", label: "طلب شراء", at: p.requested_at,
+        detail: [p.request_no, p.buyer && `بواسطة ${p.buyer}`].filter(Boolean).join(" · "),
+        icon: ClipboardCheck, tone: "default" });
+    if (p?.ordered_at)
+      events.push({ type: "procurement_ordered", label: "تأكيد الطلب", at: p.ordered_at,
+        detail: p.po_reference ? `PO ${p.po_reference}` : undefined,
+        icon: ShoppingCart, tone: "primary" });
+    if (p?.transit_started_at)
+      events.push({ type: "procurement_transit", label: "بدء الشحن", at: p.transit_started_at,
+        detail: [p.transit_carrier, p.transit_tracking].filter(Boolean).join(" · "),
+        icon: Truck, tone: "primary" });
+    if (p?.received_at)
+      events.push({ type: "procurement_received", label: "استلام المركبة", at: p.received_at,
+        detail: [p.received_by && `بواسطة ${p.received_by}`, conditionLabel(p.received_condition)].filter(Boolean).join(" · "),
+        icon: PackageCheck, tone: "warning" });
+    if (p?.inspection_at)
+      events.push({ type: "procurement_inspected", label: "تقرير الفحص", at: p.inspection_at,
+        detail: inspectionResultLabel(p.inspection_result),
+        icon: FileSearch, tone: p.inspection_result === "rejected" ? "destructive" : "warning" });
+    if (p?.approved_at && p.state === "approved")
+      events.push({ type: "procurement_approved", label: "اعتماد الإدخال", at: p.approved_at,
+        detail: p.approved_by ? `بواسطة ${p.approved_by}` : undefined,
+        icon: ShieldCheck, tone: "success" });
+    if (p?.approved_at && p.state === "rejected")
+      events.push({ type: "procurement_rejected", label: "رفض المركبة", at: p.approved_at,
+        detail: p.rejection_reason, icon: XCircle, tone: "destructive" });
+
     if (vehicle?.created_at) {
       events.push({
-        type: "purchase", label: "إضافة للمخزون", at: vehicle.created_at,
+        type: "purchase", label: "إضافة للسجل", at: vehicle.created_at,
         detail: meta.supplier ? `المورد: ${meta.supplier}` : undefined,
         icon: ArrowDownToLine, tone: "default",
       });
@@ -284,6 +319,9 @@ export default function VehicleDetail() {
                 <BookmarkPlus className="h-4 w-4 ml-1" /> حجز
               </Button>
             )}
+            <Button size="sm" variant="outline" onClick={() => setProcOpen(true)}>
+              <ClipboardCheck className="h-4 w-4 ml-1" /> المشتريات
+            </Button>
             <Button size="sm" variant="outline" onClick={() => setStatusOpen(true)}>
               <Settings2 className="h-4 w-4 ml-1" /> تغيير الحالة
             </Button>
@@ -437,6 +475,110 @@ export default function VehicleDetail() {
 
         {/* Right col */}
         <div className="space-y-4">
+          {/* Procurement / Intake panel */}
+          {(meta.procurement?.state || isInProcurement(meta)) && (
+            <Card className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-sm font-semibold flex items-center gap-2">
+                  <ClipboardCheck className="h-4 w-4 text-primary" /> المشتريات والإدخال
+                </div>
+                <Button size="sm" variant="ghost" onClick={() => setProcOpen(true)}>إدارة</Button>
+              </div>
+              {(() => {
+                const p = meta.procurement!;
+                const s = p.state as ProcurementState | undefined;
+                return (
+                  <div className="space-y-2 text-sm">
+                    {s && (
+                      <Row
+                        label="الحالة"
+                        value={<Badge className={VEHICLE_STATUS_CLASS[s as EffectiveStatus]}>{PROCUREMENT_STATE_LABEL[s as Exclude<ProcurementState,"">]}</Badge>}
+                      />
+                    )}
+                    {p.request_no && <Row label="رقم الطلب" value={p.request_no} mono />}
+                    {p.po_reference && <Row label="أمر الشراء" value={p.po_reference} mono />}
+                    {p.supplier && <Row label="المورد" value={p.supplier} />}
+                    {p.source_country && <Row label="بلد المصدر" value={p.source_country} />}
+                    {p.branch_destination && <Row label="فرع الوجهة" value={p.branch_destination} />}
+                    {p.expected_arrival && <Row label="الوصول المتوقع" value={fmtDate(p.expected_arrival)} />}
+                    {p.buyer && <Row label="المشتري" value={p.buyer} />}
+                    {p.inspection_result && (
+                      <Row
+                        label="الفحص"
+                        value={
+                          <span className={p.inspection_result === "rejected" ? "text-destructive" :
+                            p.inspection_result === "passed" ? "text-success" : "text-warning"}>
+                            {inspectionResultLabel(p.inspection_result)}
+                          </span>
+                        }
+                      />
+                    )}
+                    {p.rejection_reason && (
+                      <div className="text-xs text-destructive border-r-2 border-destructive/40 pr-2 mt-1">
+                        {p.rejection_reason}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </Card>
+          )}
+
+          {/* Landed cost panel */}
+          {meta.procurement && (
+            <Card className="p-4">
+              <div className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-primary" /> التكلفة المُحمَّلة
+              </div>
+              {(() => {
+                const p = meta.procurement!;
+                const total = landedCost(meta);
+                const items: [string, number | undefined][] = [
+                  ["الشراء", p.cost_purchase],
+                  ["الشحن", p.cost_shipping],
+                  ["الجمارك", p.cost_customs],
+                  ["الفحص", p.cost_inspection],
+                  ["الإصلاحات", p.cost_repair],
+                  ["الإكسسوارات", p.cost_accessories],
+                ];
+                return (
+                  <div className="space-y-1.5 text-sm">
+                    {items.map(([l, v]) =>
+                      v ? <Row key={l} label={l} value={Number(v).toLocaleString("ar-SA")} /> : null
+                    )}
+                    <Separator className="my-2" />
+                    <div className="flex items-center justify-between font-semibold">
+                      <span className="text-muted-foreground">الإجمالي</span>
+                      <span className="text-primary num">{total.toLocaleString("ar-SA", { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    {p.target_sale_price ? (
+                      <div className="flex items-center justify-between text-xs pt-1">
+                        <span className="text-muted-foreground">سعر البيع المستهدف</span>
+                        <span className="num">{Number(p.target_sale_price).toLocaleString("ar-SA")}</span>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })()}
+            </Card>
+          )}
+
+          {/* Supplier panel */}
+          {(meta.procurement?.supplier || meta.supplier) && (
+            <Card className="p-4">
+              <div className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-primary" /> المورد
+              </div>
+              <div className="space-y-2 text-sm">
+                <Row label="الاسم" value={meta.procurement?.supplier ?? meta.supplier} />
+                {meta.procurement?.purchase_source && <Row label="مصدر الشراء" value={meta.procurement.purchase_source} />}
+                {meta.procurement?.source_country && <Row label="البلد" value={meta.procurement.source_country} />}
+                {meta.procurement?.transit_carrier && <Row label="الناقل" value={meta.procurement.transit_carrier} />}
+                {meta.procurement?.transit_tracking && <Row label="رقم التتبع" value={meta.procurement.transit_tracking} mono />}
+              </div>
+            </Card>
+          )}
+
           {/* Reservation panel */}
           <Card className="p-4">
             <div className="text-sm font-semibold mb-3 flex items-center gap-2">
@@ -713,6 +855,17 @@ export default function VehicleDetail() {
           if (ok) { toast.success("تم تسجيل ارتجاع المركبة"); setDeliveryOpen(false); }
         }}
       />
+
+      {/* Procurement workflow dialog */}
+      <ProcurementWorkflow
+        open={procOpen}
+        onOpenChange={setProcOpen}
+        meta={meta}
+        currentUser={profile?.full_name ?? ""}
+        onSave={async (patch, dbStatus) => {
+          return await patchMeta(patch, dbStatus);
+        }}
+      />
     </div>
   );
 }
@@ -893,6 +1046,18 @@ function fuelLabel(f?: string) {
   if (f === "diesel") return "ديزل";
   if (f === "hybrid") return "هايبرد";
   if (f === "electric") return "كهربائي";
+  return "";
+}
+function conditionLabel(c?: string) {
+  if (c === "good") return "حالة جيدة";
+  if (c === "minor_damage") return "أضرار طفيفة";
+  if (c === "major_damage") return "أضرار كبيرة";
+  return "";
+}
+function inspectionResultLabel(r?: string) {
+  if (r === "passed") return "ناجح";
+  if (r === "passed_with_notes") return "ناجح مع ملاحظات";
+  if (r === "rejected") return "مرفوض";
   return "";
 }
 function orderStatusLabel(s: string) {

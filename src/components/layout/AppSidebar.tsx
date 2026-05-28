@@ -2,7 +2,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   Car, Wrench, Package, Calculator, Boxes, ShoppingCart,
   Users, BarChart3, LayoutDashboard, Receipt, BookOpen, UserCog, Building2, ShieldCheck,
-  BookText, Scale, HandCoins, Wallet
+  BookText, Scale, HandCoins, Wallet, ClipboardCheck
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ const groups: { title: string; items: NavItem[] }[] = [
     title: "المبيعات",
     items: [
       { label: "المركبات", to: "/vehicles", icon: Car, deptCode: "vehicles" },
+      { label: "المشتريات والإدخال", to: "/procurement", icon: ClipboardCheck, deptCode: "vehicles" },
       { label: "أوامر البيع", to: "/sales-orders", icon: ShoppingCart, deptCode: "vehicles" },
       { label: "الفواتير", to: "/invoices", icon: Receipt },
     ],

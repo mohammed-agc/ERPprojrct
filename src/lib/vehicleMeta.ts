@@ -13,6 +13,25 @@
  * helper without touching UI.
  */
 
+/* Procurement / intake operational contract.
+ * Vehicles enter the lifecycle via a procurement request. While the
+ * `procurement.state` is anything other than `approved` or empty, the
+ * effective status reflects the procurement state and the vehicle is
+ * considered "in intake" (not yet sellable). On `approved`, the vehicle
+ * becomes part of regular inventory (DB status="available").
+ */
+export type ProcurementState =
+  | "requested"
+  | "ordered"
+  | "in_transit"
+  | "received"
+  | "inspection_pending"
+  | "approved"
+  | "rejected"
+  | "";
+
+export type InspectionResult = "passed" | "passed_with_notes" | "rejected" | "";
+
 export type VehicleMeta = {
   // master data
   chassis?: string;
@@ -25,29 +44,91 @@ export type VehicleMeta = {
   purchase_source?: string;
 
   // ERP virtual status overlay
-  // Extends DB enum with: ready_for_delivery / delivered / maintenance / transit / returned
   status_overlay?: "ready_for_delivery" | "delivered" | "maintenance" | "transit" | "returned" | "";
   status_overlay_at?: string;
   status_overlay_by?: string;
   status_overlay_note?: string;
 
-  // reservation overlay (UX contract — backend engine will own this later)
+  // ---- Procurement / Intake ----
+  procurement?: {
+    state?: ProcurementState;
+    request_no?: string;
+    requested_at?: string;
+    requested_by?: string;
+    buyer?: string;
+    supplier?: string;
+    purchase_source?: string;
+    branch_destination?: string;
+    source_country?: string;
+    expected_arrival?: string;
+    estimated_cost?: number;
+    target_sale_price?: number;
+    note?: string;
+    // ordering
+    ordered_at?: string;
+    ordered_by?: string;
+    po_reference?: string;
+    // transit
+    transit_started_at?: string;
+    transit_carrier?: string;
+    transit_tracking?: string;
+    // receiving
+    received_at?: string;
+    received_by?: string;
+    vin_verified?: boolean;
+    chassis_verified?: boolean;
+    engine_verified?: boolean;
+    received_condition?: "good" | "minor_damage" | "major_damage" | "";
+    received_mileage?: number;
+    fuel_level?: "empty" | "quarter" | "half" | "three_quarters" | "full" | "";
+    accessories?: string;
+    keys_count?: number;
+    receiving_note?: string;
+    // inspection
+    inspection_at?: string;
+    inspection_by?: string;
+    inspection_result?: InspectionResult;
+    inspection_items?: {
+      body?: "ok" | "notes" | "fail" | "";
+      paint?: "ok" | "notes" | "fail" | "";
+      engine?: "ok" | "notes" | "fail" | "";
+      transmission?: "ok" | "notes" | "fail" | "";
+      tires?: "ok" | "notes" | "fail" | "";
+      battery?: "ok" | "notes" | "fail" | "";
+    };
+    accident_detected?: boolean;
+    maintenance_recommendations?: string;
+    inspection_note?: string;
+    // approval
+    approved_at?: string;
+    approved_by?: string;
+    rejection_reason?: string;
+    // landed cost components
+    cost_purchase?: number;
+    cost_shipping?: number;
+    cost_customs?: number;
+    cost_inspection?: number;
+    cost_repair?: number;
+    cost_accessories?: number;
+  };
+
+  // reservation overlay
   reservation?: {
-    reserved_by?: string;       // user/sales person display name
+    reserved_by?: string;
     customer_name?: string;
     customer_id?: string;
     sales_order_no?: string;
     sales_order_id?: string;
-    expires_at?: string;        // ISO date
+    expires_at?: string;
     note?: string;
     created_at?: string;
   };
 
-  // delivery workflow (UX contract for delivery & ownership)
+  // delivery workflow
   delivery?: {
     ready_at?: string;
     ready_by?: string;
-    officer?: string;              // assigned delivery officer
+    officer?: string;
     invoice_no?: string;
     payment_verified?: boolean;
     checklist?: {
@@ -61,13 +142,13 @@ export type VehicleMeta = {
     };
     customer_name?: string;
     customer_id_number?: string;
-    customer_signature_name?: string;  // typed signature placeholder
+    customer_signature_name?: string;
     delivered_at?: string;
     delivered_by?: string;
     note?: string;
   };
 
-  // ownership transfer history
+  // ownership
   ownership?: {
     current_owner?: string;
     previous_owner?: string;
@@ -76,8 +157,8 @@ export type VehicleMeta = {
   };
 
   // media
-  photos?: string[];            // public URLs in vehicle-media bucket
-  documents?: { name: string; url: string; size?: number; type?: string; kind?: "delivery_form" | "id_copy" | "insurance" | "registration" | "other" }[];
+  photos?: string[];
+  documents?: { name: string; url: string; size?: number; type?: string; kind?: "delivery_form" | "id_copy" | "insurance" | "registration" | "inspection_report" | "purchase_invoice" | "customs" | "other" }[];
 
   note?: string;
 };
@@ -113,14 +194,42 @@ export function serializeVehicleMeta(meta: VehicleMeta): string {
   return MARKER + JSON.stringify(clean);
 }
 
-/** Effective ERP status: overlay wins if set, otherwise DB status. */
+/** Effective ERP status: procurement (intake) > overlay > DB status. */
 export type EffectiveStatus =
+  | "requested" | "ordered" | "in_transit" | "received"
+  | "inspection_pending" | "approved" | "rejected"
   | "available" | "reserved" | "sold"
   | "ready_for_delivery" | "delivered" | "maintenance" | "transit" | "returned";
 
 export function effectiveStatus(dbStatus: string, meta: VehicleMeta): EffectiveStatus {
+  const proc = meta.procurement?.state;
+  // Active procurement (anything except approved) takes precedence over inventory state.
+  if (proc && proc !== "approved") return proc as EffectiveStatus;
   if (meta.status_overlay) return meta.status_overlay;
   return (dbStatus as EffectiveStatus) ?? "available";
+}
+
+/** Procurement helpers */
+export function landedCost(meta: VehicleMeta): number {
+  const p = meta.procurement;
+  if (!p) return 0;
+  return (
+    Number(p.cost_purchase ?? 0) +
+    Number(p.cost_shipping ?? 0) +
+    Number(p.cost_customs ?? 0) +
+    Number(p.cost_inspection ?? 0) +
+    Number(p.cost_repair ?? 0) +
+    Number(p.cost_accessories ?? 0)
+  );
+}
+
+export const PROCUREMENT_STATES: ProcurementState[] = [
+  "requested", "ordered", "in_transit", "received", "inspection_pending", "approved", "rejected",
+];
+
+export function isInProcurement(meta: VehicleMeta): boolean {
+  const s = meta.procurement?.state;
+  return !!s && s !== "approved";
 }
 
 /** Reservation expiry helpers. */
