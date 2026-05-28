@@ -61,6 +61,7 @@ const ActivityFeed = lazy(() => import("./pages/ActivityFeed"));
 const PurchasingDashboard = lazy(() => import("./pages/purchasing/PurchasingDashboard"));
 const PurchaseRequests = lazy(() => import("./pages/purchasing/PurchaseRequests"));
 const PurchaseOrders = lazy(() => import("./pages/purchasing/PurchaseOrders"));
+const PurchaseInvoices = lazy(() => import("./pages/purchasing/PurchaseInvoices"));
 const SupplierCredit = lazy(() => import("./pages/purchasing/SupplierCredit"));
 const SupplierIncentives = lazy(() => import("./pages/purchasing/SupplierIncentives"));
 const Shipments = lazy(() => import("./pages/purchasing/Shipments"));
