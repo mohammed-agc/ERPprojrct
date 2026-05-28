@@ -212,11 +212,12 @@ export default function SalesOrderDetail() {
     nav(`/invoices`);
   };
 
+  const state = ((order?.status ?? "draft") as SalesOrderState);
+  const { can } = useSalesActions(state);
   if (!order) return <div className="text-muted-foreground">جاري التحميل...</div>;
 
-  const state = (order.status ?? "draft") as SalesOrderState;
-  const canEditHeader = canPerform("edit_header", state, role).allowed;
-  const canEditLines = canPerform("edit_lines", state, role).allowed;
+  const canEditHeader = can("edit_header").allowed;
+  const canEditLines = can("edit_lines").allowed;
 
   const setStatus = async (next: SalesOrderState, msg: string) => {
     const { error } = await supabase.from("sales_orders").update({ status: next as any }).eq("id", id);
