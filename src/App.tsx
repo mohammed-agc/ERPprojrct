@@ -16,6 +16,7 @@ import Accounts from "./pages/Accounts";
 import Journals from "./pages/Journals";
 import UsersAdmin from "./pages/UsersAdmin";
 import Organization from "./pages/Organization";
+import Permissions from "./pages/Permissions";
 import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
 
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/journals" element={<Journals />} />
               <Route path="/users" element={<UsersAdmin />} />
               <Route path="/organization" element={<Organization />} />
+              <Route path="/permissions" element={<Permissions />} />
               <Route path="/spare-parts" element={<ComingSoon title="قطع الغيار" />} />
               <Route path="/workshop" element={<ComingSoon title="الورشة والصيانة" />} />
               <Route path="/inventory" element={<ComingSoon title="المخزون" />} />
