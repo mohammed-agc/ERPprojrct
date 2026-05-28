@@ -1,7 +1,8 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   Car, Wrench, Package, Calculator, Boxes, ShoppingCart,
-  Users, BarChart3, LayoutDashboard, Receipt, BookOpen, UserCog, Building2, ShieldCheck
+  Users, BarChart3, LayoutDashboard, Receipt, BookOpen, UserCog, Building2, ShieldCheck,
+  BookText, Scale
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,8 @@ const groups: { title: string; items: NavItem[] }[] = [
     items: [
       { label: "دليل الحسابات", to: "/accounts", icon: BookOpen, deptCode: "accounting" },
       { label: "قيود اليومية", to: "/journals", icon: Calculator, deptCode: "accounting" },
+      { label: "دفتر الأستاذ", to: "/general-ledger", icon: BookText, deptCode: "accounting" },
+      { label: "ميزان المراجعة", to: "/trial-balance", icon: Scale, deptCode: "accounting" },
     ],
   },
   {
