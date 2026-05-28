@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -6,55 +7,66 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ErpSessionProvider } from "@/contexts/ErpSessionContext";
 import AppLayout from "@/components/layout/AppLayout";
+import { ErrorBoundary } from "@/components/erp/ErrorBoundary";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
-import Customers from "./pages/Customers";
-import Contacts from "./pages/Contacts";
-import ContactDetail from "./pages/ContactDetail";
-import Vehicles from "./pages/Vehicles";
-import VehicleDetail from "./pages/VehicleDetail";
-import Procurement from "./pages/Procurement";
-import SalesOrders from "./pages/SalesOrders";
-import SalesOrderDetail from "./pages/SalesOrderDetail";
-import Invoices from "./pages/Invoices";
-import Accounts from "./pages/Accounts";
-import AccountDetail from "./pages/AccountDetail";
-import Journals from "./pages/Journals";
-import JournalDetail from "./pages/JournalDetail";
-import GeneralLedger from "./pages/GeneralLedger";
-import TrialBalance from "./pages/TrialBalance";
-import AccountsReceivable from "./pages/AccountsReceivable";
-import CustomerStatement from "./pages/CustomerStatement";
-import AccountsPayable from "./pages/AccountsPayable";
-import FinanceCenter from "./pages/FinanceCenter";
-import IncomeStatementPage from "./pages/IncomeStatement";
-import BalanceSheetPage from "./pages/BalanceSheet";
-import CashFlow from "./pages/CashFlow";
-import UsersAdmin from "./pages/UsersAdmin";
-import Organization from "./pages/Organization";
-import Permissions from "./pages/Permissions";
-import Treasury from "./pages/Treasury";
-import TreasuryAccounts from "./pages/TreasuryAccounts";
-import TreasuryAccountDetail from "./pages/TreasuryAccountDetail";
-import VouchersPage from "./pages/Vouchers";
-import Transfers from "./pages/Transfers";
-import BankReconciliation from "./pages/BankReconciliation";
-import CostCenters from "./pages/CostCenters";
-import FinancialDimensions from "./pages/FinancialDimensions";
-import { DepartmentProfitability, BranchProfitability } from "./pages/CenterProfitability";
-import FinancialAnalysis from "./pages/FinancialAnalysis";
-import CostAllocation from "./pages/CostAllocation";
-import GovernanceDashboard from "./pages/GovernanceDashboard";
-import FinancialPeriods from "./pages/FinancialPeriods";
-import MonthlyClosing from "./pages/MonthlyClosing";
-import YearEndClosing from "./pages/YearEndClosing";
-import ApprovalsPage from "./pages/Approvals";
-import AuditCenter from "./pages/AuditCenter";
-import ComingSoon from "./pages/ComingSoon";
-import ActivityFeed from "./pages/ActivityFeed";
 import NotFound from "./pages/NotFound";
 
+// Route-level code splitting — heavy modules load on demand.
+const Customers = lazy(() => import("./pages/Customers"));
+const Contacts = lazy(() => import("./pages/Contacts"));
+const ContactDetail = lazy(() => import("./pages/ContactDetail"));
+const Vehicles = lazy(() => import("./pages/Vehicles"));
+const VehicleDetail = lazy(() => import("./pages/VehicleDetail"));
+const Procurement = lazy(() => import("./pages/Procurement"));
+const SalesOrders = lazy(() => import("./pages/SalesOrders"));
+const SalesOrderDetail = lazy(() => import("./pages/SalesOrderDetail"));
+const Invoices = lazy(() => import("./pages/Invoices"));
+const Accounts = lazy(() => import("./pages/Accounts"));
+const AccountDetail = lazy(() => import("./pages/AccountDetail"));
+const Journals = lazy(() => import("./pages/Journals"));
+const JournalDetail = lazy(() => import("./pages/JournalDetail"));
+const GeneralLedger = lazy(() => import("./pages/GeneralLedger"));
+const TrialBalance = lazy(() => import("./pages/TrialBalance"));
+const AccountsReceivable = lazy(() => import("./pages/AccountsReceivable"));
+const CustomerStatement = lazy(() => import("./pages/CustomerStatement"));
+const AccountsPayable = lazy(() => import("./pages/AccountsPayable"));
+const FinanceCenter = lazy(() => import("./pages/FinanceCenter"));
+const IncomeStatementPage = lazy(() => import("./pages/IncomeStatement"));
+const BalanceSheetPage = lazy(() => import("./pages/BalanceSheet"));
+const CashFlow = lazy(() => import("./pages/CashFlow"));
+const UsersAdmin = lazy(() => import("./pages/UsersAdmin"));
+const Organization = lazy(() => import("./pages/Organization"));
+const Permissions = lazy(() => import("./pages/Permissions"));
+const Treasury = lazy(() => import("./pages/Treasury"));
+const TreasuryAccounts = lazy(() => import("./pages/TreasuryAccounts"));
+const TreasuryAccountDetail = lazy(() => import("./pages/TreasuryAccountDetail"));
+const VouchersPage = lazy(() => import("./pages/Vouchers"));
+const Transfers = lazy(() => import("./pages/Transfers"));
+const BankReconciliation = lazy(() => import("./pages/BankReconciliation"));
+const CostCenters = lazy(() => import("./pages/CostCenters"));
+const FinancialDimensions = lazy(() => import("./pages/FinancialDimensions"));
+const DepartmentProfitability = lazy(() => import("./pages/CenterProfitability").then(m => ({ default: m.DepartmentProfitability })));
+const BranchProfitability = lazy(() => import("./pages/CenterProfitability").then(m => ({ default: m.BranchProfitability })));
+const FinancialAnalysis = lazy(() => import("./pages/FinancialAnalysis"));
+const CostAllocation = lazy(() => import("./pages/CostAllocation"));
+const GovernanceDashboard = lazy(() => import("./pages/GovernanceDashboard"));
+const FinancialPeriods = lazy(() => import("./pages/FinancialPeriods"));
+const MonthlyClosing = lazy(() => import("./pages/MonthlyClosing"));
+const YearEndClosing = lazy(() => import("./pages/YearEndClosing"));
+const ApprovalsPage = lazy(() => import("./pages/Approvals"));
+const AuditCenter = lazy(() => import("./pages/AuditCenter"));
+const ComingSoon = lazy(() => import("./pages/ComingSoon"));
+const ActivityFeed = lazy(() => import("./pages/ActivityFeed"));
+
 import { ErpAuthError } from "@/services/erp";
+
+const PageLoader = () => (
+  <div className="flex items-center justify-center py-20 text-xs text-muted-foreground" aria-busy="true">
+    <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+  </div>
+);
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
