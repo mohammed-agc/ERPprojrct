@@ -21,7 +21,9 @@ import {
   ADDRESS_KIND_LABELS, parseContactMeta, serializeContactMeta,
   formatSaudiAddress, hasRole, toggleRole, complianceScore,
 } from "@/lib/contactMeta";
+import { SupplierIntelligence } from "@/components/erp/SupplierIntelligence";
 import { cn } from "@/lib/utils";
+
 
 const TYPE_ICONS: Record<ContactType, any> = {
   individual: Users, company: Building2, government: Landmark,
