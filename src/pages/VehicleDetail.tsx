@@ -645,6 +645,74 @@ export default function VehicleDetail() {
           if (ok) { toast.success("تم تحديث الحالة"); setStatusOpen(false); }
         }}
       />
+
+      {/* Delivery dialog */}
+      <DeliveryDialog
+        open={deliveryOpen}
+        onOpenChange={setDeliveryOpen}
+        meta={meta}
+        currentUser={profile?.full_name ?? ""}
+        defaultCustomerName={meta.reservation?.customer_name ?? linkedCustomer?.name ?? ""}
+        defaultInvoiceNo={meta.reservation?.sales_order_no ?? ""}
+        onMarkReady={async (payload) => {
+          const ok = await patchMeta(
+            {
+              delivery: {
+                ...(meta.delivery ?? {}),
+                ...payload,
+                ready_at: meta.delivery?.ready_at ?? new Date().toISOString(),
+                ready_by: profile?.full_name ?? "",
+              },
+              status_overlay: "ready_for_delivery",
+              status_overlay_at: new Date().toISOString(),
+              status_overlay_by: profile?.full_name ?? "",
+              status_overlay_note: undefined,
+            },
+            "sold",
+          );
+          if (ok) toast.success("المركبة جاهزة للتسليم");
+        }}
+        onComplete={async (payload) => {
+          const now = new Date().toISOString();
+          const ok = await patchMeta(
+            {
+              delivery: {
+                ...(meta.delivery ?? {}),
+                ...payload,
+                delivered_at: now,
+                delivered_by: profile?.full_name ?? "",
+              },
+              ownership: {
+                current_owner: payload.customer_name ?? meta.delivery?.customer_name ?? "",
+                previous_owner: meta.ownership?.current_owner ?? "المعرض",
+                transferred_at: now,
+              },
+              status_overlay: "delivered",
+              status_overlay_at: now,
+              status_overlay_by: profile?.full_name ?? "",
+              status_overlay_note: "تم التسليم",
+            },
+            "sold",
+          );
+          if (ok) { toast.success("تم تسليم المركبة ونقل الملكية"); setDeliveryOpen(false); }
+        }}
+        onReturn={async (note) => {
+          const now = new Date().toISOString();
+          const ok = await patchMeta(
+            {
+              status_overlay: "returned",
+              status_overlay_at: now,
+              status_overlay_by: profile?.full_name ?? "",
+              status_overlay_note: note,
+              ownership: meta.ownership
+                ? { ...meta.ownership, previous_owner: meta.ownership.current_owner, current_owner: "المعرض", transferred_at: now }
+                : undefined,
+            },
+            "available",
+          );
+          if (ok) { toast.success("تم تسجيل ارتجاع المركبة"); setDeliveryOpen(false); }
+        }}
+      />
     </div>
   );
 }
