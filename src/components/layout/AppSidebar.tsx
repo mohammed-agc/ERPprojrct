@@ -196,6 +196,7 @@ export function AppSidebar() {
         if (it.to === "/governance/audit") return { ...it, badge: { count: govCounts.audit_alerts + govCounts.audit_warnings, tone: "rose" as const } };
         if (it.to === "/governance/monthly-close") return { ...it, badge: { count: govCounts.pending_close, tone: "amber" as const } };
         if (it.to === "/governance/periods") return { ...it, badge: { count: govCounts.locked_periods, tone: "slate" as const } };
+      }
       if (purCounts) {
         if (it.to === "/purchasing/requests") return { ...it, badge: { count: purCounts.pending_prs, tone: "amber" as const } };
         if (it.to === "/purchasing/inspection") return { ...it, badge: { count: purCounts.awaiting_inspection, tone: "amber" as const } };
@@ -212,7 +213,6 @@ export function AppSidebar() {
     });
   };
 
-  };
 
   return (
     <aside className="w-60 bg-sidebar text-sidebar-foreground border-l border-sidebar-border flex flex-col h-screen sticky top-0">
