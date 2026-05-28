@@ -29,7 +29,7 @@ export function FavoritesMenu({ currentLabel }: { currentLabel?: string }) {
           {isFav ? <Star className="h-4 w-4 fill-amber-400 text-amber-500" /> : <Star className="h-4 w-4" />}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent dir="rtl" align="end" className="w-64">
+      <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel className="text-[11px]">المفضلات والشاشات المثبتة</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={toggle} className="gap-2 text-xs">

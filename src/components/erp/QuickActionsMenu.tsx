@@ -26,7 +26,7 @@ export function QuickActionsMenu() {
           إنشاء سريع
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent dir="rtl" align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="text-[11px]">العمليات السريعة</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {ITEMS.map((it, i) => {
