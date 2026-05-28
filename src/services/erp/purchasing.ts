@@ -16,6 +16,7 @@
  */
 
 import { inventoryIntegration } from "./integration";
+import { makeAudit, makeApproval, type AuditEntry, type ApprovalEntry, type ErpGovRole } from "./erpRoles";
 
 const LS_KEY = "sarat.purchasing.v1";
 
