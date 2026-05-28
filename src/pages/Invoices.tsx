@@ -7,6 +7,7 @@ import { useErpSession } from "@/contexts/ErpSessionContext";
 import { canPerform } from "@/lib/erpPermissions";
 import { Banknote } from "lucide-react";
 import { toast } from "sonner";
+import { PaymentDialog, PaymentSubmitPayload, PaymentInvoiceContext } from "@/components/erp/PaymentDialog";
 
 const statusMap: Record<string, { label: string; variant: any }> = {
   draft: { label: "مسودة", variant: "secondary" },
@@ -15,9 +16,22 @@ const statusMap: Record<string, { label: string; variant: any }> = {
   cancelled: { label: "ملغاة", variant: "destructive" },
 };
 
+// Frontend-only mirror of payment progress until backend payments table exists.
+// Keyed by invoice id → total paid.
+const paymentLedger: Record<string, number> = {};
+
+function paymentBadge(status: "unpaid" | "partial" | "paid") {
+  if (status === "paid")    return <Badge className="bg-success text-success-foreground hover:bg-success/90">مدفوعة</Badge>;
+  if (status === "partial") return <Badge variant="secondary">جزئية</Badge>;
+  return <Badge variant="destructive">غير مدفوعة</Badge>;
+}
+
 export default function Invoices() {
   const [rows, setRows] = useState<any[]>([]);
   const { role } = useErpSession();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [activeInvoice, setActiveInvoice] = useState<PaymentInvoiceContext | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const load = () => {
     supabase.from("invoices").select("*, customers(name)").order("invoice_date", { ascending: false })
@@ -25,11 +39,39 @@ export default function Invoices() {
   };
   useEffect(() => { load(); }, []);
 
-  const registerPayment = async (invoiceId: string) => {
-    const { error } = await supabase.from("invoices").update({ status: "paid" }).eq("id", invoiceId);
-    if (error) { toast.error(error.message); return; }
-    toast.success("تم تسجيل الدفعة");
-    load();
+  const openPayment = (r: any) => {
+    setActiveInvoice({
+      id: r.id,
+      invoice_no: r.invoice_no,
+      customer_name: r.customers?.name,
+      total: Number(r.total),
+      paid_amount: r.status === "paid" ? Number(r.total) : (paymentLedger[r.id] ?? 0),
+    });
+    setDialogOpen(true);
+  };
+
+  const handleSubmitPayment = async (p: PaymentSubmitPayload) => {
+    setSubmitting(true);
+    try {
+      // Track locally until backend payments service is wired.
+      paymentLedger[p.invoiceId] = (paymentLedger[p.invoiceId] ?? 0) + p.amount;
+
+      if (p.isFullPayment) {
+        const { error } = await supabase.from("invoices").update({ status: "paid" }).eq("id", p.invoiceId);
+        if (error) throw error;
+        toast.success("تم تسجيل الدفعة الكاملة");
+      } else {
+        toast.success(`تم تسجيل دفعة جزئية بقيمة ${p.amount.toLocaleString("ar-SA")}`, {
+          description: "سيتم ترحيل القيد المحاسبي من قِبل النظام الخلفي.",
+        });
+      }
+      setDialogOpen(false);
+      load();
+    } catch (e: any) {
+      toast.error(e.message ?? "فشل تسجيل الدفعة");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -47,18 +89,21 @@ export default function Invoices() {
               <th className="text-left">الإجمالي</th>
               <th>QR</th>
               <th>الحالة</th>
+              <th>الدفع</th>
               <th className="text-left">الإجراءات</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td colSpan={9} className="text-center text-muted-foreground py-8">لا توجد فواتير</td></tr>
+              <tr><td colSpan={10} className="text-center text-muted-foreground py-8">لا توجد فواتير</td></tr>
             )}
             {rows.map(r => {
-              // Map invoice status → sales-order state for permission decision.
-              // 'posted' or 'draft' invoice = awaiting payment (invoiced state).
               const woState = r.status === "paid" ? "paid" : "invoiced";
               const payPerm = canPerform("receive_payment", woState as any, role);
+              const total = Number(r.total);
+              const paidSoFar = r.status === "paid" ? total : (paymentLedger[r.id] ?? 0);
+              const payStatus: "unpaid" | "partial" | "paid" =
+                paidSoFar <= 0 ? "unpaid" : paidSoFar >= total ? "paid" : "partial";
               return (
                 <tr key={r.id}>
                   <td className="font-mono">{r.invoice_no}</td>
@@ -66,16 +111,18 @@ export default function Invoices() {
                   <td>{r.customers?.name ?? "—"}</td>
                   <td className="num text-left">{Number(r.subtotal).toLocaleString("ar-SA", {minimumFractionDigits:2})}</td>
                   <td className="num text-left">{Number(r.vat_amount).toLocaleString("ar-SA", {minimumFractionDigits:2})}</td>
-                  <td className="num text-left font-bold">{Number(r.total).toLocaleString("ar-SA", {minimumFractionDigits:2})}</td>
+                  <td className="num text-left font-bold">{total.toLocaleString("ar-SA", {minimumFractionDigits:2})}</td>
                   <td>{r.qr_code ? <span className="text-xs text-success">✓ متوفر</span> : <span className="text-xs text-muted-foreground">—</span>}</td>
                   <td><Badge variant={statusMap[r.status]?.variant}>{statusMap[r.status]?.label}</Badge></td>
+                  <td>{paymentBadge(payStatus)}</td>
                   <td className="text-left">
                     <ActionButton
                       size="sm"
                       variant="outline"
                       permission={payPerm}
                       hideIfDenied
-                      onClick={() => registerPayment(r.id)}
+                      onClick={() => openPayment(r)}
+                      disabled={payStatus === "paid"}
                     >
                       <Banknote className="h-3.5 w-3.5 ml-1" /> تسجيل دفعة
                     </ActionButton>
@@ -86,6 +133,14 @@ export default function Invoices() {
           </tbody>
         </table>
       </div>
+
+      <PaymentDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        invoice={activeInvoice}
+        submitting={submitting}
+        onSubmit={handleSubmitPayment}
+      />
     </div>
   );
 }
