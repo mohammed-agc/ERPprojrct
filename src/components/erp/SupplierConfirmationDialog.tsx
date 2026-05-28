@@ -29,7 +29,8 @@ export function SupplierConfirmationDialog({ open, onOpenChange, poId, onDone }:
   const [note, setNote] = useState("");
 
   const submit = () => {
-    purchasingService.supplierConfirm(poId, outcome);
+  const submit = () => {
+    purchasingService.supplierConfirm(poId, outcome, undefined, note || undefined);
     toast.success(outcome === "rejected" ? "تم تسجيل الرفض" : "تم تسجيل تأكيد المورد");
     onDone?.();
     onOpenChange(false);
