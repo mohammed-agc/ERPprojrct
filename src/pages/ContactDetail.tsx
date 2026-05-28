@@ -143,7 +143,14 @@ export default function ContactDetail() {
           <TabsTrigger value="financial" className="text-xs">المالي والائتمان</TabsTrigger>
           <TabsTrigger value="related" className="text-xs">جهات مرتبطة</TabsTrigger>
           <TabsTrigger value="timeline" className="text-xs">السجل ERP</TabsTrigger>
+          {hasRole(meta, "vendor") && (
+            <TabsTrigger value="supplier" className="text-xs gap-1">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              ذكاء المورد
+            </TabsTrigger>
+          )}
         </TabsList>
+
 
         {/* ---------- Overview ---------- */}
         <TabsContent value="overview" className="space-y-3">
