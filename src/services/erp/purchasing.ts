@@ -24,10 +24,15 @@ const LS_KEY = "sarat.purchasing.v1";
 export type Urgency = "low" | "normal" | "high" | "critical";
 
 export type PRStatus =
-  | "draft" | "pending" | "approved" | "rejected" | "converted_to_po";
+  | "draft" | "confirmed" | "pending" | "approved" | "rejected" | "converted_to_po";
 
 export type POStatus =
-  | "draft" | "approved" | "ordered" | "partially_received" | "completed" | "cancelled";
+  | "draft" | "approved"
+  | "awaiting_supplier_confirmation" | "allocation_pending" | "ready_for_allocation"
+  | "allocated" | "invoiced"
+  | "ordered" | "partially_received"
+  | "in_transit" | "received" | "inspection_pending" | "inventory_completed"
+  | "completed" | "closed" | "cancelled";
 
 export type ShipmentStatus =
   | "preparing" | "shipped" | "in_transit" | "at_customs" | "cleared" | "arrived";
@@ -446,11 +451,12 @@ export const URGENCY_TONE: Record<Urgency, string> = {
 };
 
 export const PR_LABEL: Record<PRStatus, string> = {
-  draft: "مسودة", pending: "بانتظار الاعتماد", approved: "معتمد",
+  draft: "مسودة", confirmed: "مؤكد", pending: "بانتظار الاعتماد", approved: "معتمد",
   rejected: "مرفوض", converted_to_po: "تم تحويلها لأمر شراء",
 };
 export const PR_TONE: Record<PRStatus, string> = {
   draft: "bg-muted text-muted-foreground border border-border",
+  confirmed: "bg-primary/10 text-primary border border-primary/30",
   pending: "bg-warning/10 text-warning border border-warning/40",
   approved: "bg-success/10 text-success border border-success/40",
   rejected: "bg-destructive/10 text-destructive border border-destructive/40",
@@ -458,15 +464,39 @@ export const PR_TONE: Record<PRStatus, string> = {
 };
 
 export const PO_LABEL: Record<POStatus, string> = {
-  draft: "مسودة", approved: "معتمد", ordered: "تم الطلب",
-  partially_received: "مستلم جزئياً", completed: "مكتمل", cancelled: "ملغى",
+  draft: "مسودة",
+  approved: "معتمد",
+  awaiting_supplier_confirmation: "بانتظار تأكيد المورد",
+  allocation_pending: "بانتظار التخصيص",
+  ready_for_allocation: "جاهز للتخصيص",
+  allocated: "تم التخصيص",
+  invoiced: "مفوتر",
+  ordered: "تم الطلب",
+  partially_received: "مستلم جزئياً",
+  in_transit: "في الطريق",
+  received: "تم الاستلام",
+  inspection_pending: "بانتظار الفحص",
+  inventory_completed: "تم الإدخال للمخزون",
+  completed: "مكتمل",
+  closed: "مُقفل",
+  cancelled: "ملغى",
 };
 export const PO_TONE: Record<POStatus, string> = {
   draft: "bg-muted text-muted-foreground border border-border",
   approved: "bg-primary/10 text-primary border border-primary/30",
+  awaiting_supplier_confirmation: "bg-warning/10 text-warning border border-warning/40",
+  allocation_pending: "bg-warning/10 text-warning border border-warning/40",
+  ready_for_allocation: "bg-primary/10 text-primary border border-primary/30",
+  allocated: "bg-primary/10 text-primary border border-primary/30",
+  invoiced: "bg-primary/10 text-primary border border-primary/30",
   ordered: "bg-primary/10 text-primary border border-primary/30",
   partially_received: "bg-warning/10 text-warning border border-warning/40",
+  in_transit: "bg-warning/10 text-warning border border-warning/40",
+  received: "bg-success/10 text-success border border-success/40",
+  inspection_pending: "bg-warning/10 text-warning border border-warning/40",
+  inventory_completed: "bg-success/10 text-success border border-success/40",
   completed: "bg-success/10 text-success border border-success/40",
+  closed: "bg-muted text-muted-foreground border border-border",
   cancelled: "bg-destructive/10 text-destructive border border-destructive/40",
 };
 
@@ -1244,6 +1274,96 @@ export const purchasingService = {
       });
     });
     return events.sort((a, b) => b.date.localeCompare(a.date));
+  },
+
+  /* ============ Governance v1.3 lifecycle hooks ============ */
+
+  /** Officer confirms a draft PR → moves it into Pending Approval queue. */
+  confirmPR(id: string) {
+    const db = load();
+    const pr = db.prs.find(p => p.id === id); if (!pr) return;
+    if (pr.status !== "draft" && pr.status !== "confirmed") return;
+    pr.status = "pending";
+    save(db);
+  },
+
+  /** Manager records supplier confirmation outcome on a PO. */
+  supplierConfirm(
+    poId: string,
+    outcome: "confirm_all" | "confirm_partial" | "model_change" | "qty_change" | "rejected",
+  ) {
+    const db = load();
+    const po = db.pos.find(p => p.id === poId); if (!po) return;
+    if (outcome === "rejected") {
+      po.status = "cancelled";
+    } else {
+      // partial / model / qty changes still unlock allocation — UI will flag
+      po.status = "ready_for_allocation";
+    }
+    save(db);
+  },
+
+  /** Move an approved PO into awaiting-supplier-confirmation. */
+  moveToAwaitingSupplier(poId: string) {
+    const db = load();
+    const po = db.pos.find(p => p.id === poId); if (!po) return;
+    if (po.status !== "approved") return;
+    po.status = "awaiting_supplier_confirmation";
+    save(db);
+  },
+
+  /** Hook invoked by allocationService.confirmAllocation. */
+  onAllocationConfirmed(poId: string) {
+    const db = load();
+    const po = db.pos.find(p => p.id === poId); if (!po) return;
+    if (po.status === "ready_for_allocation" || po.status === "approved" ||
+        po.status === "allocation_pending" || po.status === "awaiting_supplier_confirmation") {
+      po.status = "allocated";
+      save(db);
+    }
+  },
+
+  /** Hook invoked when an invoice tied to a PO becomes paid/paid-by-credit. */
+  onInvoicePaid(poId: string) {
+    const db = load();
+    const po = db.pos.find(p => p.id === poId); if (!po) return;
+    if (po.status === "allocated" || po.status === "approved") {
+      po.status = "invoiced";
+      save(db);
+    }
+  },
+
+  /** Hook invoked when shipment dispatched. */
+  onShipmentDispatched(poId: string) {
+    const db = load();
+    const po = db.pos.find(p => p.id === poId); if (!po) return;
+    if (["invoiced","allocated","approved","ordered"].includes(po.status)) {
+      po.status = "in_transit";
+      save(db);
+    }
+  },
+
+  /** Close a PO — only after inventory entry completed. */
+  closePO(poId: string): { ok: boolean; reason?: string } {
+    const db = load();
+    const po = db.pos.find(p => p.id === poId);
+    if (!po) return { ok: false, reason: "أمر الشراء غير موجود" };
+    if (po.status !== "inventory_completed" && po.status !== "completed") {
+      return { ok: false, reason: "لا يمكن الإقفال قبل اكتمال الفحص وإدخال المخزون" };
+    }
+    po.status = "closed";
+    po.completed_at = po.completed_at ?? isoNow();
+    save(db);
+    return { ok: true };
+  },
+
+  /** Mark PO inspection-pending (called after GRN handoff). */
+  setPOStatus(poId: string, status: POStatus) {
+    const db = load();
+    const po = db.pos.find(p => p.id === poId); if (!po) return;
+    po.status = status;
+    if (status === "completed" || status === "closed") po.completed_at = isoNow();
+    save(db);
   },
 
   /* utilities */
