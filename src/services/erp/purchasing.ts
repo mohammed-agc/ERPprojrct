@@ -33,7 +33,31 @@ export type ShipmentStatus =
   | "preparing" | "shipped" | "in_transit" | "at_customs" | "cleared" | "arrived";
 
 export type ReceivingStatus =
-  | "pending" | "partial" | "received" | "with_discrepancy";
+  | "draft" | "receiving" | "pending" | "partial" | "partially_received"
+  | "received" | "with_discrepancy" | "awaiting_inspection" | "completed" | "cancelled";
+
+export type DiscrepancyKind = "missing" | "damaged" | "wrong_item" | "extra" | "supplier_issue";
+
+export interface GRNDiscrepancy {
+  id: string;
+  line_id?: string;
+  kind: DiscrepancyKind;
+  qty?: number;
+  notes?: string;
+  reported_at: string;
+}
+
+export interface GRNReceiptItem {
+  line_id: string;
+  qty: number;
+  condition: "ok" | "damaged" | "missing" | "wrong_item" | "extra";
+  bin?: string;
+  vin_pending?: boolean;       // vehicle without confirmed VIN
+  chassis_verified?: boolean;
+  sku_verified?: boolean;
+  barcode_verified?: boolean;
+  notes?: string;
+}
 
 export type InspectionStatus =
   | "pending" | "in_progress" | "approved" | "rejected";
@@ -126,13 +150,23 @@ export interface ReceivingNote {
   id: string;
   code: string;            // GRN-2026-0001
   po_id: string;
-  warehouse: string;
+  invoice_id?: string;
+  shipment_ref?: string;
+  branch?: string;
+  warehouse: string;       // warehouse code/name (display)
+  warehouse_id?: string;
+  yard?: string;
   status: ReceivingStatus;
   inspection_status: InspectionStatus;
   received_at: string;
+  created_at?: string;
+  completed_at?: string;
+  handoff_at?: string;
   receiver: string;
+  notes?: string;
   discrepancy_notes?: string;
-  items: { line_id: string; qty: number; condition: "ok" | "damaged" | "missing" }[];
+  items: GRNReceiptItem[];
+  discrepancies?: GRNDiscrepancy[];
 }
 
 export interface InspectionRecord {
@@ -450,14 +484,43 @@ export const SHIPMENT_TONE: Record<ShipmentStatus, string> = {
 };
 
 export const RECV_LABEL: Record<ReceivingStatus, string> = {
-  pending: "بانتظار الاستلام", partial: "استلام جزئي",
-  received: "تم الاستلام", with_discrepancy: "بفروقات",
+  draft: "مسودة",
+  receiving: "قيد الاستلام",
+  pending: "بانتظار الاستلام",
+  partial: "استلام جزئي",
+  partially_received: "مستلم جزئياً",
+  received: "تم الاستلام",
+  with_discrepancy: "بفروقات",
+  awaiting_inspection: "بانتظار الفحص",
+  completed: "مكتمل",
+  cancelled: "ملغى",
 };
 export const RECV_TONE: Record<ReceivingStatus, string> = {
+  draft: "bg-muted text-muted-foreground border border-border",
+  receiving: "bg-primary/10 text-primary border border-primary/30",
   pending: "bg-muted text-muted-foreground border border-border",
   partial: "bg-warning/10 text-warning border border-warning/40",
+  partially_received: "bg-warning/10 text-warning border border-warning/40",
   received: "bg-success/10 text-success border border-success/40",
   with_discrepancy: "bg-destructive/10 text-destructive border border-destructive/40",
+  awaiting_inspection: "bg-primary/10 text-primary border border-primary/30",
+  completed: "bg-success/10 text-success border border-success/40",
+  cancelled: "bg-destructive/10 text-destructive border border-destructive/40",
+};
+
+export const DISCREPANCY_LABEL: Record<DiscrepancyKind, string> = {
+  missing: "كمية ناقصة",
+  damaged: "تالف",
+  wrong_item: "صنف خاطئ",
+  extra: "كمية زائدة",
+  supplier_issue: "خطأ من المورد",
+};
+export const DISCREPANCY_TONE: Record<DiscrepancyKind, string> = {
+  missing: "bg-warning/10 text-warning border border-warning/40",
+  damaged: "bg-destructive/10 text-destructive border border-destructive/40",
+  wrong_item: "bg-destructive/10 text-destructive border border-destructive/40",
+  extra: "bg-primary/10 text-primary border border-primary/30",
+  supplier_issue: "bg-destructive/10 text-destructive border border-destructive/40",
 };
 
 export const INSP_LABEL: Record<InspectionStatus, string> = {
@@ -817,10 +880,223 @@ export const purchasingService = {
     return load().shipments.slice().sort((a, b) => b.created_at.localeCompare(a.created_at));
   },
 
-  /* receiving */
+  /* ============ Receiving / GRN governance ============ */
   listGRNs(): ReceivingNote[] {
-    return load().grns.slice().sort((a, b) => b.received_at.localeCompare(a.received_at));
+    return load().grns.slice().sort((a, b) => (b.received_at || "").localeCompare(a.received_at || ""));
   },
+  getGRN(id: string) { return load().grns.find(g => g.id === id); },
+  grnsForPO(poId: string) { return load().grns.filter(g => g.po_id === poId); },
+
+  /** Aggregate ordered/received/remaining per line and overall for a PO from all GRNs. */
+  poReceivingProgress(poId: string) {
+    const po = this.getPO(poId);
+    if (!po) return { lines: [], orderedQty: 0, receivedQty: 0, remainingQty: 0, pct: 0 };
+    const grns = this.grnsForPO(poId);
+    const lines = po.items.map(li => {
+      const received = grns.reduce((s, g) => s + g.items
+        .filter(it => it.line_id === li.id && it.condition !== "missing" && it.condition !== "wrong_item")
+        .reduce((x, it) => x + (it.qty || 0), 0), 0);
+      const remaining = Math.max(0, li.qty - received);
+      return { line_id: li.id, description: li.description, kind: li.kind, ordered: li.qty, received, remaining };
+    });
+    const orderedQty = lines.reduce((s, l) => s + l.ordered, 0);
+    const receivedQty = lines.reduce((s, l) => s + l.received, 0);
+    const remainingQty = Math.max(0, orderedQty - receivedQty);
+    return { lines, orderedQty, receivedQty, remainingQty, pct: orderedQty ? (receivedQty / orderedQty) * 100 : 0 };
+  },
+
+  /** Create a Draft GRN for an approved PO (gate enforced by canCreateGRN). */
+  createGRN(input: {
+    po_id: string;
+    invoice_id?: string;
+    warehouse: string;
+    warehouse_id?: string;
+    branch?: string;
+    yard?: string;
+    receiver: string;
+    shipment_ref?: string;
+    notes?: string;
+  }): ReceivingNote | undefined {
+    const gate = this.canCreateGRN(input.po_id);
+    if (!gate.allowed) return undefined;
+    const db = load();
+    const po = db.pos.find(p => p.id === input.po_id);
+    if (!po) return undefined;
+    const year = new Date().getFullYear();
+    const seq = db.grns.filter(g => g.code.startsWith(`GRN-${year}`)).length + 67;
+    const grn: ReceivingNote = {
+      id: uid("grn"),
+      code: `GRN-${year}-${String(seq).padStart(4, "0")}`,
+      po_id: po.id,
+      invoice_id: input.invoice_id,
+      warehouse: input.warehouse,
+      warehouse_id: input.warehouse_id,
+      branch: input.branch || po.branch_destination,
+      yard: input.yard,
+      shipment_ref: input.shipment_ref,
+      status: "draft",
+      inspection_status: "pending",
+      received_at: today(),
+      created_at: isoNow(),
+      receiver: input.receiver,
+      notes: input.notes,
+      items: [],
+      discrepancies: [],
+    };
+    db.grns.unshift(grn); save(db);
+    return grn;
+  },
+
+  /** Record a partial receipt against a GRN. Appends items and recomputes status. */
+  recordReceipt(grnId: string, items: GRNReceiptItem[]) {
+    const db = load();
+    const grn = db.grns.find(g => g.id === grnId); if (!grn) return;
+    if (grn.status === "completed" || grn.status === "cancelled") return;
+    grn.items = [...grn.items, ...items.filter(i => (i.qty || 0) > 0)];
+    grn.received_at = today();
+    this._syncGRNStatus(db, grn);
+    save(db);
+  },
+
+  assignWarehouse(grnId: string, input: { warehouse: string; warehouse_id?: string; yard?: string }) {
+    const db = load();
+    const grn = db.grns.find(g => g.id === grnId); if (!grn) return;
+    grn.warehouse = input.warehouse;
+    grn.warehouse_id = input.warehouse_id;
+    grn.yard = input.yard;
+    save(db);
+  },
+
+  addDiscrepancy(grnId: string, d: Omit<GRNDiscrepancy, "id" | "reported_at">) {
+    const db = load();
+    const grn = db.grns.find(g => g.id === grnId); if (!grn) return;
+    grn.discrepancies = [...(grn.discrepancies ?? []), {
+      id: uid("disc"), reported_at: isoNow(), ...d,
+    }];
+    this._syncGRNStatus(db, grn);
+    save(db);
+  },
+
+  cancelGRN(grnId: string) {
+    const db = load();
+    const grn = db.grns.find(g => g.id === grnId); if (!grn) return;
+    if (grn.status === "completed") return;
+    grn.status = "cancelled";
+    save(db);
+  },
+
+  /** Mark the GRN as fully received and ready for inspection handoff. */
+  completeGRN(grnId: string) {
+    const db = load();
+    const grn = db.grns.find(g => g.id === grnId); if (!grn) return;
+    if (grn.items.length === 0) return;
+    const hasDisc = (grn.discrepancies?.length ?? 0) > 0
+      || grn.items.some(i => i.condition !== "ok");
+    grn.status = hasDisc ? "with_discrepancy" : "received";
+    grn.completed_at = isoNow();
+    // mirror onto PO line received_qty (compute inline from in-memory db)
+    const po = db.pos.find(p => p.id === grn.po_id);
+    if (po) {
+      const allGrns = db.grns.filter(g => g.po_id === po.id);
+      let orderedQty = 0, receivedQty = 0;
+      po.items.forEach(li => {
+        const recv = allGrns.reduce((s, g) => s + g.items
+          .filter(it => it.line_id === li.id && it.condition !== "missing" && it.condition !== "wrong_item")
+          .reduce((x, it) => x + (it.qty || 0), 0), 0);
+        li.received_qty = recv;
+        orderedQty += li.qty;
+        receivedQty += recv;
+      });
+      if (receivedQty >= orderedQty) {
+        po.status = "completed";
+        po.completed_at = isoNow();
+      } else if (receivedQty > 0) {
+        po.status = "partially_received";
+      }
+    }
+    save(db);
+  },
+
+  /** Hand-off GRN to Inspection — auto-creates an inspection record if missing. */
+  handoffToInspection(grnId: string, inspector = "م. ناصر") {
+    const db = load();
+    const grn = db.grns.find(g => g.id === grnId); if (!grn) return;
+    if (grn.status !== "received" && grn.status !== "with_discrepancy") return;
+    grn.status = "awaiting_inspection";
+    grn.handoff_at = isoNow();
+    grn.inspection_status = "pending";
+    const existing = db.inspections.find(i => i.grn_id === grn.id);
+    if (!existing) {
+      const insp: InspectionRecord = {
+        id: uid("insp"),
+        grn_id: grn.id,
+        po_id: grn.po_id,
+        inspector,
+        status: "pending",
+        started_at: isoNow(),
+        items: grn.items
+          .filter(it => it.condition === "ok" || it.condition === "damaged")
+          .map(it => ({ line_id: it.line_id, passed: 0, failed: 0 })),
+      };
+      db.inspections.unshift(insp);
+    }
+    save(db);
+  },
+
+  /** Internal: recompute GRN.status based on items + discrepancies + PO totals. */
+  _syncGRNStatus(db: DB, grn: ReceivingNote) {
+    if (grn.status === "completed" || grn.status === "cancelled"
+      || grn.status === "awaiting_inspection") return;
+    const po = db.pos.find(p => p.id === grn.po_id);
+    if (!po) return;
+    const totals = grn.items.reduce((acc, it) => {
+      if (it.condition === "ok" || it.condition === "damaged" || it.condition === "extra") acc.recv += it.qty;
+      return acc;
+    }, { recv: 0 });
+    const ordered = po.items.reduce((s, l) => s + l.qty, 0);
+    const hasDisc = (grn.discrepancies?.length ?? 0) > 0
+      || grn.items.some(i => i.condition !== "ok");
+    if (totals.recv === 0) grn.status = "draft";
+    else if (hasDisc && totals.recv >= ordered) grn.status = "with_discrepancy";
+    else if (totals.recv >= ordered) grn.status = "received";
+    else grn.status = "partial";
+  },
+
+  /** GRN-specific dashboard KPIs. */
+  grnDashboard() {
+    const db = load();
+    const grns = db.grns;
+    const todayISO = today();
+    const draftOrReceiving = grns.filter(g => ["draft", "receiving", "pending", "partial"].includes(g.status)).length;
+    const partial = grns.filter(g => g.status === "partial" || g.status === "partially_received").length;
+    const awaitingInspection = grns.filter(g => g.status === "awaiting_inspection"
+      || (g.inspection_status === "pending" && (g.status === "received" || g.status === "with_discrepancy"))).length;
+    const discrepancy = grns.filter(g => g.status === "with_discrepancy"
+      || (g.discrepancies?.length ?? 0) > 0).length;
+    const receivedToday = grns.filter(g => (g.received_at || "").slice(0, 10) === todayISO).length;
+    const completed = grns.filter(g => g.status === "completed").length;
+    // supplier perf
+    const bySupplier = new Map<string, { name: string; total: number; clean: number }>();
+    grns.forEach(g => {
+      const po = db.pos.find(p => p.id === g.po_id); if (!po) return;
+      const sup = db.suppliers.find(s => s.id === po.supplier_id); if (!sup) return;
+      const e = bySupplier.get(sup.id) || { name: sup.name, total: 0, clean: 0 };
+      e.total += 1;
+      if (g.status === "received" || g.status === "completed") e.clean += 1;
+      bySupplier.set(sup.id, e);
+    });
+    const supplierPerf = Array.from(bySupplier.entries()).map(([id, v]) => ({
+      supplier_id: id, name: v.name, total: v.total,
+      clean_rate: v.total ? (v.clean / v.total) * 100 : 0,
+    })).sort((a, b) => b.total - a.total).slice(0, 6);
+    return {
+      total: grns.length,
+      draftOrReceiving, partial, awaitingInspection,
+      discrepancy, receivedToday, completed, supplierPerf,
+    };
+  },
+
+
 
   /* inspection */
   listInspections(): InspectionRecord[] {

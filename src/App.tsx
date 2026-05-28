@@ -81,6 +81,9 @@ const InventoryParts = lazy(() => import("./pages/inventory/PartsInventory"));
 const InventoryMovements = lazy(() => import("./pages/inventory/Movements"));
 const InventoryReservations = lazy(() => import("./pages/inventory/Reservations"));
 const InventoryTransfers = lazy(() => import("./pages/inventory/Transfers"));
+const GRNDashboard = lazy(() => import("./pages/grn/GRNDashboard"));
+const GRNList = lazy(() => import("./pages/grn/GRNList"));
+const GRNDetail = lazy(() => import("./pages/grn/GRNDetail"));
 
 
 import { ErpAuthError } from "@/services/erp";
@@ -197,6 +200,9 @@ const App = () => (
               <Route path="/inventory/movements" element={<InventoryMovements />} />
               <Route path="/inventory/reservations" element={<InventoryReservations />} />
               <Route path="/inventory/transfers" element={<InventoryTransfers />} />
+              <Route path="/grn" element={<GRNDashboard />} />
+              <Route path="/grn/list" element={<GRNList />} />
+              <Route path="/grn/:id" element={<GRNDetail />} />
               <Route path="/reports" element={<ComingSoon title="التقارير والإحصاءات" />} />
             </Route>
             <Route path="*" element={<NotFound />} />

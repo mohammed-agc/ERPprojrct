@@ -64,6 +64,13 @@ const groups: { title: string; items: NavItem[] }[] = [
     ],
   },
   {
+    title: "إشعارات الاستلام",
+    items: [
+      { label: "لوحة الاستلام", to: "/grn", icon: LayoutDashboard, deptCode: "vehicles" },
+      { label: "قائمة الإشعارات", to: "/grn/list", icon: PackageCheck, deptCode: "vehicles" },
+    ],
+  },
+  {
     title: "المخزون والمستودعات",
     items: [
       { label: "لوحة المخزون", to: "/inventory", icon: LayoutDashboard, deptCode: "inventory" },
