@@ -72,6 +72,7 @@ export default function VehicleDetail() {
   const [reserveOpen, setReserveOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const [deliveryOpen, setDeliveryOpen] = useState(false);
+  const [procOpen, setProcOpen] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
 
