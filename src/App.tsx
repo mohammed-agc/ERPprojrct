@@ -51,6 +51,7 @@ import YearEndClosing from "./pages/YearEndClosing";
 import ApprovalsPage from "./pages/Approvals";
 import AuditCenter from "./pages/AuditCenter";
 import ComingSoon from "./pages/ComingSoon";
+import ActivityFeed from "./pages/ActivityFeed";
 import NotFound from "./pages/NotFound";
 
 import { ErpAuthError } from "@/services/erp";
@@ -128,6 +129,7 @@ const App = () => (
               <Route path="/governance/year-end-close" element={<YearEndClosing />} />
               <Route path="/governance/approvals" element={<ApprovalsPage scope="journal" />} />
               <Route path="/governance/audit" element={<AuditCenter />} />
+              <Route path="/activity" element={<ActivityFeed />} />
               <Route path="/users" element={<UsersAdmin />} />
               <Route path="/organization" element={<Organization />} />
               <Route path="/permissions" element={<Permissions />} />
