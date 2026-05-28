@@ -25,12 +25,9 @@ export default function Invoices() {
   };
   useEffect(() => { load(); }, []);
 
-  const registerPayment = async (invoiceId: string, salesOrderId: string | null) => {
+  const registerPayment = async (invoiceId: string) => {
     const { error } = await supabase.from("invoices").update({ status: "paid" }).eq("id", invoiceId);
     if (error) { toast.error(error.message); return; }
-    if (salesOrderId) {
-      await supabase.from("sales_orders").update({ status: "paid" }).eq("id", salesOrderId);
-    }
     toast.success("تم تسجيل الدفعة");
     load();
   };
