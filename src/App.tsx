@@ -200,6 +200,9 @@ const App = () => (
               <Route path="/inventory/movements" element={<InventoryMovements />} />
               <Route path="/inventory/reservations" element={<InventoryReservations />} />
               <Route path="/inventory/transfers" element={<InventoryTransfers />} />
+              <Route path="/grn" element={<GRNDashboard />} />
+              <Route path="/grn/list" element={<GRNList />} />
+              <Route path="/grn/:id" element={<GRNDetail />} />
               <Route path="/reports" element={<ComingSoon title="التقارير والإحصاءات" />} />
             </Route>
             <Route path="*" element={<NotFound />} />
