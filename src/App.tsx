@@ -64,8 +64,14 @@ const PurchaseOrders = lazy(() => import("./pages/purchasing/PurchaseOrders"));
 const PurchaseInvoices = lazy(() => import("./pages/purchasing/PurchaseInvoices"));
 const SupplierCredit = lazy(() => import("./pages/purchasing/SupplierCredit"));
 const SupplierIncentives = lazy(() => import("./pages/purchasing/SupplierIncentives"));
-const Shipments = lazy(() => import("./pages/purchasing/Shipments"));
-const Receiving = lazy(() => import("./pages/purchasing/Receiving"));
+const PurchaseOrders = lazy(() => import("./pages/purchasing/PurchaseOrders"));
+const PurchaseInvoices = lazy(() => import("./pages/purchasing/PurchaseInvoices"));
+const PurchaseInvoiceDetail = lazy(() => import("./pages/purchasing/PurchaseInvoiceDetail"));
+const Allocations = lazy(() => import("./pages/purchasing/Allocations"));
+const AllocationDetail = lazy(() => import("./pages/purchasing/AllocationDetail"));
+const AllocationConfirmations = lazy(() => import("./pages/purchasing/AllocationConfirmations"));
+const AllocationConfirmationDetail = lazy(() => import("./pages/purchasing/AllocationConfirmationDetail"));
+
 const Inspection = lazy(() => import("./pages/purchasing/Inspection"));
 const SalesDashboard = lazy(() => import("./pages/sales/SalesDashboard"));
 const SalesQuotations = lazy(() => import("./pages/sales/Quotations"));
