@@ -11,6 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ProductCombobox } from "@/components/erp/ProductCombobox";
 import { WorkflowStepper } from "@/components/erp/WorkflowStepper";
+import { ActionButton } from "@/components/erp/ActionButton";
+import { RoleSwitcher } from "@/components/erp/RoleSwitcher";
+import { canPerform, ErpRole, SalesOrderState, STATE_LABELS } from "@/lib/erpPermissions";
+import { Banknote, Truck, XCircle, Printer } from "lucide-react";
 
 interface Line {
   id?: string;
@@ -39,6 +43,7 @@ export default function SalesOrderDetail() {
   const [lines, setLines] = useState<Line[]>([]);
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [role, setRole] = useState<ErpRole>("sales_manager");
 
   const load = async () => {
     const [{ data: o }, { data: c }, { data: v }, { data: ls }] = await Promise.all([
@@ -205,19 +210,62 @@ export default function SalesOrderDetail() {
 
   if (!order) return <div className="text-muted-foreground">جاري التحميل...</div>;
 
-  const isLocked = order.status !== "draft";
+  const state = (order.status ?? "draft") as SalesOrderState;
+  const canEditHeader = canPerform("edit_header", state, role).allowed;
+  const canEditLines = canPerform("edit_lines", state, role).allowed;
+
+  const setStatus = async (next: SalesOrderState, msg: string) => {
+    const { error } = await supabase.from("sales_orders").update({ status: next as any }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(msg);
+    load();
+  };
+
+  const stateBadgeClass: Record<SalesOrderState, string> = {
+    draft: "bg-muted text-muted-foreground border-border",
+    confirmed: "bg-primary/10 text-primary border-primary/30",
+    invoiced: "bg-accent/20 text-accent-foreground border-accent/40",
+    paid: "bg-success/10 text-success border-success/30",
+    delivered: "bg-success/20 text-success border-success/40",
+    cancelled: "bg-destructive/10 text-destructive border-destructive/30",
+  };
 
   return (
     <div>
       <PageHeader
         title={`أمر بيع ${order.order_no}`}
-        subtitle={<></> as any}
+        subtitle={
+          <div className="flex items-center gap-3 mt-1">
+            <span className={`px-2 py-0.5 rounded border text-[11px] font-medium ${stateBadgeClass[state]}`}>
+              {STATE_LABELS[state]}
+            </span>
+            <RoleSwitcher value={role} onChange={setRole} />
+          </div>
+        }
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 justify-end">
             <Button variant="ghost" size="sm" onClick={()=>nav("/sales-orders")}><ArrowRight className="h-4 w-4 ml-1" /> رجوع</Button>
-            {!isLocked && <Button size="sm" variant="outline" onClick={save} disabled={saving}>حفظ</Button>}
-            {!isLocked && <Button size="sm" onClick={confirm} disabled={saving}><Check className="h-4 w-4 ml-1" /> تأكيد</Button>}
-            {order.status === "confirmed" && <Button size="sm" onClick={generateInvoice}><FileText className="h-4 w-4 ml-1" /> إصدار فاتورة</Button>}
+            <ActionButton size="sm" variant="ghost" permission={canPerform("print", state, role)} hideIfDenied onClick={()=>window.print()}>
+              <Printer className="h-4 w-4 ml-1" /> طباعة
+            </ActionButton>
+            <ActionButton size="sm" variant="outline" permission={canPerform("save", state, role)} onClick={save} disabled={saving}>
+              حفظ
+            </ActionButton>
+            <ActionButton size="sm" permission={canPerform("confirm", state, role)} onClick={confirm} disabled={saving}>
+              <Check className="h-4 w-4 ml-1" /> تأكيد
+            </ActionButton>
+            <ActionButton size="sm" permission={canPerform("invoice", state, role)} onClick={generateInvoice}>
+              <FileText className="h-4 w-4 ml-1" /> إصدار فاتورة
+            </ActionButton>
+            <ActionButton size="sm" permission={canPerform("receive_payment", state, role)} onClick={()=>setStatus("paid","تم تسجيل الدفعة")}>
+              <Banknote className="h-4 w-4 ml-1" /> استلام دفعة
+            </ActionButton>
+            <ActionButton size="sm" permission={canPerform("deliver", state, role)} onClick={()=>setStatus("delivered","تم التسليم")}>
+              <Truck className="h-4 w-4 ml-1" /> تسليم
+            </ActionButton>
+            <ActionButton size="sm" variant="destructive" permission={canPerform("cancel", state, role)} hideIfDenied onClick={()=>setStatus("cancelled","تم إلغاء الأمر")}>
+              <XCircle className="h-4 w-4 ml-1" /> إلغاء
+            </ActionButton>
           </div>
         }
       />
@@ -229,12 +277,14 @@ export default function SalesOrderDetail() {
             { key: "draft", label: "مسودة" },
             { key: "confirmed", label: "مؤكَّد" },
             { key: "invoiced", label: "مفوتر" },
+            { key: "paid", label: "مسدَّد" },
             { key: "delivered", label: "مُسلَّم" },
           ]}
-          current={order.status === "delivered" ? "delivered" : order.status}
-          cancelled={order.status === "cancelled"}
+          current={state}
+          cancelled={state === "cancelled"}
         />
       </div>
+
 
       {/* Header form */}
       <div className="bg-card border border-border rounded-lg p-4 mb-4">
@@ -246,7 +296,7 @@ export default function SalesOrderDetail() {
                 items={customers as any[]}
                 value={order.customer_id}
                 onChange={(cid) => setOrder({ ...order, customer_id: cid })}
-                disabled={isLocked}
+                disabled={!canEditHeader}
                 placeholder="اختر عميلاً..."
                 searchKeys={["name", "code", "vat_number", "phone"] as any}
                 displayValue={(c: any) => c.name}
@@ -312,7 +362,7 @@ export default function SalesOrderDetail() {
             )}
             {lines.map((l, i) => {
               const onLastKey = (e: React.KeyboardEvent) => {
-                if (e.key === "Enter" && !isLocked && i === lines.length - 1) {
+                if (e.key === "Enter" && canEditLines && i === lines.length - 1) {
                   e.preventDefault();
                   addLine();
                 }
@@ -325,7 +375,7 @@ export default function SalesOrderDetail() {
                     items={vehicles as any[]}
                     value={l.vehicle_id}
                     onChange={(vid) => onPickVehicle(i, vid)}
-                    disabled={isLocked}
+                    disabled={!canEditLines}
                     placeholder="اختر مركبة..."
                     searchKeys={["name","brand","model","vin","year"] as any}
                     displayValue={(v: any) => `${v.name} · ${v.year}`}
@@ -339,13 +389,13 @@ export default function SalesOrderDetail() {
                   />
                   {l.description && <div className="text-[11px] text-muted-foreground px-2 truncate">{l.description}</div>}
                 </td>
-                <td className="w-24"><input className="erp-input num text-left" type="number" value={l.quantity} onChange={e=>updateLine(i,{quantity:Number(e.target.value)})} disabled={isLocked} /></td>
-                <td className="w-32"><input className="erp-input num text-left" type="number" value={l.unit_price} onChange={e=>updateLine(i,{unit_price:Number(e.target.value)})} disabled={isLocked} dir="ltr" /></td>
-                <td className="w-20"><input className="erp-input num text-left" type="number" value={l.discount_pct} onChange={e=>updateLine(i,{discount_pct:Number(e.target.value)})} disabled={isLocked} /></td>
-                <td className="w-20"><input className="erp-input num text-left" type="number" value={l.vat_pct} onChange={e=>updateLine(i,{vat_pct:Number(e.target.value)})} disabled={isLocked} onKeyDown={onLastKey} /></td>
+                <td className="w-24"><input className="erp-input num text-left" type="number" value={l.quantity} onChange={e=>updateLine(i,{quantity:Number(e.target.value)})} disabled={!canEditLines} /></td>
+                <td className="w-32"><input className="erp-input num text-left" type="number" value={l.unit_price} onChange={e=>updateLine(i,{unit_price:Number(e.target.value)})} disabled={!canEditLines} dir="ltr" /></td>
+                <td className="w-20"><input className="erp-input num text-left" type="number" value={l.discount_pct} onChange={e=>updateLine(i,{discount_pct:Number(e.target.value)})} disabled={!canEditLines} /></td>
+                <td className="w-20"><input className="erp-input num text-left" type="number" value={l.vat_pct} onChange={e=>updateLine(i,{vat_pct:Number(e.target.value)})} disabled={!canEditLines} onKeyDown={onLastKey} /></td>
                 <td className="num text-left font-semibold w-32">{l.line_total.toLocaleString("ar-SA", { minimumFractionDigits: 2 })}</td>
                 <td className="w-20">
-                  {!isLocked && (
+                  {canEditLines && (
                     <div className="flex items-center gap-0.5 justify-end">
                       <Button variant="ghost" size="icon" className="h-7 w-7" title="تكرار البند" onClick={()=>duplicateLine(i)}>
                         <Copy className="h-3.5 w-3.5 text-muted-foreground" />
@@ -360,7 +410,7 @@ export default function SalesOrderDetail() {
             );})}
           </tbody>
         </table>
-        {!isLocked && (
+        {canEditLines && (
           <div className="p-2 border-t border-border bg-muted/30">
             <Button variant="ghost" size="sm" onClick={addLine}><Plus className="h-4 w-4 ml-1" /> إضافة بند</Button>
           </div>
