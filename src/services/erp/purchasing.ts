@@ -469,6 +469,36 @@ export const INSP_TONE: Record<InspectionStatus, string> = {
   rejected: "bg-destructive/10 text-destructive border border-destructive/40",
 };
 
+export const PINV_LABEL: Record<InvoiceStatus, string> = {
+  draft: "مسودة", issued: "صادرة", partially_paid: "مدفوعة جزئياً",
+  paid: "مدفوعة", cancelled: "ملغاة",
+};
+export const PINV_TONE: Record<InvoiceStatus, string> = {
+  draft: "bg-muted text-muted-foreground border border-border",
+  issued: "bg-primary/10 text-primary border border-primary/30",
+  partially_paid: "bg-warning/10 text-warning border border-warning/40",
+  paid: "bg-success/10 text-success border border-success/40",
+  cancelled: "bg-destructive/10 text-destructive border border-destructive/40",
+};
+
+export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
+  cash: "نقدي", bank_transfer: "حوالة بنكية",
+  cheque: "شيك", credit_utilization: "استخدام حد ائتماني",
+};
+
+/** ERP purchasing workflow stages (governance steps). */
+export const PURCHASING_WORKFLOW = [
+  { key: "pr", label: "طلب شراء" },
+  { key: "pr_approved", label: "اعتماد الطلب" },
+  { key: "po", label: "أمر شراء" },
+  { key: "po_approved", label: "اعتماد الأمر" },
+  { key: "invoice", label: "فاتورة شراء" },
+  { key: "payment", label: "السداد" },
+  { key: "receiving", label: "الاستلام" },
+  { key: "inspection", label: "الفحص" },
+  { key: "intake", label: "إدخال المخزون" },
+];
+
 export const fmtSAR = (n: number) =>
   `${Math.round(n).toLocaleString("ar-SA")} ر.س`;
 export const fmtDate = (s?: string) =>
