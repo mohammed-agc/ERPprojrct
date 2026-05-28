@@ -902,3 +902,186 @@ function orderStatusLabel(s: string) {
   if (s === "cancelled") return "ملغي";
   return s;
 }
+
+/* ---------------- Delivery dialog ---------------- */
+
+type DeliveryPayload = {
+  officer?: string;
+  invoice_no?: string;
+  customer_name?: string;
+  customer_id_number?: string;
+  customer_signature_name?: string;
+  checklist?: VehicleMeta["delivery"]["checklist"];
+  payment_verified?: boolean;
+  note?: string;
+};
+
+function DeliveryDialog({
+  open, onOpenChange, meta, currentUser, defaultCustomerName, defaultInvoiceNo,
+  onMarkReady, onComplete, onReturn,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  meta: VehicleMeta;
+  currentUser: string;
+  defaultCustomerName: string;
+  defaultInvoiceNo: string;
+  onMarkReady: (p: DeliveryPayload) => void;
+  onComplete: (p: DeliveryPayload) => void;
+  onReturn: (note?: string) => void;
+}) {
+  const existing = meta.delivery;
+  const [officer, setOfficer] = useState(existing?.officer ?? currentUser);
+  const [invoiceNo, setInvoiceNo] = useState(existing?.invoice_no ?? defaultInvoiceNo);
+  const [customerName, setCustomerName] = useState(existing?.customer_name ?? defaultCustomerName);
+  const [customerId, setCustomerId] = useState(existing?.customer_id_number ?? "");
+  const [signature, setSignature] = useState(existing?.customer_signature_name ?? "");
+  const [note, setNote] = useState(existing?.note ?? "");
+  const [returnNote, setReturnNote] = useState("");
+  const [checklist, setChecklist] = useState<NonNullable<VehicleMeta["delivery"]>["checklist"]>(
+    existing?.checklist ?? {},
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    setOfficer(existing?.officer ?? currentUser);
+    setInvoiceNo(existing?.invoice_no ?? defaultInvoiceNo);
+    setCustomerName(existing?.customer_name ?? defaultCustomerName);
+    setCustomerId(existing?.customer_id_number ?? "");
+    setSignature(existing?.customer_signature_name ?? "");
+    setNote(existing?.note ?? "");
+    setChecklist(existing?.checklist ?? {});
+    setReturnNote("");
+  }, [open, existing, currentUser, defaultCustomerName, defaultInvoiceNo]);
+
+  const buildPayload = (): DeliveryPayload => ({
+    officer: officer.trim(),
+    invoice_no: invoiceNo.trim(),
+    customer_name: customerName.trim(),
+    customer_id_number: customerId.trim(),
+    customer_signature_name: signature.trim(),
+    checklist,
+    payment_verified: !!checklist?.payment,
+    note: note.trim() || undefined,
+  });
+
+  const done = DELIVERY_CHECKLIST_KEYS.filter((k) => checklist?.[k]).length;
+  const ready = checklist?.payment && checklist?.id && customerName.trim().length > 0;
+  const canComplete = done === DELIVERY_CHECKLIST_KEYS.length && customerName.trim() && signature.trim();
+
+  const toggle = (k: DeliveryChecklistKey) =>
+    setChecklist((c) => ({ ...c, [k]: !c?.[k] }));
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>سير عمل التسليم</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Authorization */}
+          <section>
+            <div className="text-xs font-semibold text-muted-foreground mb-2">الترخيص والمسؤول</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>موظف التسليم</Label>
+                <Input value={officer} onChange={(e) => setOfficer(e.target.value)} />
+              </div>
+              <div>
+                <Label>رقم الفاتورة</Label>
+                <Input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} dir="ltr" />
+              </div>
+            </div>
+          </section>
+
+          {/* Customer */}
+          <section>
+            <div className="text-xs font-semibold text-muted-foreground mb-2">العميل المستلم</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>اسم العميل</Label>
+                <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+              </div>
+              <div>
+                <Label>رقم الهوية</Label>
+                <Input value={customerId} onChange={(e) => setCustomerId(e.target.value)} dir="ltr" />
+              </div>
+            </div>
+          </section>
+
+          {/* Checklist */}
+          <section>
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                <ClipboardCheck className="h-3.5 w-3.5" /> قائمة التحقق التشغيلية
+              </div>
+              <div className="text-xs text-muted-foreground">{done}/{DELIVERY_CHECKLIST_KEYS.length}</div>
+            </div>
+            <Progress value={(done / DELIVERY_CHECKLIST_KEYS.length) * 100} className="h-1.5 mb-2" />
+            <div className="grid grid-cols-2 gap-2">
+              {DELIVERY_CHECKLIST_KEYS.map((k) => (
+                <label
+                  key={k}
+                  className="flex items-center gap-2 px-3 py-2 border border-border rounded-md text-sm cursor-pointer hover:bg-accent/50"
+                >
+                  <Checkbox checked={!!checklist?.[k]} onCheckedChange={() => toggle(k)} />
+                  <span>{CHECKLIST_LABEL[k]}</span>
+                  {k === "spare_key" && <KeyRound className="h-3.5 w-3.5 text-muted-foreground mr-auto" />}
+                  {k === "payment" && <PackageCheck className="h-3.5 w-3.5 text-muted-foreground mr-auto" />}
+                </label>
+              ))}
+            </div>
+          </section>
+
+          {/* Signature */}
+          <section>
+            <div className="text-xs font-semibold text-muted-foreground mb-2">توقيع العميل</div>
+            <Input
+              value={signature}
+              onChange={(e) => setSignature(e.target.value)}
+              placeholder="اكتب اسم العميل كتوقيع رقمي"
+              className="font-medium"
+              style={{ fontFamily: "cursive" }}
+            />
+            <div className="text-[11px] text-muted-foreground mt-1">
+              التوقيع الفعلي على المستند الورقي يُرفع في قسم المستندات.
+            </div>
+          </section>
+
+          <section>
+            <Label>ملاحظات التسليم</Label>
+            <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
+          </section>
+
+          {/* Return action (advanced) */}
+          <section className="border border-destructive/30 bg-destructive/5 rounded-md p-3">
+            <div className="text-xs font-semibold text-destructive mb-2">ارتجاع</div>
+            <div className="flex gap-2">
+              <Input
+                value={returnNote}
+                onChange={(e) => setReturnNote(e.target.value)}
+                placeholder="سبب الارتجاع (اختياري)"
+              />
+              <Button variant="destructive" size="sm" onClick={() => onReturn(returnNote.trim() || undefined)}>
+                <RotateCcw className="h-4 w-4 ml-1" /> ارتجاع
+              </Button>
+            </div>
+          </section>
+        </div>
+
+        <DialogFooter className="flex justify-between sm:justify-between">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>إغلاق</Button>
+          <div className="flex gap-2">
+            <Button variant="outline" disabled={!ready} onClick={() => onMarkReady(buildPayload())}>
+              <ClipboardCheck className="h-4 w-4 ml-1" /> جاهز للتسليم
+            </Button>
+            <Button disabled={!canComplete} onClick={() => onComplete(buildPayload())}>
+              <Truck className="h-4 w-4 ml-1" /> إتمام التسليم
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
