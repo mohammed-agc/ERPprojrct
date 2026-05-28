@@ -3,7 +3,8 @@ import {
   Car, Wrench, Package, Calculator, Boxes, ShoppingCart,
   Users, BarChart3, LayoutDashboard, Receipt, BookOpen, UserCog, Building2, ShieldCheck,
   BookText, Scale, HandCoins, Wallet, ClipboardCheck, Contact2,
-  TrendingUp, ArrowLeftRight, PieChart, Landmark, ArrowDownCircle, ArrowUpCircle, CheckSquare
+  TrendingUp, ArrowLeftRight, PieChart, Landmark, ArrowDownCircle, ArrowUpCircle, CheckSquare,
+  Vault, Banknote
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -48,6 +49,18 @@ const groups: { title: string; items: NavItem[] }[] = [
       { label: "التدفقات النقدية", to: "/cash-flow", icon: ArrowLeftRight, deptCode: "accounting" },
       { label: "الذمم المدينة", to: "/ar", icon: HandCoins, deptCode: "accounting" },
       { label: "الذمم الدائنة", to: "/ap", icon: Wallet, deptCode: "accounting" },
+    ],
+  },
+  {
+    title: "الخزينة",
+    items: [
+      { label: "الخزينة", to: "/treasury", icon: Vault, deptCode: "accounting" },
+      { label: "الصناديق", to: "/treasury/accounts", icon: Banknote, deptCode: "accounting" },
+      { label: "البنوك", to: "/treasury/accounts", icon: Landmark, deptCode: "accounting" },
+      { label: "القبض", to: "/treasury/receipts", icon: ArrowDownCircle, deptCode: "accounting" },
+      { label: "الصرف", to: "/treasury/payments", icon: ArrowUpCircle, deptCode: "accounting" },
+      { label: "التحويلات", to: "/treasury/transfers", icon: ArrowLeftRight, deptCode: "accounting" },
+      { label: "التسوية البنكية", to: "/treasury/reconciliation", icon: CheckSquare, deptCode: "accounting" },
     ],
   },
   {
