@@ -930,6 +930,18 @@ function fuelLabel(f?: string) {
   if (f === "electric") return "كهربائي";
   return "";
 }
+function conditionLabel(c?: string) {
+  if (c === "good") return "حالة جيدة";
+  if (c === "minor_damage") return "أضرار طفيفة";
+  if (c === "major_damage") return "أضرار كبيرة";
+  return "";
+}
+function inspectionResultLabel(r?: string) {
+  if (r === "passed") return "ناجح";
+  if (r === "passed_with_notes") return "ناجح مع ملاحظات";
+  if (r === "rejected") return "مرفوض";
+  return "";
+}
 function orderStatusLabel(s: string) {
   if (s === "draft") return "مسودة";
   if (s === "confirmed") return "مؤكد";
