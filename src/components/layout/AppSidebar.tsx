@@ -232,7 +232,8 @@ export function AppSidebar() {
         {groups.map((g) => {
           const visibleItems = g.items.filter(it => !it.deptCode || isManager || canAccessDept(it.deptCode));
           if (!visibleItems.length) return null;
-          const groupItems = (g.title === "الحوكمة المالية" || g.title === "المشتريات") ? itemsWithBadge(visibleItems) : visibleItems;
+          const groupItems = (g.title === "الحوكمة المالية" || g.title === "المشتريات" || g.title === "المبيعات") ? itemsWithBadge(visibleItems) : visibleItems;
+
           const hasAlerts = groupItems.some(it => it.badge && it.badge.count > 0);
           return (
             <div key={g.title} className={cn("mb-3", hasAlerts && "border-r-2 border-amber-400/40")}>
