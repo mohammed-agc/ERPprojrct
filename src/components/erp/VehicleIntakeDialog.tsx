@@ -192,6 +192,21 @@ export function VehicleIntakeDialog({ open, onOpenChange, inspection, po, onCrea
       }
       const ids = (data ?? []).map((v: any) => v.id);
       purchasingService.recordVehicleIntake(inspection.id, ids);
+      // Inventory engine integration: log v_receive movements per VIN
+      try {
+        inventoryIntegration.onVehicleIntake({
+          po,
+          inspector: inspection.inspector,
+          vehicles: (data ?? []).map((row: any, idx: number) => {
+            const r = validated[idx];
+            return {
+              id: row.id, vin: row.vin, brand: r.brand, model: r.model,
+              year: r.year, trim: r.trim, color: r.color,
+              mileage: r.mileage, cost: r.unit_cost,
+            };
+          }),
+        });
+      } catch (e) { console.warn("inv-integration:", e); }
       toast.success(`تم إدخال ${ids.length} مركبة للمخزون`);
       onOpenChange(false);
       onCreated?.();
