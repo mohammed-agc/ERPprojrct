@@ -556,8 +556,92 @@ export const purchasingService = {
     };
   },
 
+  /* ============ Supplier 360 (for Contacts → Vendor profile) ============ */
+
+  supplierExposure(supplierId: string) {
+    const db = load();
+    const pos = db.pos.filter(p => p.supplier_id === supplierId);
+    const openPos = pos.filter(p => ["approved", "ordered", "partially_received"].includes(p.status));
+    const payable = openPos.reduce((s, p) => s + p.total, 0);
+    // synthetic overdue heuristic: net_30/net_60 past expected_delivery
+    const overdue = openPos
+      .filter(p => new Date(p.expected_delivery) < new Date())
+      .reduce((s, p) => s + p.total, 0);
+    const pendingShipments = db.shipments.filter(
+      sh => ["preparing", "shipped", "in_transit", "at_customs"].includes(sh.status) &&
+        pos.some(p => p.id === sh.po_id),
+    ).length;
+    const pendingInspections = db.inspections.filter(
+      i => (i.status === "pending" || i.status === "in_progress") &&
+        pos.some(p => p.id === i.po_id),
+    ).length;
+    return {
+      payable, overdue_payable: overdue,
+      pending_pos: openPos.length,
+      pending_shipments: pendingShipments,
+      pending_inspections: pendingInspections,
+    };
+  },
+
+  supplierPerformance(supplierId: string) {
+    const db = load();
+    const pos = db.pos.filter(p => p.supplier_id === supplierId);
+    const completed = pos.filter(p => p.status === "completed" && p.completed_at);
+    const avgDeliveryDays = completed.length
+      ? Math.round(
+        completed.reduce((s, p) =>
+          s + Math.max(0, (new Date(p.completed_at!).getTime() - new Date(p.created_at).getTime()) / 86_400_000), 0,
+        ) / completed.length,
+      )
+      : 0;
+    const delayed = pos.filter(p =>
+      p.status !== "completed" && p.status !== "cancelled" &&
+      new Date(p.expected_delivery) < new Date(),
+    ).length;
+    const insps = db.inspections.filter(i => pos.some(p => p.id === i.po_id));
+    const items = insps.flatMap(i => i.items);
+    const passed = items.reduce((s, it) => s + (it.passed ?? 0), 0);
+    const failed = items.reduce((s, it) => s + (it.failed ?? 0), 0);
+    const rejectionRate = passed + failed > 0 ? (failed / (passed + failed)) * 100 : 0;
+    // return rate placeholder (no returns module yet) — derived from discrepancies
+    const grns = db.grns.filter(g => pos.some(p => p.id === g.po_id));
+    const withDiscrepancy = grns.filter(g => g.status === "with_discrepancy").length;
+    const returnRate = grns.length ? (withDiscrepancy / grns.length) * 100 : 0;
+    // reliability composite 0-100
+    const reliability = Math.max(0, Math.min(100, Math.round(
+      100 - rejectionRate * 1.5 - returnRate - delayed * 5,
+    )));
+    return { avgDeliveryDays, delayed, rejectionRate, returnRate, reliability };
+  },
+
+  supplierTimeline(supplierId: string) {
+    const db = load();
+    const pos = db.pos.filter(p => p.supplier_id === supplierId);
+    const events: { date: string; kind: string; title: string; tone?: string }[] = [];
+    pos.forEach(p => {
+      events.push({ date: p.created_at, kind: "أمر شراء", title: `${p.code} — ${PO_LABEL[p.status]}` });
+      if (p.approved_at) events.push({ date: p.approved_at, kind: "اعتماد", title: `اعتماد ${p.code}`, tone: "success" });
+      if (p.completed_at) events.push({ date: p.completed_at, kind: "اكتمال", title: `اكتمال ${p.code}`, tone: "success" });
+    });
+    db.shipments.filter(sh => pos.some(p => p.id === sh.po_id)).forEach(sh => {
+      events.push({ date: sh.created_at, kind: "شحنة", title: `${sh.code} — ${SHIPMENT_LABEL[sh.status]}` });
+    });
+    db.grns.filter(g => pos.some(p => p.id === g.po_id)).forEach(g => {
+      events.push({ date: g.received_at, kind: "استلام", title: `${g.code} — ${RECV_LABEL[g.status]}` });
+    });
+    db.inspections.filter(i => pos.some(p => p.id === i.po_id)).forEach(i => {
+      events.push({
+        date: i.started_at, kind: "فحص",
+        title: `فحص — ${INSP_LABEL[i.status]}`,
+        tone: i.status === "approved" ? "success" : i.status === "rejected" ? "destructive" : undefined,
+      });
+    });
+    return events.sort((a, b) => b.date.localeCompare(a.date));
+  },
+
   /* utilities */
   resetSeed() {
     if (typeof window !== "undefined") localStorage.removeItem(LS_KEY);
   },
 };
+
