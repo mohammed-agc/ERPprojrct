@@ -356,8 +356,9 @@ export default function SalesOrderDetail() {
           </div>
           <div className="col-span-1">
             <Label className="text-xs text-muted-foreground">الحالة</Label>
-            <div className="mt-2"><Badge variant="outline">{order.status}</Badge></div>
+            <div className="mt-2"><span className={`state-badge ${stateClass[state]}`}>{STATE_LABELS[state]}</span></div>
           </div>
+
         </div>
       </div>
 
