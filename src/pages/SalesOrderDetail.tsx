@@ -263,28 +263,54 @@ export default function SalesOrderDetail() {
             {lines.length === 0 && (
               <tr><td colSpan={8} className="text-center text-muted-foreground py-6">لا توجد بنود — أضف بنداً جديداً</td></tr>
             )}
-            {lines.map((l, i) => (
-              <tr key={i}>
-                <td className="text-muted-foreground num">{i+1}</td>
+            {lines.map((l, i) => {
+              const onLastKey = (e: React.KeyboardEvent) => {
+                if (e.key === "Enter" && !isLocked && i === lines.length - 1) {
+                  e.preventDefault();
+                  addLine();
+                }
+              };
+              return (
+              <tr key={l.id ?? `new-${i}`}>
+                <td className="text-muted-foreground num w-10">{i+1}</td>
                 <td>
-                  <Select value={l.vehicle_id ?? ""} onValueChange={v=>onPickVehicle(i, v)} disabled={isLocked}>
-                    <SelectTrigger className="h-8 border-0 bg-transparent hover:bg-accent/40"><SelectValue placeholder="اختر مركبة..." /></SelectTrigger>
-                    <SelectContent>
-                      {vehicles.map(v=><SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  {l.description && <div className="text-[11px] text-muted-foreground px-2">{l.description}</div>}
+                  <ProductCombobox
+                    items={vehicles as any[]}
+                    value={l.vehicle_id}
+                    onChange={(vid) => onPickVehicle(i, vid)}
+                    disabled={isLocked}
+                    placeholder="اختر مركبة..."
+                    searchKeys={["name","brand","model","vin","year"] as any}
+                    displayValue={(v: any) => `${v.name} · ${v.year}`}
+                    columns={[
+                      { key: "name", header: "المركبة", className: "font-medium", render: (v: any) => <span>{v.name}</span> },
+                      { key: "model", header: "الموديل", render: (v: any) => <span className="text-muted-foreground">{v.brand} {v.model}</span> },
+                      { key: "year", header: "السنة", render: (v: any) => <span className="num">{v.year}</span> },
+                      { key: "vin", header: "VIN", className: "text-[11px]", render: (v: any) => <span dir="ltr" className="num truncate">{v.vin || "—"}</span> },
+                      { key: "price", header: "السعر", className: "text-left", render: (v: any) => <span className="num">{Number(v.sale_price).toLocaleString("ar-SA")}</span> },
+                    ]}
+                  />
+                  {l.description && <div className="text-[11px] text-muted-foreground px-2 truncate">{l.description}</div>}
                 </td>
-                <td><input className="erp-input num text-left" type="number" value={l.quantity} onChange={e=>updateLine(i,{quantity:Number(e.target.value)})} disabled={isLocked} /></td>
-                <td><input className="erp-input num text-left" type="number" value={l.unit_price} onChange={e=>updateLine(i,{unit_price:Number(e.target.value)})} disabled={isLocked} dir="ltr" /></td>
-                <td><input className="erp-input num text-left" type="number" value={l.discount_pct} onChange={e=>updateLine(i,{discount_pct:Number(e.target.value)})} disabled={isLocked} /></td>
-                <td><input className="erp-input num text-left" type="number" value={l.vat_pct} onChange={e=>updateLine(i,{vat_pct:Number(e.target.value)})} disabled={isLocked} /></td>
-                <td className="num text-left font-semibold">{l.line_total.toLocaleString("ar-SA", { minimumFractionDigits: 2 })}</td>
-                <td>
-                  {!isLocked && <Button variant="ghost" size="icon" className="h-7 w-7" onClick={()=>removeLine(i)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
+                <td className="w-24"><input className="erp-input num text-left" type="number" value={l.quantity} onChange={e=>updateLine(i,{quantity:Number(e.target.value)})} disabled={isLocked} /></td>
+                <td className="w-32"><input className="erp-input num text-left" type="number" value={l.unit_price} onChange={e=>updateLine(i,{unit_price:Number(e.target.value)})} disabled={isLocked} dir="ltr" /></td>
+                <td className="w-20"><input className="erp-input num text-left" type="number" value={l.discount_pct} onChange={e=>updateLine(i,{discount_pct:Number(e.target.value)})} disabled={isLocked} /></td>
+                <td className="w-20"><input className="erp-input num text-left" type="number" value={l.vat_pct} onChange={e=>updateLine(i,{vat_pct:Number(e.target.value)})} disabled={isLocked} onKeyDown={onLastKey} /></td>
+                <td className="num text-left font-semibold w-32">{l.line_total.toLocaleString("ar-SA", { minimumFractionDigits: 2 })}</td>
+                <td className="w-20">
+                  {!isLocked && (
+                    <div className="flex items-center gap-0.5 justify-end">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" title="تكرار البند" onClick={()=>duplicateLine(i)}>
+                        <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" title="حذف البند" onClick={()=>removeLine(i)}>
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
+                    </div>
+                  )}
                 </td>
               </tr>
-            ))}
+            );})}
           </tbody>
         </table>
         {!isLocked && (
