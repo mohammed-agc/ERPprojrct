@@ -672,15 +672,22 @@ export const purchasingService = {
   approvePR(id: string, approver = "م. عبدالله") {
     const db = load();
     const pr = db.prs.find(p => p.id === id); if (!pr) return;
+    const from = pr.status;
     pr.status = "approved"; pr.approved_at = isoNow(); pr.approver = approver;
+    pr.audit = [...(pr.audit ?? []), makeAudit({ role: "purchasing_manager", actor: approver, action: "اعتماد طلب الشراء", from_status: from, to_status: "approved" })];
+    pr.approvals = [...(pr.approvals ?? []), makeApproval({ role: "purchasing_manager", actor: approver, decision: "approved" })];
     save(db);
   },
-  rejectPR(id: string) {
+  rejectPR(id: string, approver = "م. عبدالله", note?: string) {
     const db = load();
     const pr = db.prs.find(p => p.id === id); if (!pr) return;
+    const from = pr.status;
     pr.status = "rejected";
+    pr.audit = [...(pr.audit ?? []), makeAudit({ role: "purchasing_manager", actor: approver, action: "رفض طلب الشراء", from_status: from, to_status: "rejected", note })];
+    pr.approvals = [...(pr.approvals ?? []), makeApproval({ role: "purchasing_manager", actor: approver, decision: "rejected", note })];
     save(db);
   },
+
 
   createPR(input: {
     requester: string; department: string; branch: string;
