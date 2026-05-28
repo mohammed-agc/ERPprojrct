@@ -33,6 +33,12 @@ import CashFlow from "./pages/CashFlow";
 import UsersAdmin from "./pages/UsersAdmin";
 import Organization from "./pages/Organization";
 import Permissions from "./pages/Permissions";
+import Treasury from "./pages/Treasury";
+import TreasuryAccounts from "./pages/TreasuryAccounts";
+import TreasuryAccountDetail from "./pages/TreasuryAccountDetail";
+import VouchersPage from "./pages/Vouchers";
+import Transfers from "./pages/Transfers";
+import BankReconciliation from "./pages/BankReconciliation";
 import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
 
