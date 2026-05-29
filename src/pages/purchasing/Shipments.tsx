@@ -92,7 +92,7 @@ export default function Shipments() {
               const units = getPoVehicleUnits(s.po_id);
               const isOpen = expanded.has(s.id);
               return (
-                <>
+                <Fragment key={s.id}>
                 <tr key={s.id} className={units.length ? "cursor-pointer hover:bg-muted/30" : ""} onClick={() => units.length && toggle(s.id)}>
                   <td className="text-muted-foreground">
                     {units.length > 0 && (isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />)}
