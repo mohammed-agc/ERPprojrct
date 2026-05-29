@@ -107,6 +107,7 @@ const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminUsers = lazy(() => import("./pages/admin/Users"));
 const AdminRoles = lazy(() => import("./pages/admin/Roles"));
+const AdminRolesManager = lazy(() => import("./pages/admin/RolesManager"));
 const AdminSessions = lazy(() => import("./pages/admin/Sessions"));
 const AdminLoginHistory = lazy(() => import("./pages/admin/LoginHistory"));
 const AdminAuditLog = lazy(() => import("./pages/admin/AuditLog"));
@@ -256,6 +257,7 @@ const App = () => (
                 <Route index element={<AdminDashboard />} />
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="roles" element={<AdminRoles />} />
+                <Route path="roles-manager" element={<AdminRolesManager />} />
                 <Route path="permissions" element={<Permissions />} />
                 <Route path="sessions" element={<AdminSessions />} />
                 <Route path="login-history" element={<AdminLoginHistory />} />

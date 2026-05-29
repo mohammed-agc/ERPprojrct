@@ -22,6 +22,7 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
     items: [
       { to: "/admin/users", label: "المستخدمون", icon: Users },
       { to: "/admin/roles", label: "الأدوار", icon: ShieldCheck },
+      { to: "/admin/roles-manager", label: "إدارة الأدوار والصلاحيات", icon: KeyRound },
       { to: "/admin/permissions", label: "مصفوفة الصلاحيات", icon: KeyRound },
       { to: "/admin/sessions", label: "الجلسات النشطة", icon: MonitorSmartphone },
       { to: "/admin/login-history", label: "سجل تسجيل الدخول", icon: History },

@@ -56,7 +56,8 @@ export default function AdminRoles() {
         ))}
       </div>
       <div className="mt-4 text-xs text-muted-foreground">
-        لتعديل صلاحيات الأدوار: <Link to="/admin/permissions" className="text-primary underline">مصفوفة الصلاحيات</Link> •
+        <Link to="/admin/roles-manager" className="text-primary underline font-bold">إدارة الأدوار وتعيين الصلاحيات (دفعة واحدة)</Link> •
+        لتعديل صلاحيات الأدوار عبر مصفوفة: <Link to="/admin/permissions" className="text-primary underline">مصفوفة الصلاحيات</Link> •
         لتعيين الأدوار للمستخدمين: <Link to="/admin/users" className="text-primary underline">المستخدمون</Link>
       </div>
     </div>
