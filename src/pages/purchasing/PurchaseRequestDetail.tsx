@@ -3,13 +3,13 @@ import { useParams, Link } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Check, X, Printer } from "lucide-react";
+import { Check, X } from "lucide-react";
 import {
   purchasingService, PR_LABEL, PR_TONE, URGENCY_LABEL, URGENCY_TONE, fmtSAR, fmtDate,
 } from "@/services/erp/purchasing";
 import { PrintablePurchaseDoc } from "@/components/erp/PrintablePurchaseDoc";
+import { DocPrintActions } from "@/components/erp/DocPrintActions";
 import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
 import { makeAudit, type AuditEntry, type ErpGovRole } from "@/services/erp/erpRoles";
 
