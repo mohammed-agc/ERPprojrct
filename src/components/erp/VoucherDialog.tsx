@@ -39,7 +39,7 @@ export function VoucherDialog({ open, onOpenChange, type, accounts, defaultAccou
       setKind(type === "receipt" ? "customer" : "vendor");
       setDate(new Date().toISOString().slice(0, 10));
       setAccountId(defaultAccountId ?? accounts[0]?.id ?? "");
-      setCounterparty(""); setAmount(""); setMethod("cash");
+      setCounterparty(""); setAmount(undefined); setMethod("cash");
       setReference(""); setLinkedInvoice(""); setNotes("");
     }
   }, [open, type, defaultAccountId, accounts]);
