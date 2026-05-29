@@ -59,6 +59,26 @@ export default function PurchaseInvoices() {
   }), [filtered]);
 
   const activeInv = invs.find(i => i.id === payOpen);
+  const activeSupplier = activeInv ? suppliers.find(s => s.id === activeInv.supplier_id) : null;
+  const paymentCtx: PaymentInvoiceContext | null = activeInv ? {
+    id: activeInv.id, invoice_no: activeInv.code,
+    customer_name: activeSupplier?.name, total: activeInv.total, paid_amount: activeInv.paid,
+  } : null;
+  const [submitting, setSubmitting] = useState(false);
+  const handleSubmitPayment = async (p: PaymentSubmitPayload) => {
+    setSubmitting(true);
+    try {
+      const r = purchasingService.recordPurchasePayment({
+        invoice_id: p.invoiceId, amount: p.amount,
+        method: METHOD_MAP[p.method] ?? "bank_transfer",
+        reference: p.reference || undefined,
+      });
+      if (!r) { toast.error("تعذر تسجيل الدفعة"); return; }
+      toast.success(`تم تسجيل الدفعة ${r.code}`);
+      setPayOpen(null); refresh();
+    } finally { setSubmitting(false); }
+  };
+
 
   return (
     <div>
