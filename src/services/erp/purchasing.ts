@@ -804,7 +804,6 @@ export const purchasingService = {
     items: (Partial<LineItem> & { kind: ItemKind; description: string; qty: number; unit_cost: number })[];
     submit?: boolean;
   }): PurchaseRequest {
-  }): PurchaseRequest {
     const db = load();
     const year = new Date().getFullYear();
     const seq = db.prs.filter(p => p.code.startsWith(`PR-${year}`)).length + 143;
@@ -831,7 +830,7 @@ export const purchasingService = {
   createPO(input: {
     supplier_id: string; branch_destination: string; expected_delivery: string;
     payment_term: PaymentTerm; agreement_type: "spot" | "framework" | "consignment";
-    items: { kind: ItemKind; description: string; qty: number; unit_cost: number }[];
+    items: (Partial<LineItem> & { kind: ItemKind; description: string; qty: number; unit_cost: number })[];
     pr_id?: string; submit?: boolean;
   }): PurchaseOrder {
     const db = load();
