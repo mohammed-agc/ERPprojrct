@@ -183,7 +183,8 @@ export function GRNReceiptDialog({ open, onOpenChange, grn, onRecorded }: Props)
                     )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
