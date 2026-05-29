@@ -33,6 +33,13 @@ const groups: { title: string; items: NavItem[] }[] = [
     ],
   },
   {
+    title: "البيانات الرئيسية",
+    items: [
+      { label: "كتالوج المنتجات", to: "/master/products", icon: Database },
+      { label: "ألوان المركبات", to: "/master/colors", icon: Palette },
+    ],
+  },
+  {
     title: "المبيعات",
     items: [
       { label: "لوحة المبيعات", to: "/sales", icon: LayoutDashboard, deptCode: "vehicles" },
