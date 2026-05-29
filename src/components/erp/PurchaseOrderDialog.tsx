@@ -6,16 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
-import { Plus, Trash2, UserPlus } from "lucide-react";
+import { UserPlus } from "lucide-react";
 import { toast } from "sonner";
-import {
-  purchasingService, type ItemKind, type PaymentTerm, fmtSAR,
-} from "@/services/erp/purchasing";
+import { purchasingService, type PaymentTerm, fmtSAR } from "@/services/erp/purchasing";
 import { supabase } from "@/integrations/supabase/client";
 import { parseContactMeta } from "@/lib/contactMeta";
-import { ProductPicker } from "@/components/erp/ProductPicker";
-import { ColorPicker } from "@/components/erp/ColorPicker";
-import type { Product } from "@/services/erp/masterData";
+import { LinesEditor, emptyLine, type LineDraft } from "@/components/erp/LinesEditor";
 
 interface Props {
   open: boolean;
@@ -23,17 +19,7 @@ interface Props {
   onCreated?: () => void;
 }
 
-type Draft = {
-  product_id?: string; product_code?: string;
-  kind: ItemKind;
-  description: string;
-  brand?: string; model?: string; year?: number;
-  color_id?: string; color_name?: string;
-  qty: number; unit_cost: number; vat_pct: number;
-};
 const BRANCHES = ["الرياض الرئيسي", "جدة", "الدمام", "مكة", "المدينة"];
-
-const emptyDraft = (): Draft => ({ kind: "vehicle", description: "", qty: 1, unit_cost: 0, vat_pct: 15 });
 
 type ContactVendor = {
   id: string; contactId: string; code: string; name: string; country: string;
@@ -50,7 +36,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, onCreated }: Props) {
   });
   const [paymentTerm, setPaymentTerm] = useState<PaymentTerm>("net_30");
   const [agreementType, setAgreementType] = useState<"spot" | "framework" | "consignment">("framework");
-  const [items, setItems] = useState<Draft[]>([emptyDraft()]);
+  const [items, setItems] = useState<LineDraft[]>([emptyLine()]);
 
   useEffect(() => {
     if (!open) return;
@@ -88,35 +74,22 @@ export function PurchaseOrderDialog({ open, onOpenChange, onCreated }: Props) {
   const selectedContact = contactVendors.find(v => v.id === supplierId);
   const supplier = suppliers.find(s => s.id === supplierId);
 
-  const subtotal = items.reduce((s, i) => s + i.qty * i.unit_cost, 0);
-  const vatTotal = items.reduce((s, i) => s + i.qty * i.unit_cost * (i.vat_pct / 100), 0);
+  const subtotal = items.reduce((s, i) => s + (i.qty || 0) * (i.unit_cost || 0), 0);
+  const vatTotal = items.reduce((s, i) => s + (i.qty || 0) * (i.unit_cost || 0) * ((i.vat_pct || 0) / 100), 0);
   const grand = subtotal + vatTotal;
   const credit = supplier ? purchasingService.creditSummary(supplier) : null;
   const overCredit = supplier ? supplier.utilized + grand > supplier.credit_limit
     : selectedContact?.credit_limit ? grand > selectedContact.credit_limit : false;
 
-  const update = (idx: number, patch: Partial<Draft>) =>
-    setItems(items.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
-
-  const onPickProduct = (idx: number, p: Product) => {
-    update(idx, {
-      product_id: p.id, product_code: p.code,
-      kind: p.category === "vehicle" ? "vehicle" : "part",
-      description: p.name,
-      brand: p.brand, model: p.model, year: p.year,
-      unit_cost: p.default_unit_price ?? items[idx].unit_cost,
-    });
-  };
-
   const reset = () => {
     setSupplierId(suppliers[0]?.id ?? contactVendors[0]?.id ?? "");
     setBranch(BRANCHES[0]); setPaymentTerm("net_30"); setAgreementType("framework");
-    setItems([emptyDraft()]);
+    setItems([emptyLine()]);
   };
 
   const submit = (asDraft: boolean) => {
     if (!supplierId) return toast.error("يرجى اختيار المورد");
-    const valid = items.filter(i => i.description.trim() && i.qty > 0 && i.unit_cost > 0);
+    const valid = items.filter(i => (i.description.trim() || i.model || i.manufacturer) && i.qty > 0 && i.unit_cost > 0);
     if (valid.length === 0) return toast.error("يرجى إضافة سطر واحد على الأقل بسعر صحيح");
 
     let finalSupplierId = supplierId;
@@ -131,7 +104,11 @@ export function PurchaseOrderDialog({ open, onOpenChange, onCreated }: Props) {
     const po = purchasingService.createPO({
       supplier_id: finalSupplierId, branch_destination: branch, expected_delivery: eta,
       payment_term: paymentTerm, agreement_type: agreementType,
-      items: valid, submit: !asDraft,
+      items: valid.map(i => ({
+        ...i,
+        description: i.description.trim() || [i.manufacturer, i.model, i.trim, i.year].filter(Boolean).join(" "),
+      })),
+      submit: !asDraft,
     });
     toast.success(asDraft ? `حُفظ الأمر ${po.code} كمسودة` : `تم اعتماد الأمر ${po.code}`);
     onOpenChange(false); reset(); onCreated?.();
@@ -142,7 +119,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, onCreated }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) reset(); }}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto" dir="rtl">
+      <DialogContent className="max-w-6xl max-h-[92vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
           <DialogTitle>أمر شراء جديد</DialogTitle>
           <DialogDescription>إنشاء أمر شراء مباشر باستخدام الأصناف الرئيسية.</DialogDescription>
@@ -217,56 +194,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, onCreated }: Props) {
           </div>
         )}
 
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <Label className="text-xs">الأصناف</Label>
-            <Button size="sm" variant="outline" className="h-7" onClick={() => setItems([...items, emptyDraft()])}>
-              <Plus className="h-3.5 w-3.5 ml-1" /> إضافة سطر
-            </Button>
-          </div>
-          <div className="border border-border rounded-lg overflow-x-auto">
-            <table className="erp-table text-[11px]">
-              <thead>
-                <tr>
-                  <th className="min-w-[180px]">المنتج</th>
-                  <th className="min-w-[180px]">الوصف</th>
-                  <th className="w-[120px]">اللون</th>
-                  <th className="w-[110px]">الموديل</th>
-                  <th className="w-[70px]">السنة</th>
-                  <th className="w-[60px]">الكمية</th>
-                  <th className="w-[110px]">سعر الوحدة</th>
-                  <th className="w-[60px]">ض.ق.م %</th>
-                  <th className="w-[110px]">الإجمالي</th>
-                  <th className="w-[36px]"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((it, idx) => {
-                  const lineTotal = it.qty * it.unit_cost * (1 + it.vat_pct / 100);
-                  return (
-                    <tr key={idx}>
-                      <td><ProductPicker value={it.product_id ?? null} onChange={(p) => onPickProduct(idx, p)} /></td>
-                      <td><Input className="h-8" value={it.description} onChange={e => update(idx, { description: e.target.value })} placeholder="وصف" /></td>
-                      <td>{it.kind === "vehicle" ? <ColorPicker value={it.color_id} onChange={(c) => update(idx, { color_id: c.id, color_name: c.name_ar })} /> : <span className="text-muted-foreground text-[10px]">—</span>}</td>
-                      <td><Input className="h-8" value={it.model ?? ""} onChange={e => update(idx, { model: e.target.value })} /></td>
-                      <td><Input className="h-8 num" type="number" value={it.year ?? ""} onChange={e => update(idx, { year: e.target.value ? Number(e.target.value) : undefined })} /></td>
-                      <td><Input className="h-8 num" type="number" min={1} value={it.qty} onChange={e => update(idx, { qty: Number(e.target.value) })} /></td>
-                      <td><Input className="h-8 num" type="number" min={0} value={it.unit_cost} onChange={e => update(idx, { unit_cost: Number(e.target.value) })} /></td>
-                      <td><Input className="h-8 num" type="number" min={0} value={it.vat_pct} onChange={e => update(idx, { vat_pct: Number(e.target.value) })} /></td>
-                      <td className="num text-[11px] font-semibold">{fmtSAR(lineTotal)}</td>
-                      <td><Button size="sm" variant="ghost" className="h-7 px-2 text-destructive" onClick={() => setItems(items.filter((_, i) => i !== idx))} disabled={items.length === 1}><Trash2 className="h-3.5 w-3.5" /></Button></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <div className="text-left mt-2 text-xs space-y-0.5">
-            <div>قبل الضريبة: <span className="font-mono">{fmtSAR(subtotal)}</span></div>
-            <div>الضريبة: <span className="font-mono">{fmtSAR(vatTotal)}</span></div>
-            <div className="text-sm">الإجمالي: <span className="font-bold font-mono">{fmtSAR(grand)}</span></div>
-          </div>
-        </div>
+        <LinesEditor items={items} onChange={setItems} />
 
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
