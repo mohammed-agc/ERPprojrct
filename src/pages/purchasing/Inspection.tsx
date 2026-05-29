@@ -101,7 +101,7 @@ export default function Inspection() {
               const remaining = Math.max(0, vehicleApproved - intaked);
               const canIntake = i.status === "approved" && po && remaining > 0;
               return (
-                <tr key={i.id}>
+                <tr key={i.id} className="cursor-pointer hover:bg-muted/40" onClick={() => nav(`/purchasing/inspection/${i.id}`)}>
                   <td className="font-mono text-[11px]">
                     <div className="flex items-center gap-1.5">
                       <FileSearch className="h-3 w-3 text-muted-foreground" />{po?.code ?? "—"}
