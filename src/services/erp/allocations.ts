@@ -11,6 +11,7 @@ import {
   makeAudit, makeApproval, type AuditEntry, type ApprovalEntry, type ErpGovRole,
 } from "./erpRoles";
 import { purchasingService } from "./purchasing";
+import { validateVIN, normalizeVIN } from "@/lib/vinValidation";
 
 const LS_KEY = "sarat.allocations.v1";
 
@@ -196,12 +197,62 @@ export const allocationService = {
 
   /** Validate VIN uniqueness across all allocations and inventory. */
   vinExists(vin: string, excludeLineId?: string): boolean {
-    const v = vin.trim().toUpperCase();
+    const v = normalizeVIN(vin);
     if (!v) return false;
     const db = load();
     return db.allocations.some(a => a.lines.some(l =>
-      l.vin.toUpperCase() === v && l.id !== excludeLineId
+      normalizeVIN(l.vin) === v && l.id !== excludeLineId
     ));
+  },
+
+  /**
+   * Backend-side full VIN governance for an allocation.
+   * Used by Purchase Invoice creation to refuse issuing an invoice when any
+   * vehicle has a missing or duplicate VIN.
+   */
+  validateAllVINs(allocId: string): { ok: true } | { ok: false; reason: string } {
+    const a = load().allocations.find(x => x.id === allocId);
+    if (!a) return { ok: false, reason: "التخصيص غير موجود" };
+    if (a.lines.length === 0) return { ok: false, reason: "التخصيص لا يحتوي على أي مركبة" };
+    const seen = new Set<string>();
+    for (const l of a.lines) {
+      const chk = validateVIN(l.vin);
+      if (!chk.ok) return { ok: false, reason: `${chk.reason} — وحدة ${l.model} ${l.year ?? ""}`.trim() };
+      const v = chk.normalized!;
+      if (seen.has(v)) return { ok: false, reason: `VIN مكرر داخل التخصيص: ${v}` };
+      if (this.vinExists(v, l.id)) return { ok: false, reason: `VIN موجود مسبقاً في تخصيص آخر: ${v}` };
+      seen.add(v);
+      if (!l.engine_no || !l.engine_no.trim()) {
+        return { ok: false, reason: `رقم المحرك مطلوب لـ VIN ${v}` };
+      }
+    }
+    return { ok: true };
+  },
+
+  /** Update VIN / engine number on an existing allocation line with full validation. */
+  updateLineVIN(allocId: string, lineId: string, vin: string, engineNo?: string):
+    { ok: true } | { ok: false; reason: string }
+  {
+    const db = load();
+    const a = db.allocations.find(x => x.id === allocId);
+    if (!a) return { ok: false, reason: "التخصيص غير موجود" };
+    const line = a.lines.find(l => l.id === lineId);
+    if (!line) return { ok: false, reason: "السطر غير موجود" };
+    const chk = validateVIN(vin);
+    if (!chk.ok) return { ok: false, reason: chk.reason! };
+    const v = chk.normalized!;
+    if (this.vinExists(v, lineId)) return { ok: false, reason: `VIN موجود مسبقاً: ${v}` };
+    // duplicate within same allocation
+    if (a.lines.some(l => l.id !== lineId && normalizeVIN(l.vin) === v)) {
+      return { ok: false, reason: `VIN مكرر داخل التخصيص: ${v}` };
+    }
+    line.vin = v;
+    if (engineNo !== undefined) {
+      if (!engineNo.trim()) return { ok: false, reason: "رقم المحرك لا يمكن أن يكون فارغاً" };
+      line.engine_no = engineNo.trim();
+    }
+    save(db);
+    return { ok: true };
   },
 
   /** Create a draft allocation against an approved PO. */
@@ -219,15 +270,24 @@ export const allocationService = {
       return { error: "لا يمكن التخصيص — يجب أن يكون أمر الشراء في حالة (جاهز للتخصيص) بعد تأكيد المورد" };
     }
 
-    // VIN uniqueness
+    // VIN governance — format + uniqueness within request + uniqueness vs DB
     const seen = new Set<string>();
-    for (const l of input.lines) {
-      const v = l.vin.trim().toUpperCase();
-      if (!v) return { error: "VIN مطلوب لكل مركبة" };
+    const normalizedLines = input.lines.map(l => ({ ...l }));
+    for (const l of normalizedLines) {
+      const chk = validateVIN(l.vin);
+      if (!chk.ok) return { error: chk.reason! };
+      const v = chk.normalized!;
       if (seen.has(v)) return { error: `VIN مكرر داخل الطلب: ${v}` };
       if (this.vinExists(v)) return { error: `VIN موجود مسبقاً: ${v}` };
+      if (!l.engine_no || !l.engine_no.trim()) {
+        return { error: `رقم المحرك مطلوب لـ VIN ${v}` };
+      }
+      l.vin = v;
+      l.engine_no = l.engine_no.trim();
       seen.add(v);
     }
+    input = { ...input, lines: normalizedLines };
+
     const db = load();
     const year = new Date().getFullYear();
     const seq = db.allocations.filter(a => a.code.startsWith(`ALC-${year}`)).length + 12;
@@ -380,3 +440,18 @@ export const allocationService = {
     return undefined;
   },
 };
+
+/* ----- Register VIN governance gate with purchasing (avoids circular import) ----- */
+import { _registerVinGate } from "./purchasing";
+_registerVinGate((poId) => {
+  const allocs = allocationService.list().filter(a => a.po_id === poId && a.status !== "cancelled");
+  if (allocs.length === 0) {
+    return { ok: false, reason: "يجب إنشاء تخصيص مركبات وتحديد VIN لكل وحدة قبل إصدار الفاتورة" };
+  }
+  for (const a of allocs) {
+    const r = allocationService.validateAllVINs(a.id);
+    if (r.ok === false) return { ok: false, reason: `التخصيص ${a.code}: ${r.reason}` };
+  }
+  return { ok: true };
+});
+

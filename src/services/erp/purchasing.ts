@@ -20,6 +20,15 @@ import { makeAudit, makeApproval, type AuditEntry, type ApprovalEntry, type ErpG
 
 const LS_KEY = "sarat.purchasing.v1";
 
+/**
+ * VIN governance hook — registered by allocations service to avoid a circular
+ * import. Returns { ok: true } or { ok: false, reason } for a given PO.
+ * If no allocation exists for the PO, the gate refuses invoice creation.
+ */
+type VinGate = (poId: string) => { ok: true } | { ok: false; reason: string };
+let _vinGate: VinGate | null = null;
+export function _registerVinGate(fn: VinGate) { _vinGate = fn; }
+
 /* ============================ Domain Types ============================ */
 
 export type Urgency = "low" | "normal" | "high" | "critical";
@@ -928,11 +937,20 @@ export const purchasingService = {
   /** Create a purchase invoice from an approved PO. */
   createPurchaseInvoice(input: {
     po_id: string; vat_pct?: number; due_date?: string; notes?: string;
-  }): PurchaseInvoice | undefined {
+  }): PurchaseInvoice | { error: string } {
     const db = load();
     const po = db.pos.find(p => p.id === input.po_id);
-    if (!po) return undefined;
-    if (po.status === "cancelled") return undefined;
+    if (!po) return { error: "أمر الشراء غير موجود" };
+    if (po.status === "cancelled") return { error: "لا يمكن إصدار فاتورة لأمر شراء ملغى" };
+
+    // VIN governance — refuse if any vehicle in the linked allocation has a
+    // missing, malformed, or duplicate VIN. Vehicle-bearing POs MUST be
+    // allocated first; invoices cannot be issued on phantom VINs.
+    if (_vinGate) {
+      const gate = _vinGate(po.id);
+      if (gate.ok === false) return { error: `تعذّر إصدار الفاتورة — ${gate.reason}` };
+    }
+
     // Auto-approve a draft PO when invoicing (PR→PO auto-creates draft; invoicing implies acceptance)
     if (po.status === "draft") {
       po.status = "approved";
