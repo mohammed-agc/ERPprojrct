@@ -16,11 +16,12 @@ import { makeAudit, type AuditEntry, type ErpGovRole } from "@/services/erp/erpR
 export default function PurchaseRequestDetail() {
   const { id = "" } = useParams();
   const [tick, setTick] = useState(0);
-  const refresh = () => setTick(t => t + 1);
-
-  const [tick, setTick] = useState(0);
   const [printOpen, setPrintOpen] = useState(false);
   const refresh = () => setTick(t => t + 1);
+
+  const pr = useMemo(() => purchasingService.listPRs().find(p => p.id === id), [id, tick]);
+  if (!pr) return <div className="p-6 text-sm text-muted-foreground">طلب الشراء غير موجود</div>;
+
   const po = pr.po_id ? purchasingService.getPO(pr.po_id) : undefined;
   const totalEst = pr.items.reduce((s, i) => s + i.qty * i.unit_cost, 0);
 
