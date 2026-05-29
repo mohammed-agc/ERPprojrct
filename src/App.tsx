@@ -257,6 +257,7 @@ const App = () => (
                 <Route index element={<AdminDashboard />} />
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="roles" element={<AdminRoles />} />
+                <Route path="roles-manager" element={<AdminRolesManager />} />
                 <Route path="permissions" element={<Permissions />} />
                 <Route path="sessions" element={<AdminSessions />} />
                 <Route path="login-history" element={<AdminLoginHistory />} />
