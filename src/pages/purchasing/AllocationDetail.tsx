@@ -56,6 +56,38 @@ export default function AllocationDetail() {
       />
       <AllocationConfirmationDialog open={confOpen} onOpenChange={setConfOpen} allocationId={alloc.id} onCreated={refresh} />
 
+      {/* Supplier + PO header banner */}
+      {supplier && (
+        <div className="border border-primary/30 bg-primary/5 rounded-md p-3 grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
+          <div>
+            <div className="text-[10px] text-muted-foreground">المورد</div>
+            <div className="font-semibold text-sm">{supplier.name}</div>
+            <div className="text-[10px] text-muted-foreground font-mono">{supplier.code}</div>
+          </div>
+          <div>
+            <div className="text-[10px] text-muted-foreground">أمر الشراء</div>
+            {po
+              ? <Link to={`/purchasing/orders/${po.id}`} className="font-mono font-semibold text-primary hover:underline">{po.code}</Link>
+              : <div>—</div>}
+            <div className="text-[10px] text-muted-foreground">{po ? fmtDate(po.created_at) : "—"}</div>
+          </div>
+          <div>
+            <div className="text-[10px] text-muted-foreground">الفرع الوجهة</div>
+            <div>{po?.branch_destination ?? "—"}</div>
+          </div>
+          <div>
+            <div className="text-[10px] text-muted-foreground">عدد المركبات</div>
+            <div className="num font-bold">{alloc.lines.length}</div>
+          </div>
+          <div>
+            <div className="text-[10px] text-muted-foreground">إجمالي تقديري</div>
+            <div className="num font-bold">
+              {alloc.lines.reduce((s, l) => s + (l.cost ?? 0), 0).toLocaleString("ar-SA")} ر.س
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-3">
         <div className="space-y-3">
           <div className="bg-card border border-border rounded-lg overflow-hidden">
@@ -63,24 +95,28 @@ export default function AllocationDetail() {
             <table className="erp-table">
               <thead>
                 <tr>
-                  <th>VIN</th>
-                  <th>رقم المحرك</th>
-                  <th>الماركة / الموديل</th>
+                  <th>#</th>
+                  <th>الصانع / الموديل</th>
+                  <th>الفئة</th>
                   <th>السنة</th>
                   <th>اللون</th>
-                  <th>الفئة</th>
+                  <th>VIN</th>
+                  <th>رقم المحرك</th>
+                  <th>تكلفة الوحدة</th>
                   <th>الحالة</th>
                 </tr>
               </thead>
               <tbody>
-                {alloc.lines.map(l => (
+                {alloc.lines.map((l, idx) => (
                   <tr key={l.id}>
-                    <td className="font-mono text-[11px]">{l.vin}</td>
-                    <td className="font-mono text-[11px]">{l.engine_no}</td>
-                    <td className="text-xs">{l.brand} {l.model}</td>
+                    <td className="text-xs num">{idx + 1}</td>
+                    <td className="text-xs font-semibold">{(l.manufacturer || l.brand)} {l.model}</td>
+                    <td className="text-xs">{l.trim || "—"}</td>
                     <td className="text-xs num">{l.year}</td>
                     <td className="text-xs">{l.color}</td>
-                    <td className="text-xs">{l.trim || "—"}</td>
+                    <td className="font-mono text-[11px]">{l.vin}</td>
+                    <td className="font-mono text-[11px]">{l.engine_no}</td>
+                    <td className="text-xs num">{l.cost ? l.cost.toLocaleString("ar-SA") : "—"}</td>
                     <td><Badge className={ALC_VSTATUS_TONE[l.status]}>{ALC_VSTATUS_LABEL[l.status]}</Badge></td>
                   </tr>
                 ))}
@@ -120,3 +156,4 @@ export default function AllocationDetail() {
     </div>
   );
 }
+

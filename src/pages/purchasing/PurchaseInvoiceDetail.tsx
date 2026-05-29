@@ -103,18 +103,43 @@ export default function PurchaseInvoiceDetail() {
           </div>
 
           {allocs.length > 0 && (
-            <div className="bg-card border border-border rounded-lg p-3 text-xs">
-              <div className="font-semibold mb-2">التخصيصات المرتبطة</div>
-              <ul className="space-y-1">
-                {allocs.map(a => (
-                  <li key={a.id} className="flex items-center justify-between bg-muted/40 rounded px-2 py-1">
-                    <Link to={`/purchasing/allocations/${a.id}`} className="text-primary hover:underline font-mono">{a.code}</Link>
-                    <span>{a.lines.length} مركبة</span>
-                  </li>
-                ))}
-              </ul>
+            <div className="bg-card border border-border rounded-lg overflow-hidden text-xs">
+              <div className="px-3 py-2 border-b border-border bg-muted/40 font-semibold">
+                المركبات المفوترة ({allocs.reduce((s, a) => s + a.lines.length, 0)})
+              </div>
+              <table className="erp-table">
+                <thead>
+                  <tr>
+                    <th>التخصيص</th>
+                    <th>الصانع / الموديل</th>
+                    <th>الفئة</th>
+                    <th>السنة</th>
+                    <th>اللون</th>
+                    <th>VIN</th>
+                    <th>رقم المحرك</th>
+                    <th>السعر</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allocs.flatMap(a => a.lines.map(l => (
+                    <tr key={l.id}>
+                      <td className="font-mono text-[10px]">
+                        <Link to={`/purchasing/allocations/${a.id}`} className="text-primary hover:underline">{a.code}</Link>
+                      </td>
+                      <td className="font-semibold">{(l.manufacturer || l.brand)} {l.model}</td>
+                      <td>{l.trim || "—"}</td>
+                      <td className="num">{l.year}</td>
+                      <td>{l.color}</td>
+                      <td className="font-mono text-[11px]">{l.vin}</td>
+                      <td className="font-mono text-[11px]">{l.engine_no}</td>
+                      <td className="num">{l.cost ? fmtSAR(l.cost) : "—"}</td>
+                    </tr>
+                  )))}
+                </tbody>
+              </table>
             </div>
           )}
+
 
           <div className="bg-card border border-border rounded-lg p-3 text-xs">
             <div className="font-semibold mb-2">الدفعات</div>
