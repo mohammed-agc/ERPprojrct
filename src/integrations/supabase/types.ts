@@ -612,6 +612,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_list_sessions: {
+        Args: never
+        Returns: {
+          aal: string
+          created_at: string
+          email: string
+          full_name: string
+          ip: string
+          not_after: string
+          refreshed_at: string
+          session_id: string
+          updated_at: string
+          user_agent: string
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
