@@ -94,7 +94,9 @@ export default function PurchaseRequestDetail() {
                 <Badge className={URGENCY_TONE[pr.urgency]}>{URGENCY_LABEL[pr.urgency]}</Badge>
                 <Badge className={PR_TONE[pr.status]}>{PR_LABEL[pr.status]}</Badge>
               </div>
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2 border-t border-border">
+
               <div><div className="text-[10px] text-muted-foreground">التاريخ</div><div>{fmtDate(pr.created_at)}</div></div>
               <div><div className="text-[10px] text-muted-foreground">المورد</div>
                 <div className="font-semibold">{supplier?.name ?? "—"}</div>
