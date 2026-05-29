@@ -102,6 +102,23 @@ const ColorsMaster = lazy(() => import("./pages/master/Colors"));
 const PurchaseInvoicesRegistry = lazy(() => import("./pages/accounting/PurchaseInvoicesRegistry"));
 const SalesInvoicesRegistry = lazy(() => import("./pages/accounting/SalesInvoicesRegistry"));
 
+// Admin module
+const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminUsers = lazy(() => import("./pages/admin/Users"));
+const AdminRoles = lazy(() => import("./pages/admin/Roles"));
+const AdminSessions = lazy(() => import("./pages/admin/Sessions"));
+const AdminLoginHistory = lazy(() => import("./pages/admin/LoginHistory"));
+const AdminAuditLog = lazy(() => import("./pages/admin/AuditLog"));
+const AdminMasterDataHub = lazy(() => import("./pages/admin/MasterDataHub"));
+const AdminUatTools = lazy(() => import("./pages/admin/UatTools"));
+const AdminSettingsCompany = lazy(() => import("./pages/admin/settings/Company"));
+const AdminSettingsBranches = lazy(() => import("./pages/admin/settings/Branches"));
+const AdminSettingsWarehouses = lazy(() => import("./pages/admin/settings/Warehouses"));
+const AdminSettingsTax = lazy(() => import("./pages/admin/settings/Tax"));
+const AdminSettingsSequences = lazy(() => import("./pages/admin/settings/Sequences"));
+const AdminSettingsTemplates = lazy(() => import("./pages/admin/settings/Templates"));
+
 import { ErpAuthError } from "@/services/erp";
 
 const PageLoader = () => (
