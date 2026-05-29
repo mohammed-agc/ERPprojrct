@@ -68,6 +68,9 @@ export function VehicleIntakeDialog({ open, onOpenChange, inspection, po, onCrea
   useEffect(() => {
     if (!open || !inspection || !po) return;
     const alreadyTaken = inspection.vehicle_ids?.length ?? 0;
+    // Pull per-VIN units from the confirmed Allocation linked to this PO.
+    const allUnits = getPoVehicleUnits(po.id);
+    const unitsByLine = groupUnitsByPoLine(allUnits);
     const initial: Row[] = [];
     let counter = 0;
     inspection.items.forEach(insItem => {
@@ -75,16 +78,25 @@ export function VehicleIntakeDialog({ open, onOpenChange, inspection, po, onCrea
       if (!poLine || poLine.kind !== "vehicle") return;
       const approved = insItem.passed ?? 0;
       const parsed = parseDescription(poLine.description);
+      const lineUnits = unitsByLine.get(poLine.id) ?? [];
       for (let i = 0; i < approved; i++) {
         counter += 1;
         if (counter <= alreadyTaken) continue;
+        const u = lineUnits[i];
         initial.push({
           uid: `${insItem.line_id}_${i}`,
           source_line_id: insItem.line_id,
           description: poLine.description,
-          ...parsed,
-          unit_cost: poLine.unit_cost,
-          vin: "", chassis: "", engine: "", color: "", mileage: 0,
+          brand: u?.manufacturer || u?.brand || parsed.brand,
+          model: u?.model || parsed.model,
+          trim: u?.trim || parsed.trim,
+          year: u?.year || parsed.year,
+          unit_cost: u?.cost ?? poLine.unit_cost,
+          vin: u?.vin ?? "",
+          chassis: "",
+          engine: u?.engine_no ?? "",
+          color: u?.color ?? "",
+          mileage: 0,
           transmission: "automatic", fuel_type: "petrol",
         });
       }
