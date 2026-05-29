@@ -51,7 +51,11 @@ export default function PurchaseRequests() {
     approved: all.filter(p => p.status === "approved").length,
   }), [all]);
 
-  const onApprove = (id: string) => { purchasingService.approvePR(id); toast.success("تم اعتماد الطلب"); refresh(); };
+  const onApprove = (id: string) => {
+    const generatedPO = purchasingService.approvePR(id);
+    toast.success(generatedPO ? `تم اعتماد الطلب وإنشاء أمر الشراء ${generatedPO.code}` : "تم اعتماد الطلب");
+    refresh();
+  };
   const onReject = (id: string) => { purchasingService.rejectPR(id); toast.error("تم رفض الطلب"); refresh(); };
 
   return (
