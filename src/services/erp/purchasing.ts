@@ -801,8 +801,9 @@ export const purchasingService = {
   createPR(input: {
     requester: string; department: string; branch: string;
     urgency: Urgency; justification: string;
-    items: { kind: ItemKind; description: string; qty: number; unit_cost: number }[];
+    items: Partial<LineItem>[] & { kind: ItemKind; description: string; qty: number; unit_cost: number }[];
     submit?: boolean;
+  }): PurchaseRequest {
   }): PurchaseRequest {
     const db = load();
     const year = new Date().getFullYear();
