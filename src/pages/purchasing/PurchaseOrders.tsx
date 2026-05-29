@@ -103,19 +103,21 @@ export default function PurchaseOrders() {
               <th>الوصول المتوقع</th>
               <th>التقدم</th>
               <th>الحالة</th>
+              <th>إجراءات</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={10} className="text-center text-muted-foreground py-8">لا توجد أوامر مطابقة</td></tr>
+              <tr><td colSpan={11} className="text-center text-muted-foreground py-8">لا توجد أوامر مطابقة</td></tr>
             )}
             {filtered.map(p => {
               const s = suppliers.find(x => x.id === p.supplier_id);
               const av = purchasingService.availability(p);
+              const canConfirmSupplier = p.status === "awaiting_supplier_confirmation";
               return (
-                <tr key={p.id}>
+                <tr key={p.id} className="cursor-pointer hover:bg-muted/40" onClick={() => nav(`/purchasing/orders/${p.id}`)}>
                   <td className="font-mono text-[11px]">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 text-primary hover:underline">
                       <FileText className="h-3 w-3 text-muted-foreground" />
                       {p.code}
                     </div>
@@ -144,12 +146,30 @@ export default function PurchaseOrders() {
                     </div>
                   </td>
                   <td><Badge className={PO_TONE[p.status]}>{PO_LABEL[p.status]}</Badge></td>
+                  <td className="whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    {canConfirmSupplier && (
+                      <Button size="sm" variant="outline" className="h-7 text-[11px]"
+                        onClick={() => setConfirmPoId(p.id)}>
+                        <ShieldCheck className="h-3.5 w-3.5 ml-1" /> تأكيد المورد
+                      </Button>
+                    )}
+                  </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
+
+      {confirmPoId && (
+        <SupplierConfirmationDialog
+          open={!!confirmPoId}
+          onOpenChange={(v) => !v && setConfirmPoId(null)}
+          poId={confirmPoId}
+          onDone={() => { setTick(t => t + 1); setConfirmPoId(null); }}
+        />
+      )}
     </div>
   );
 }
+
