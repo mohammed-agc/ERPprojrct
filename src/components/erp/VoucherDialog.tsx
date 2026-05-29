@@ -11,6 +11,7 @@ import {
   type ReceiptKind, type PaymentKind,
   receiptKindLabel, paymentKindLabel, methodLabel,
 } from "@/services/erp/treasury";
+import { AmountInput } from "@/components/erp/AmountInput";
 
 interface Props {
   open: boolean;
