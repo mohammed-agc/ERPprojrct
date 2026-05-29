@@ -11,6 +11,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Banknote, CreditCard, Landmark, FileText, Wallet } from "lucide-react";
+import { AmountInput } from "@/components/erp/AmountInput";
 
 export type PaymentMethod = "cash" | "bank_transfer" | "card" | "check" | "credit";
 
@@ -77,7 +78,7 @@ export function PaymentDialog({
 
   const [method, setMethod] = useState<PaymentMethod>("cash");
   const [accountId, setAccountId] = useState<string>(accounts[0]?.id ?? "");
-  const [amount, setAmount] = useState<string>("");
+  const [amount, setAmount] = useState<number | undefined>(undefined);
   const [paymentDate, setPaymentDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
@@ -87,14 +88,14 @@ export function PaymentDialog({
     if (open && invoice) {
       setMethod("cash");
       setAccountId(accounts[0]?.id ?? "");
-      setAmount(outstanding.toFixed(2));
+      setAmount(outstanding > 0 ? outstanding : undefined);
       setPaymentDate(new Date().toISOString().slice(0, 10));
       setReference("");
       setNotes("");
     }
   }, [open, invoice?.id]);
 
-  const numericAmount = Number(amount) || 0;
+  const numericAmount = amount ?? 0;
   const remaining = Math.max(0, outstanding - numericAmount);
   const isFull = numericAmount >= outstanding && outstanding > 0;
   const isPartial = numericAmount > 0 && numericAmount < outstanding;
@@ -156,23 +157,23 @@ export function PaymentDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Summary strip */}
-        <div className="grid grid-cols-4 gap-2 text-xs border border-border rounded-md bg-muted/30 p-2.5">
+        {/* Summary strip — large emphasis on financial state */}
+        <div className="grid grid-cols-4 gap-2 border border-border rounded-md bg-muted/30 p-3">
           <div>
-            <div className="text-muted-foreground">إجمالي الفاتورة</div>
-            <div className="font-bold tabular-nums">{fmt(total)}</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">إجمالي الفاتورة</div>
+            <div className="text-lg font-bold tabular-nums" dir="ltr">{fmt(total)}</div>
           </div>
           <div>
-            <div className="text-muted-foreground">المدفوع سابقًا</div>
-            <div className="font-bold tabular-nums">{fmt(alreadyPaid)}</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">المدفوع سابقًا</div>
+            <div className="text-lg font-bold tabular-nums" dir="ltr">{fmt(alreadyPaid)}</div>
           </div>
           <div>
-            <div className="text-muted-foreground">المستحق</div>
-            <div className="font-bold tabular-nums text-primary">{fmt(outstanding)}</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">المتبقي</div>
+            <div className="text-lg font-bold tabular-nums text-primary" dir="ltr">{fmt(outstanding)}</div>
           </div>
           <div>
-            <div className="text-muted-foreground">الحالة</div>
-            <div className="mt-0.5">{statusBadge}</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">الحالة</div>
+            <div className="mt-1">{statusBadge}</div>
           </div>
         </div>
 
@@ -219,20 +220,17 @@ export function PaymentDialog({
               <span>المبلغ المدفوع</span>
               <button
                 type="button"
-                onClick={() => setAmount(outstanding.toFixed(2))}
+                onClick={() => setAmount(outstanding)}
                 className="text-[10px] text-primary hover:underline"
               >
                 المبلغ الكامل
               </button>
             </Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
+            <AmountInput
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="h-9 tabular-nums font-mono"
-              dir="ltr"
+              onChange={setAmount}
+              min={0}
+              placeholder="0.00"
             />
             {overpay && (
               <p className="text-[10px] text-destructive">المبلغ يتجاوز المستحق</p>

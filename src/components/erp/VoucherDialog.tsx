@@ -11,6 +11,7 @@ import {
   type ReceiptKind, type PaymentKind,
   receiptKindLabel, paymentKindLabel, methodLabel,
 } from "@/services/erp/treasury";
+import { AmountInput } from "@/components/erp/AmountInput";
 
 interface Props {
   open: boolean;
@@ -27,7 +28,7 @@ export function VoucherDialog({ open, onOpenChange, type, accounts, defaultAccou
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [accountId, setAccountId] = useState(defaultAccountId ?? accounts[0]?.id ?? "");
   const [counterparty, setCounterparty] = useState("");
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState<number | undefined>(undefined);
   const [method, setMethod] = useState<PaymentMethod>("cash");
   const [reference, setReference] = useState("");
   const [linkedInvoice, setLinkedInvoice] = useState("");
@@ -38,13 +39,13 @@ export function VoucherDialog({ open, onOpenChange, type, accounts, defaultAccou
       setKind(type === "receipt" ? "customer" : "vendor");
       setDate(new Date().toISOString().slice(0, 10));
       setAccountId(defaultAccountId ?? accounts[0]?.id ?? "");
-      setCounterparty(""); setAmount(""); setMethod("cash");
+      setCounterparty(""); setAmount(undefined); setMethod("cash");
       setReference(""); setLinkedInvoice(""); setNotes("");
     }
   }, [open, type, defaultAccountId, accounts]);
 
   const submit = async () => {
-    if (!accountId || !counterparty || !amount) {
+    if (!accountId || !counterparty || !amount || amount <= 0) {
       toast.error("الحقول المطلوبة غير مكتملة");
       return;
     }
@@ -99,7 +100,7 @@ export function VoucherDialog({ open, onOpenChange, type, accounts, defaultAccou
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-xs">المبلغ *</Label>
-            <Input type="number" step="0.01" className="h-8" value={amount} onChange={e => setAmount(e.target.value)} />
+            <AmountInput value={amount} onChange={setAmount} min={0} className="h-8" placeholder="0.00" />
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-xs">طريقة الدفع</Label>
