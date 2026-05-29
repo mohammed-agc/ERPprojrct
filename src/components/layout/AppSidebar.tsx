@@ -103,6 +103,8 @@ const groups: { title: string; items: NavItem[] }[] = [
     title: "المحاسبة",
     items: [
       { label: "مركز التقارير", to: "/finance", icon: PieChart, deptCode: "accounting" },
+      { label: "فواتير الشراء", to: "/accounting/purchase-invoices", icon: Receipt, deptCode: "accounting" },
+      { label: "فواتير المبيعات", to: "/accounting/sales-invoices", icon: Receipt, deptCode: "accounting" },
       { label: "دليل الحسابات", to: "/accounts", icon: BookOpen, deptCode: "accounting" },
       { label: "قيود اليومية", to: "/journals", icon: Calculator, deptCode: "accounting" },
       { label: "دفتر الأستاذ", to: "/general-ledger", icon: BookText, deptCode: "accounting" },
