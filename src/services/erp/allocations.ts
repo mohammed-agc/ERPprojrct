@@ -25,15 +25,19 @@ export interface AllocationLine {
   id: string;
   vin: string;
   engine_no: string;
-  brand: string;
+  brand: string;            // legacy / manufacturer display
+  manufacturer?: string;    // preferred display
   model: string;
   year: number;
   color: string;
   trim?: string;
   status: AllocVehicleStatus;
-  cost?: number;             // optional landed-cost hint (frontend only)
-  inventory_vehicle_id?: string; // populated when inventory unit is created
+  cost?: number;             // unit cost (excl VAT) from PO
+  vat_pct?: number;          // VAT% snapshot from PO
+  po_line_id?: string;       // link back to PO line
+  inventory_vehicle_id?: string;
 }
+
 
 export type AllocationStatus =
   | "draft" | "confirmed" | "invoiced" | "in_transit"

@@ -109,10 +109,12 @@ export interface PurchaseRequest {
   created_at: string;
   approved_at?: string;
   approver?: string;
+  supplier_id?: string;    // preferred supplier (vendor) — propagates to PO
   po_id?: string;
   audit?: AuditEntry[];
   approvals?: ApprovalEntry[];
 }
+
 
 export type PaymentTerm = "cash" | "net_30" | "net_60" | "net_90" | "credit_line";
 
@@ -473,7 +475,8 @@ function createPOFromApprovedPR(db: DB, pr: PurchaseRequest, input: PRToPOInput 
 
   const defaultSupplier = db.suppliers[0] ?? seed().suppliers[0];
   if (!db.suppliers.some(s => s.id === defaultSupplier.id)) db.suppliers.unshift(defaultSupplier);
-  const supplierId = input.supplier_id ?? defaultSupplier.id;
+  const supplierId = input.supplier_id ?? pr.supplier_id ?? defaultSupplier.id;
+
   const year = new Date().getFullYear();
   const seq = db.pos.filter(p => p.code.startsWith(`PO-${year}`)).length + 233;
   const items = pr.items.map(i => ({
@@ -814,6 +817,7 @@ export const purchasingService = {
   createPR(input: {
     requester: string; department: string; branch: string;
     urgency: Urgency; justification: string;
+    supplier_id?: string;
     items: (Partial<LineItem> & { kind: ItemKind; description: string; qty: number; unit_cost: number })[];
     submit?: boolean;
   }): PurchaseRequest {
@@ -825,6 +829,7 @@ export const purchasingService = {
       code: `PR-${year}-${String(seq).padStart(4, "0")}`,
       requester: input.requester, department: input.department, branch: input.branch,
       urgency: input.urgency, justification: input.justification,
+      supplier_id: input.supplier_id,
       items: input.items.map(i => ({ id: uid("li"), ...i })),
       status: input.submit ? "pending" : "draft",
       created_at: isoNow(),
@@ -833,6 +838,7 @@ export const purchasingService = {
     };
     db.prs.unshift(pr); save(db); return pr;
   },
+
 
 
   /* purchase orders */
