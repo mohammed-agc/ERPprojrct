@@ -165,11 +165,7 @@ export function AccountStatement({ contactName, contactCode, scope, customerInvo
                 <PrintLayout
                   title="كشف حساب"
                   subtitle={`${contactName}${contactCode ? " — " + contactCode : ""}`}
-                  meta={[
-                    { label: "النطاق", value: scope === "supplier" ? "مورد" : scope === "customer" ? "عميل" : "عميل/مورد" },
-                    { label: "من", value: from || "البداية" },
-                    { label: "إلى", value: to || "حتى اليوم" },
-                  ]}
+                  documentDate={`${from || "البداية"} → ${to || "حتى اليوم"}`}
                 >
                   <StatementTable lines={lines} totals={totals} />
                 </PrintLayout>
