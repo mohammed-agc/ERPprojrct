@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,8 +10,8 @@ import {
   purchasingService, INSP_LABEL, INSP_TONE, fmtDate, type InspectionRecord, type PurchaseOrder,
 } from "@/services/erp/purchasing";
 import { VehicleIntakeDialog } from "@/components/erp/VehicleIntakeDialog";
-
 export default function Inspection() {
+  const nav = useNavigate();
   const [tick, setTick] = useState(0);
   const [q, setQ] = useState("");
   const [intakeOpen, setIntakeOpen] = useState(false);
@@ -100,7 +101,7 @@ export default function Inspection() {
               const remaining = Math.max(0, vehicleApproved - intaked);
               const canIntake = i.status === "approved" && po && remaining > 0;
               return (
-                <tr key={i.id}>
+                <tr key={i.id} className="cursor-pointer hover:bg-muted/40" onClick={() => nav(`/purchasing/inspection/${i.id}`)}>
                   <td className="font-mono text-[11px]">
                     <div className="flex items-center gap-1.5">
                       <FileSearch className="h-3 w-3 text-muted-foreground" />{po?.code ?? "—"}
@@ -128,7 +129,7 @@ export default function Inspection() {
                       </span>
                     )}
                   </td>
-                  <td>
+                  <td onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-1">
                       {canDecide && (
                         <>

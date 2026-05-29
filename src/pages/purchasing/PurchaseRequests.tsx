@@ -25,6 +25,7 @@ const STATUS_OPTS: { value: PRStatus | "all"; label: string }[] = [
 ];
 
 export default function PurchaseRequests() {
+  const nav = useNavigate();
   const [tick, setTick] = useState(0);
   const refresh = () => setTick(t => t + 1);
   const [q, setQ] = useState("");
@@ -98,8 +99,8 @@ export default function PurchaseRequests() {
               const qty = p.items.reduce((s, i) => s + i.qty, 0);
               const total = p.items.reduce((s, i) => s + i.qty * i.unit_cost, 0);
               return (
-                <tr key={p.id}>
-                  <td className="font-mono text-[11px]">{p.code}</td>
+                <tr key={p.id} className="cursor-pointer hover:bg-muted/40" onClick={() => nav(`/purchasing/requests/${p.id}`)}>
+                  <td className="font-mono text-[11px] text-primary hover:underline">{p.code}</td>
                   <td>
                     <div className="font-medium text-sm">{p.requester}</div>
                     <div className="text-[10px] text-muted-foreground line-clamp-1">{p.justification}</div>
@@ -115,7 +116,7 @@ export default function PurchaseRequests() {
                   <td><Badge className={URGENCY_TONE[p.urgency]}>{URGENCY_LABEL[p.urgency]}</Badge></td>
                   <td><Badge className={PR_TONE[p.status]}>{PR_LABEL[p.status]}</Badge></td>
                   <td className="text-xs">{fmtDate(p.created_at)}</td>
-                  <td className="whitespace-nowrap">
+                  <td className="whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                     {p.status === "pending" && (
                       <div className="flex gap-1">
                         <Button size="sm" variant="ghost" className="h-7 px-2 text-success" onClick={() => onApprove(p.id)}>

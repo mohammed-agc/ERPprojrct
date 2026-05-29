@@ -1,14 +1,16 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus, FileText } from "lucide-react";
+import { Search, Plus, FileText, ShieldCheck } from "lucide-react";
 import {
   purchasingService, PO_LABEL, PO_TONE, fmtSAR, fmtDate, type POStatus,
 } from "@/services/erp/purchasing";
 import { PurchaseOrderDialog } from "@/components/erp/PurchaseOrderDialog";
+import { SupplierConfirmationDialog } from "@/components/erp/SupplierConfirmationDialog";
 
 const PAYMENT_LABEL: Record<string, string> = {
   cash: "نقدي", net_30: "30 يوم", net_60: "60 يوم", net_90: "90 يوم", credit_line: "حد ائتماني",
@@ -27,10 +29,12 @@ const STATUS_OPTS: { value: POStatus | "all" | "open"; label: string }[] = [
 ];
 
 export default function PurchaseOrders() {
+  const nav = useNavigate();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<POStatus | "all" | "open">("open");
   const [supplier, setSupplier] = useState<string>("all");
   const [createOpen, setCreateOpen] = useState(false);
+  const [confirmPoId, setConfirmPoId] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
 
   const pos = useMemo(() => purchasingService.listPOs(), [tick]);
@@ -99,19 +103,21 @@ export default function PurchaseOrders() {
               <th>الوصول المتوقع</th>
               <th>التقدم</th>
               <th>الحالة</th>
+              <th>إجراءات</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={10} className="text-center text-muted-foreground py-8">لا توجد أوامر مطابقة</td></tr>
+              <tr><td colSpan={11} className="text-center text-muted-foreground py-8">لا توجد أوامر مطابقة</td></tr>
             )}
             {filtered.map(p => {
               const s = suppliers.find(x => x.id === p.supplier_id);
               const av = purchasingService.availability(p);
+              const canConfirmSupplier = p.status === "awaiting_supplier_confirmation";
               return (
-                <tr key={p.id}>
+                <tr key={p.id} className="cursor-pointer hover:bg-muted/40" onClick={() => nav(`/purchasing/orders/${p.id}`)}>
                   <td className="font-mono text-[11px]">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 text-primary hover:underline">
                       <FileText className="h-3 w-3 text-muted-foreground" />
                       {p.code}
                     </div>
@@ -140,12 +146,30 @@ export default function PurchaseOrders() {
                     </div>
                   </td>
                   <td><Badge className={PO_TONE[p.status]}>{PO_LABEL[p.status]}</Badge></td>
+                  <td className="whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    {canConfirmSupplier && (
+                      <Button size="sm" variant="outline" className="h-7 text-[11px]"
+                        onClick={() => setConfirmPoId(p.id)}>
+                        <ShieldCheck className="h-3.5 w-3.5 ml-1" /> تأكيد المورد
+                      </Button>
+                    )}
+                  </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
+
+      {confirmPoId && (
+        <SupplierConfirmationDialog
+          open={!!confirmPoId}
+          onOpenChange={(v) => !v && setConfirmPoId(null)}
+          poId={confirmPoId}
+          onDone={() => { setTick(t => t + 1); setConfirmPoId(null); }}
+        />
+      )}
     </div>
   );
 }
+

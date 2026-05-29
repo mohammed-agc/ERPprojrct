@@ -76,6 +76,7 @@ const Shipments = lazy(() => import("./pages/purchasing/Shipments"));
 const Receiving = lazy(() => import("./pages/purchasing/Receiving"));
 
 const Inspection = lazy(() => import("./pages/purchasing/Inspection"));
+const InspectionDetail = lazy(() => import("./pages/purchasing/InspectionDetail"));
 const SalesDashboard = lazy(() => import("./pages/sales/SalesDashboard"));
 const SalesQuotations = lazy(() => import("./pages/sales/Quotations"));
 const SalesReservations = lazy(() => import("./pages/sales/Reservations"));
@@ -145,7 +146,9 @@ const App = () => (
               <Route path="/procurement" element={<Procurement />} />
               <Route path="/purchasing" element={<PurchasingDashboard />} />
               <Route path="/purchasing/requests" element={<PurchaseRequests />} />
+              <Route path="/purchasing/requests/:id" element={<PurchaseRequestDetail />} />
               <Route path="/purchasing/orders" element={<PurchaseOrders />} />
+              <Route path="/purchasing/orders/:id" element={<PurchaseOrderDetail />} />
               <Route path="/purchasing/invoices" element={<PurchaseInvoices />} />
               <Route path="/purchasing/invoices/:id" element={<PurchaseInvoiceDetail />} />
               <Route path="/purchasing/allocations" element={<Allocations />} />
@@ -158,6 +161,7 @@ const App = () => (
               <Route path="/purchasing/shipments" element={<Shipments />} />
               <Route path="/purchasing/receiving" element={<Receiving />} />
               <Route path="/purchasing/inspection" element={<Inspection />} />
+              <Route path="/purchasing/inspection/:id" element={<InspectionDetail />} />
               <Route path="/sales" element={<SalesDashboard />} />
               <Route path="/sales/quotations" element={<SalesQuotations />} />
               <Route path="/sales/reservations" element={<SalesReservations />} />

@@ -19,6 +19,8 @@ import {
 } from "@/services/erp/purchasing";
 import { inventoryService } from "@/services/erp/inventory";
 import { GRNReceiptDialog } from "@/components/erp/GRNReceiptDialog";
+import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
+import { makeAudit, type AuditEntry, type ErpGovRole } from "@/services/erp/erpRoles";
 
 export default function GRNDetail() {
   const { id = "" } = useParams();
@@ -323,18 +325,55 @@ export default function GRNDetail() {
         </CardContent>
       </Card>
 
-      {/* Timeline */}
-      <Card>
-        <CardContent className="p-3">
-          <div className="text-sm font-semibold mb-2">المخطط الزمني</div>
-          <ul className="text-xs space-y-1.5">
-            <Tl when={grn.created_at} label="تم إنشاء الإشعار" by={grn.receiver} />
-            {grn.items.length > 0 && <Tl when={grn.received_at} label={`سجلت ${grn.items.length} عناصر استلام`} by={grn.receiver} />}
-            {grn.completed_at && <Tl when={grn.completed_at} label="إقفال الاستلام" />}
-            {grn.handoff_at && <Tl when={grn.handoff_at} label="إرسال للفحص" />}
-          </ul>
-        </CardContent>
-      </Card>
+      {/* Timeline + Governance */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <Card className="lg:col-span-2">
+          <CardContent className="p-3">
+            <div className="text-sm font-semibold mb-2">المخطط الزمني</div>
+            <ul className="text-xs space-y-1.5">
+              <Tl when={grn.created_at} label="تم إنشاء الإشعار" by={grn.receiver} />
+              {grn.items.length > 0 && <Tl when={grn.received_at} label={`سجلت ${grn.items.length} عناصر استلام`} by={grn.receiver} />}
+              {grn.completed_at && <Tl when={grn.completed_at} label="إقفال الاستلام" />}
+              {grn.handoff_at && <Tl when={grn.handoff_at} label="إرسال للفحص" />}
+            </ul>
+          </CardContent>
+        </Card>
+
+        {(() => {
+          const audit: AuditEntry[] = [
+            makeAudit({ role: "receiving", action: "إنشاء إشعار الاستلام", to_status: "draft", actor: grn.receiver }),
+            ...(grn.items.length > 0 ? [makeAudit({ role: "receiving", action: `تسجيل ${grn.items.length} عنصر استلام`, actor: grn.receiver })] : []),
+            ...(grn.completed_at ? [makeAudit({ role: "receiving", action: "إقفال الاستلام", to_status: grn.status, actor: grn.receiver })] : []),
+            ...(grn.handoff_at ? [makeAudit({ role: "receiving", action: "إرسال للفحص", to_status: "awaiting_inspection", actor: grn.receiver })] : []),
+            ...((discrepancies.length > 0) ? [makeAudit({ role: "receiving", action: `تسجيل ${discrepancies.length} فرق` })] : []),
+          ];
+          const responsibleRole: ErpGovRole =
+            grn.status === "awaiting_inspection" ? "inspection" :
+            grn.status === "received" || grn.status === "with_discrepancy" ? "receiving" :
+            "receiving";
+          const nextActions: any[] = [];
+          if (grn.status === "draft" || grn.status === "partial" || grn.status === "receiving" || grn.status === "pending") {
+            nextActions.push({ label: "تسجيل استلام", role: "receiving", onClick: () => setReceiveOpen(true) });
+            nextActions.push({ label: "إقفال", role: "receiving", onClick: complete, variant: "outline" });
+          }
+          if (grn.status === "received" || grn.status === "with_discrepancy") {
+            nextActions.push({ label: "إرسال للفحص", role: "receiving", onClick: handoff });
+          }
+          if (grn.status === "awaiting_inspection") {
+            nextActions.push({ label: "فتح الفحص", role: "inspection", onClick: () => nav("/purchasing/inspection") });
+          }
+          return (
+            <DocGovernancePanel
+              status={RECV_LABEL[grn.status]}
+              statusTone={RECV_TONE[grn.status]}
+              responsibleRole={responsibleRole}
+              previous={po ? { kind: "po", id: po.id, code: po.code } : undefined}
+              audit={audit}
+              nextActions={nextActions}
+            />
+          );
+        })()}
+      </div>
     </div>
   );
 }
