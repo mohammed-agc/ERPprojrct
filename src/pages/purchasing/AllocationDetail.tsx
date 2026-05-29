@@ -56,8 +56,6 @@ export default function AllocationDetail() {
       />
       <AllocationConfirmationDialog open={confOpen} onOpenChange={setConfOpen} allocationId={alloc.id} onCreated={refresh} />
 
-      <AllocationConfirmationDialog open={confOpen} onOpenChange={setConfOpen} allocationId={alloc.id} onCreated={refresh} />
-
       {/* Supplier + PO header banner */}
       {supplier && (
         <div className="border border-primary/30 bg-primary/5 rounded-md p-3 grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
@@ -126,6 +124,14 @@ export default function AllocationDetail() {
             </table>
           </div>
 
+          {cc && (
+            <div className="bg-card border border-border rounded-lg p-3 text-xs">
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-semibold text-sm">وثيقة تأكيد التخصيص</div>
+                <Link to={`/purchasing/allocation-confirmations/${cc.id}`} className="font-mono text-primary hover:underline">{cc.code}</Link>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-[11px]">
+                <div><span className="text-muted-foreground">تاريخ التخصيص:</span> {fmtDate(cc.allocation_date)}</div>
                 <div><span className="text-muted-foreground">عدد المركبات:</span> {cc.vehicle_count}</div>
                 <div><span className="text-muted-foreground">الفاتورة:</span> {cc.invoice_id ? "مرتبطة" : "—"}</div>
               </div>
@@ -150,3 +156,4 @@ export default function AllocationDetail() {
     </div>
   );
 }
+
