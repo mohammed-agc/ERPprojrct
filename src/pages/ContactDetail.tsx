@@ -501,6 +501,19 @@ export default function ContactDetail() {
           </Card>
         </TabsContent>
 
+        {/* ---------- Financial Statement ---------- */}
+        <TabsContent value="statement">
+          <AccountStatement
+            contactName={row.name}
+            contactCode={row.code}
+            scope={hasRole(meta, "vendor") && !hasRole(meta, "customer") ? "supplier"
+              : hasRole(meta, "customer") && !hasRole(meta, "vendor") ? "customer"
+              : "both"}
+            customerInvoices={invoices as any}
+            creditLimit={meta.credit_limit}
+          />
+        </TabsContent>
+
         {/* ---------- Supplier Intelligence (vendor role only) ---------- */}
         {hasRole(meta, "vendor") && (
           <TabsContent value="supplier">
