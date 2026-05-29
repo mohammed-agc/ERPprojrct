@@ -11,6 +11,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Banknote, CreditCard, Landmark, FileText, Wallet } from "lucide-react";
+import { AmountInput } from "@/components/erp/AmountInput";
 
 export type PaymentMethod = "cash" | "bank_transfer" | "card" | "check" | "credit";
 
