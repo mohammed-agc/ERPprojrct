@@ -16,7 +16,6 @@ import { makeAudit, type AuditEntry, type ErpGovRole } from "@/services/erp/erpR
 export default function PurchaseRequestDetail() {
   const { id = "" } = useParams();
   const [tick, setTick] = useState(0);
-  const [printOpen, setPrintOpen] = useState(false);
   const refresh = () => setTick(t => t + 1);
 
   const pr = useMemo(() => purchasingService.listPRs().find(p => p.id === id), [id, tick]);
