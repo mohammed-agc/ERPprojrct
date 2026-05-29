@@ -46,11 +46,6 @@ export default function AllocationDetail() {
         actions={
           <div className="flex gap-2">
             {po && <Button variant="outline" size="sm" asChild><Link to={`/purchasing/orders`}><FileText className="h-4 w-4 ml-1" />{po.code}</Link></Button>}
-            {alloc.status === "confirmed" && !cc && (
-              <Button size="sm" variant="secondary" onClick={() => setConfOpen(true)}>
-                <ShieldCheck className="h-4 w-4 ml-1" /> إصدار وثيقة التأكيد
-              </Button>
-            )}
           </div>
         }
       />
