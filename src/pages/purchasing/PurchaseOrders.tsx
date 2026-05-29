@@ -29,10 +29,12 @@ const STATUS_OPTS: { value: POStatus | "all" | "open"; label: string }[] = [
 ];
 
 export default function PurchaseOrders() {
+  const nav = useNavigate();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<POStatus | "all" | "open">("open");
   const [supplier, setSupplier] = useState<string>("all");
   const [createOpen, setCreateOpen] = useState(false);
+  const [confirmPoId, setConfirmPoId] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
 
   const pos = useMemo(() => purchasingService.listPOs(), [tick]);
