@@ -470,7 +470,14 @@ function createPOFromApprovedPR(db: DB, pr: PurchaseRequest, input: PRToPOInput 
   const supplierId = input.supplier_id ?? defaultSupplier.id;
   const year = new Date().getFullYear();
   const seq = db.pos.filter(p => p.code.startsWith(`PO-${year}`)).length + 233;
-  const items = pr.items.map(i => ({ id: uid("li"), kind: i.kind, description: i.description, qty: i.qty, unit_cost: i.unit_cost }));
+  const items = pr.items.map(i => ({
+    ...i,
+    id: uid("li"),
+    // reset receiving/inspection counters on the new PO
+    received_qty: undefined,
+    inspected_qty: undefined,
+    approved_qty: undefined,
+  }));
   const po: PurchaseOrder = {
     id: uid("po"),
     code: `PO-${year}-${String(seq).padStart(4, "0")}`,
