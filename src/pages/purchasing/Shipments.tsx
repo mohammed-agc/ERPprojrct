@@ -71,6 +71,7 @@ export default function Shipments() {
         <table className="erp-table">
           <thead>
             <tr>
+              <th className="w-6"></th>
               <th>الشحنة</th>
               <th>أمر الشراء</th>
               <th>الناقل</th>
@@ -84,14 +85,21 @@ export default function Shipments() {
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={9} className="text-center text-muted-foreground py-8">لا توجد شحنات مطابقة</td></tr>
+              <tr><td colSpan={10} className="text-center text-muted-foreground py-8">لا توجد شحنات مطابقة</td></tr>
             )}
             {filtered.map(s => {
               const po = pos.find(p => p.id === s.po_id);
+              const units = getPoVehicleUnits(s.po_id);
+              const isOpen = expanded.has(s.id);
               return (
-                <tr key={s.id}>
+                <>
+                <tr key={s.id} className={units.length ? "cursor-pointer hover:bg-muted/30" : ""} onClick={() => units.length && toggle(s.id)}>
+                  <td className="text-muted-foreground">
+                    {units.length > 0 && (isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />)}
+                  </td>
                   <td className="font-mono text-[11px]">
                     <div className="flex items-center gap-1.5"><Ship className="h-3 w-3 text-muted-foreground" />{s.code}</div>
+                    {units.length > 0 && <div className="text-[10px] text-muted-foreground mt-0.5">{units.length} مركبة · VIN جاهز</div>}
                   </td>
                   <td className="font-mono text-[11px]">{po?.code ?? "—"}</td>
                   <td className="text-xs">{s.carrier}</td>
@@ -102,6 +110,26 @@ export default function Shipments() {
                   <td><Badge className={CUSTOMS_TONE[s.customs_status]}>{CUSTOMS_LABEL[s.customs_status]}</Badge></td>
                   <td><Badge className={SHIPMENT_TONE[s.status]}>{SHIPMENT_LABEL[s.status]}</Badge></td>
                 </tr>
+                {isOpen && units.length > 0 && (
+                  <tr key={s.id + "_x"} className="bg-muted/20">
+                    <td></td>
+                    <td colSpan={9} className="p-2">
+                      <div className="text-[11px] font-semibold mb-1.5">المركبات في هذه الشحنة ({units.length})</div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
+                        {units.map(u => (
+                          <div key={u.alloc_line_id} className="bg-background border border-border rounded px-2 py-1 text-[10px] flex items-center justify-between gap-2">
+                            <div dir="ltr" className="font-mono font-semibold">{u.vin}</div>
+                            <div className="text-muted-foreground truncate">
+                              {u.manufacturer} {u.model} {u.year} · {u.color}{u.trim ? " · " + u.trim : ""}
+                              <span className="ml-1" dir="ltr">⚙ {u.engine_no}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </>
               );
             })}
           </tbody>
