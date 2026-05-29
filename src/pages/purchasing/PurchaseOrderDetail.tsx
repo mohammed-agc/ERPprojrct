@@ -10,6 +10,8 @@ import {
 } from "@/services/erp/purchasing";
 import { allocationService } from "@/services/erp/allocations";
 import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
+import { DocPrintActions } from "@/components/erp/DocPrintActions";
+import { PrintablePurchaseDoc } from "@/components/erp/PrintablePurchaseDoc";
 import { SupplierConfirmationDialog } from "@/components/erp/SupplierConfirmationDialog";
 import { makeAudit, type AuditEntry, type ErpGovRole } from "@/services/erp/erpRoles";
 
