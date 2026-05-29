@@ -503,15 +503,22 @@ export default function ContactDetail() {
 
         {/* ---------- Financial Statement ---------- */}
         <TabsContent value="statement">
-          <AccountStatement
-            contactName={row.name}
-            contactCode={row.code}
-            scope={hasRole(meta, "vendor") && !hasRole(meta, "customer") ? "supplier"
-              : hasRole(meta, "customer") && !hasRole(meta, "vendor") ? "customer"
-              : "both"}
-            customerInvoices={invoices as any}
-            creditLimit={meta.credit_limit}
-          />
+          {(() => {
+            const isVendor = hasRole(meta, "vendor");
+            const isCustomer = hasRole(meta, "vehicle_customer") || hasRole(meta, "spare_parts_customer")
+              || hasRole(meta, "maintenance_customer") || hasRole(meta, "fleet_customer");
+            const scope: "supplier" | "customer" | "both" =
+              isVendor && !isCustomer ? "supplier" : isCustomer && !isVendor ? "customer" : "both";
+            return (
+              <AccountStatement
+                contactName={row.name}
+                contactCode={row.code}
+                scope={scope}
+                customerInvoices={invoices as any}
+                creditLimit={meta.credit_limit}
+              />
+            );
+          })()}
         </TabsContent>
 
         {/* ---------- Supplier Intelligence (vendor role only) ---------- */}
