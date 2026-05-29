@@ -76,6 +76,7 @@ const Shipments = lazy(() => import("./pages/purchasing/Shipments"));
 const Receiving = lazy(() => import("./pages/purchasing/Receiving"));
 
 const Inspection = lazy(() => import("./pages/purchasing/Inspection"));
+const InspectionDetail = lazy(() => import("./pages/purchasing/InspectionDetail"));
 const SalesDashboard = lazy(() => import("./pages/sales/SalesDashboard"));
 const SalesQuotations = lazy(() => import("./pages/sales/Quotations"));
 const SalesReservations = lazy(() => import("./pages/sales/Reservations"));
