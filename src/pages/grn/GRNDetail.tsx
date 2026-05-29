@@ -35,6 +35,8 @@ export default function GRNDetail() {
   const progress = grn ? purchasingService.poReceivingProgress(grn.po_id) : null;
   const warehouses = inventoryService.listWarehouses();
   const invoice = grn?.invoice_id ? purchasingService.getPurchaseInvoice(grn.invoice_id) : undefined;
+  const vehicleUnits = useMemo(() => po ? getPoVehicleUnits(po.id) : [], [po, tick]);
+  const unitsByLine = useMemo(() => groupUnitsByPoLine(vehicleUnits), [vehicleUnits]);
 
   // discrepancy form
   const [discKind, setDiscKind] = useState<DiscrepancyKind>("missing");
