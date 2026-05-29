@@ -99,8 +99,8 @@ export default function PurchaseRequests() {
               const qty = p.items.reduce((s, i) => s + i.qty, 0);
               const total = p.items.reduce((s, i) => s + i.qty * i.unit_cost, 0);
               return (
-                <tr key={p.id}>
-                  <td className="font-mono text-[11px]">{p.code}</td>
+                <tr key={p.id} className="cursor-pointer hover:bg-muted/40" onClick={() => nav(`/purchasing/requests/${p.id}`)}>
+                  <td className="font-mono text-[11px] text-primary hover:underline">{p.code}</td>
                   <td>
                     <div className="font-medium text-sm">{p.requester}</div>
                     <div className="text-[10px] text-muted-foreground line-clamp-1">{p.justification}</div>
