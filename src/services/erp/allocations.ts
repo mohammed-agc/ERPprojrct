@@ -450,7 +450,7 @@ _registerVinGate((poId) => {
   }
   for (const a of allocs) {
     const r = allocationService.validateAllVINs(a.id);
-    if (!r.ok) return { ok: false, reason: `التخصيص ${a.code}: ${r.reason}` };
+    if (r.ok === false) return { ok: false, reason: `التخصيص ${a.code}: ${r.reason}` };
   }
   return { ok: true };
 });

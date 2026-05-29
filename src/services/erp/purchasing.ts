@@ -948,7 +948,7 @@ export const purchasingService = {
     // allocated first; invoices cannot be issued on phantom VINs.
     if (_vinGate) {
       const gate = _vinGate(po.id);
-      if (!gate.ok) return { error: `تعذّر إصدار الفاتورة — ${gate.reason}` };
+      if (gate.ok === false) return { error: `تعذّر إصدار الفاتورة — ${gate.reason}` };
     }
 
     // Auto-approve a draft PO when invoicing (PR→PO auto-creates draft; invoicing implies acceptance)

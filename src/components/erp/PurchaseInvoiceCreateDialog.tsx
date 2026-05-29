@@ -32,13 +32,16 @@ export function PurchaseInvoiceCreateDialog({ open, onOpenChange, defaultAllocat
     if (!selected) { toast.error("اختر تخصيصاً مؤكداً"); return; }
     if (!po) { toast.error("أمر الشراء غير موجود"); return; }
     if (selected.invoice_id) { toast.error("التخصيص مرتبط بفاتورة مسبقاً"); return; }
-    const inv = purchasingService.createPurchaseInvoice({
+    const res = purchasingService.createPurchaseInvoice({
       po_id: po.id, vat_pct: vatPct, notes: notes || undefined,
     });
-    if (!inv) { toast.error("تعذّر إنشاء الفاتورة — تحقق من حالة أمر الشراء"); return; }
-    allocationService.attachInvoice(selected.id, inv.id, inv.code);
-    toast.success(`تم إنشاء الفاتورة ${inv.code}`);
-    onCreated?.(inv.id);
+    if (!res || "error" in res) {
+      toast.error(res && "error" in res ? res.error : "تعذّر إنشاء الفاتورة — تحقق من حالة أمر الشراء");
+      return;
+    }
+    allocationService.attachInvoice(selected.id, res.id, res.code);
+    toast.success(`تم إنشاء الفاتورة ${res.code}`);
+    onCreated?.(res.id);
     onOpenChange(false);
     setAllocId(""); setNotes("");
   };
