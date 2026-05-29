@@ -39,19 +39,34 @@ export default function AdminAuditLog() {
 
   const exportCsv = () => {
     if (!rows?.length) return;
-    const headers = ["التاريخ", "المستخدم", "الإجراء", "الوحدة", "نوع المستند", "كود المستند"];
+    const headers = [
+      "التاريخ والوقت",
+      "المستخدم",
+      "الإجراء",
+      "الوحدة",
+      "نوع المستند",
+      "معرف المستند",
+      "كود المستند",
+    ];
     const lines = [headers.join(",")];
-    rows.forEach(r => {
-      lines.push([
-        new Date(r.created_at).toISOString(),
-        r.user_name ?? "",
-        r.action,
-        r.module,
-        r.document_type ?? "",
-        r.document_code ?? "",
-      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(","));
+    rows.forEach((r) => {
+      lines.push(
+        [
+          new Date(r.created_at).toISOString(),
+          r.user_name ?? "—",
+          r.action,
+          r.module,
+          r.document_type ?? "—",
+          r.document_id ?? "—",
+          r.document_code ?? "—",
+        ]
+          .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+          .join(",")
+      );
     });
-    const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const blob = new Blob(["\uFEFF" + lines.join("\n")], {
+      type: "text/csv;charset=utf-8",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
