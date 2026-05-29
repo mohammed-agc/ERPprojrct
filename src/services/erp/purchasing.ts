@@ -75,10 +75,19 @@ export interface LineItem {
   kind: ItemKind;
   description: string;     // "Toyota Camry 2025 / GLE" or "Brake Pad Set"
   qty: number;
-  unit_cost: number;       // SAR
+  unit_cost: number;       // SAR (excl VAT)
   received_qty?: number;
   inspected_qty?: number;
   approved_qty?: number;
+  /* ===== ERP enrichment (Product Master + per-line attributes) ===== */
+  product_id?: string;     // FK → masterData.products
+  product_code?: string;   // denormalized snapshot
+  brand?: string;
+  model?: string;
+  year?: number;
+  color_id?: string;       // FK → masterData.vehicle_colors (vehicles only)
+  color_name?: string;     // denormalized snapshot
+  vat_pct?: number;        // default 15
 }
 
 export interface PurchaseRequest {
