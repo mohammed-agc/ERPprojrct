@@ -146,7 +146,9 @@ const App = () => (
               <Route path="/procurement" element={<Procurement />} />
               <Route path="/purchasing" element={<PurchasingDashboard />} />
               <Route path="/purchasing/requests" element={<PurchaseRequests />} />
+              <Route path="/purchasing/requests/:id" element={<PurchaseRequestDetail />} />
               <Route path="/purchasing/orders" element={<PurchaseOrders />} />
+              <Route path="/purchasing/orders/:id" element={<PurchaseOrderDetail />} />
               <Route path="/purchasing/invoices" element={<PurchaseInvoices />} />
               <Route path="/purchasing/invoices/:id" element={<PurchaseInvoiceDetail />} />
               <Route path="/purchasing/allocations" element={<Allocations />} />
