@@ -10,6 +10,7 @@ import { Plus, Trash2, Check, FileText, ArrowRight, Copy, User2, Phone, MapPin, 
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ProductCombobox } from "@/components/erp/ProductCombobox";
+import { NumberCell } from "@/components/erp/master/NumberCell";
 import { WorkflowStepper } from "@/components/erp/WorkflowStepper";
 import { ActionButton } from "@/components/erp/ActionButton";
 import { RoleSwitcher } from "@/components/erp/RoleSwitcher";
@@ -85,7 +86,9 @@ export default function SalesOrderDetail() {
     }
     const v = vehicles.find(x => x.id === vid);
     if (!v) return;
-    updateLine(i, { vehicle_id: vid, description: v.name, unit_price: Number(v.sale_price) });
+    // Auto-build description: Manufacturer Model Year Color
+    const desc = [v.brand, v.model, v.year, v.color].filter(Boolean).join(" ");
+    updateLine(i, { vehicle_id: vid, description: desc || v.name, unit_price: Number(v.sale_price) });
   };
 
   const addLine = () => {
@@ -371,12 +374,12 @@ export default function SalesOrderDetail() {
       </div>
 
       <div className="bg-card border border-border rounded-lg overflow-hidden mb-4">
-        <table className="erp-table">
+        <table className="erp-table text-[12px]">
           <thead>
             <tr>
               <th className="w-10">#</th>
-              <th className="w-1/3">المنتج / الوصف</th>
-              <th className="w-24">الكمية</th>
+              <th className="min-w-[360px]">المركبة (VIN · الصانع · الموديل · الفئة · السنة · اللون)</th>
+              <th className="w-20">الكمية</th>
               <th className="w-32">السعر (ر.س)</th>
               <th className="w-20">خصم %</th>
               <th className="w-20">VAT %</th>
@@ -405,33 +408,63 @@ export default function SalesOrderDetail() {
                 }
               };
               return (
+              const veh = vehicles.find(v => v.id === l.vehicle_id);
+              return (
               <tr key={l.id ?? `new-${i}`}>
-                <td className="text-muted-foreground num w-10">{i+1}</td>
-                <td>
+                <td className="text-muted-foreground num w-10 align-top pt-2">{i+1}</td>
+                <td className="align-top">
                   <ProductCombobox
                     items={vehicles as any[]}
                     value={l.vehicle_id}
                     onChange={(vid) => onPickVehicle(i, vid)}
                     disabled={!canEditLines}
-                    placeholder="اختر مركبة..."
-                    searchKeys={["name","brand","model","vin","year"] as any}
-                    displayValue={(v: any) => `${v.name} · ${v.year}`}
+                    placeholder="اختر مركبة (VIN · الصانع · الموديل · السنة · اللون)..."
+                    searchKeys={["name","brand","model","vin","year","color"] as any}
+                    displayValue={(v: any) =>
+                      `${v.vin || "بدون VIN"} · ${v.brand} ${v.model} ${v.year}${v.color ? " · " + v.color : ""}`
+                    }
                     columns={[
-                      { key: "name", header: "المركبة", className: "font-medium", render: (v: any) => <span>{v.name}</span> },
-                      { key: "model", header: "الموديل", render: (v: any) => <span className="text-muted-foreground">{v.brand} {v.model}</span> },
+                      { key: "vin", header: "VIN", className: "text-[11px] font-mono", render: (v: any) => <span dir="ltr" className="num truncate">{v.vin || "—"}</span> },
+                      { key: "brand", header: "الصانع", className: "font-medium", render: (v: any) => <span>{v.brand}</span> },
+                      { key: "model", header: "الموديل", render: (v: any) => <span>{v.model}</span> },
                       { key: "year", header: "السنة", render: (v: any) => <span className="num">{v.year}</span> },
-                      { key: "vin", header: "VIN", className: "text-[11px]", render: (v: any) => <span dir="ltr" className="num truncate">{v.vin || "—"}</span> },
+                      { key: "color", header: "اللون", render: (v: any) => <span className="text-muted-foreground">{v.color || "—"}</span> },
                       { key: "price", header: "السعر", className: "text-left", render: (v: any) => <span className="num">{Number(v.sale_price).toLocaleString("ar-SA")}</span> },
                     ]}
                   />
-                  {l.description && <div className="text-[11px] text-muted-foreground px-2 truncate">{l.description}</div>}
+                  {/* Vehicle identification chips */}
+                  {veh && (
+                    <div className="flex flex-wrap items-center gap-1 px-2 mt-1 text-[10.5px]">
+                      <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono" dir="ltr">VIN: {veh.vin || "—"}</span>
+                      <span className="px-1.5 py-0.5 rounded bg-muted">الصانع: {veh.brand}</span>
+                      <span className="px-1.5 py-0.5 rounded bg-muted">الموديل: {veh.model}</span>
+                      <span className="px-1.5 py-0.5 rounded bg-muted num">السنة: {veh.year}</span>
+                      {veh.color && <span className="px-1.5 py-0.5 rounded bg-muted">اللون: {veh.color}</span>}
+                    </div>
+                  )}
+                  {/* Editable auto-built description */}
+                  <input
+                    className="erp-input text-[11px] mt-1 w-full"
+                    value={l.description}
+                    onChange={e => updateLine(i, { description: e.target.value })}
+                    placeholder="الوصف — يُولَّد تلقائياً من المركبة، قابل للتعديل"
+                    disabled={!canEditLines}
+                  />
                 </td>
-                <td className="w-24"><input className="erp-input num text-left" type="number" value={l.quantity} onChange={e=>updateLine(i,{quantity:Number(e.target.value)})} disabled={!canEditLines} /></td>
-                <td className="w-32"><input className="erp-input num text-left" type="number" value={l.unit_price} onChange={e=>updateLine(i,{unit_price:Number(e.target.value)})} disabled={!canEditLines} dir="ltr" /></td>
-                <td className="w-20"><input className="erp-input num text-left" type="number" value={l.discount_pct} onChange={e=>updateLine(i,{discount_pct:Number(e.target.value)})} disabled={!canEditLines} /></td>
-                <td className="w-20"><input className="erp-input num text-left" type="number" value={l.vat_pct} onChange={e=>updateLine(i,{vat_pct:Number(e.target.value)})} disabled={!canEditLines} onKeyDown={onLastKey} /></td>
-                <td className="num text-left font-semibold w-32">{l.line_total.toLocaleString("ar-SA", { minimumFractionDigits: 2 })}</td>
-                <td className="w-20">
+                <td className="w-20 align-top">
+                  <NumberCell value={l.quantity} onChange={v => updateLine(i, { quantity: v ?? 0 })} integer min={1} disabled={!canEditLines} />
+                </td>
+                <td className="w-32 align-top">
+                  <NumberCell value={l.unit_price} onChange={v => updateLine(i, { unit_price: v ?? 0 })} currency min={0} disabled={!canEditLines} />
+                </td>
+                <td className="w-20 align-top">
+                  <NumberCell value={l.discount_pct} onChange={v => updateLine(i, { discount_pct: v ?? 0 })} min={0} max={100} disabled={!canEditLines} />
+                </td>
+                <td className="w-20 align-top">
+                  <NumberCell value={l.vat_pct} onChange={v => updateLine(i, { vat_pct: v ?? 0 })} min={0} max={100} disabled={!canEditLines} />
+                </td>
+                <td className="num text-left font-semibold w-32 align-top pt-2">{l.line_total.toLocaleString("ar-SA", { minimumFractionDigits: 2 })}</td>
+                <td className="w-20 align-top">
                   {canEditLines && (
                     <div className="flex items-center gap-0.5 justify-end">
                       <Button variant="ghost" size="icon" className="h-7 w-7" title="تكرار البند" onClick={()=>duplicateLine(i)}>
