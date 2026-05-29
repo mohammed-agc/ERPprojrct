@@ -12,6 +12,8 @@ import { FavoritesMenu } from "@/components/erp/FavoritesMenu";
 import { ShortcutsDialog } from "@/components/erp/ShortcutsDialog";
 import { ErrorBoundary } from "@/components/erp/ErrorBoundary";
 import { OnlineStatusBanner } from "@/components/erp/OnlineStatusBanner";
+import { UatBanner } from "@/components/erp/UatBanner";
+import { UatResetButton } from "@/components/erp/UatResetButton";
 export default function AppLayout({ children }: { children?: ReactNode }) {
   const { user, loading, profile, department, signOut, roles } = useAuth();
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -34,6 +36,7 @@ export default function AppLayout({ children }: { children?: ReactNode }) {
     <div className="min-h-screen flex w-full bg-background">
       <AppSidebar />
       <div className="flex-1 flex flex-col min-w-0">
+        <UatBanner />
         <header className="h-12 bg-card border-b border-border flex items-center justify-between px-3 sticky top-0 z-10 gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <button
@@ -52,6 +55,7 @@ export default function AppLayout({ children }: { children?: ReactNode }) {
           </div>
 
           <div className="flex items-center gap-1.5">
+            <UatResetButton />
             <QuickActionsMenu />
             <div className="h-5 w-px bg-border mx-1" />
             <FavoritesMenu />
