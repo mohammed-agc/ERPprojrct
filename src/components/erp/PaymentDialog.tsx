@@ -157,23 +157,23 @@ export function PaymentDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Summary strip */}
-        <div className="grid grid-cols-4 gap-2 text-xs border border-border rounded-md bg-muted/30 p-2.5">
+        {/* Summary strip — large emphasis on financial state */}
+        <div className="grid grid-cols-4 gap-2 border border-border rounded-md bg-muted/30 p-3">
           <div>
-            <div className="text-muted-foreground">إجمالي الفاتورة</div>
-            <div className="font-bold tabular-nums">{fmt(total)}</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">إجمالي الفاتورة</div>
+            <div className="text-lg font-bold tabular-nums" dir="ltr">{fmt(total)}</div>
           </div>
           <div>
-            <div className="text-muted-foreground">المدفوع سابقًا</div>
-            <div className="font-bold tabular-nums">{fmt(alreadyPaid)}</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">المدفوع سابقًا</div>
+            <div className="text-lg font-bold tabular-nums" dir="ltr">{fmt(alreadyPaid)}</div>
           </div>
           <div>
-            <div className="text-muted-foreground">المستحق</div>
-            <div className="font-bold tabular-nums text-primary">{fmt(outstanding)}</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">المتبقي</div>
+            <div className="text-lg font-bold tabular-nums text-primary" dir="ltr">{fmt(outstanding)}</div>
           </div>
           <div>
-            <div className="text-muted-foreground">الحالة</div>
-            <div className="mt-0.5">{statusBadge}</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">الحالة</div>
+            <div className="mt-1">{statusBadge}</div>
           </div>
         </div>
 
