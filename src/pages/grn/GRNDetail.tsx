@@ -216,9 +216,24 @@ export default function GRNDetail() {
                 )}
                 {grn.items.map((it, i) => {
                   const line = po?.items.find(l => l.id === it.line_id);
+                  const isVehicle = line?.kind === "vehicle";
+                  const lineUnits = isVehicle ? (unitsByLine.get(line!.id) ?? []) : [];
                   return (
                     <tr key={i}>
-                      <td className="text-xs">{line?.description ?? it.line_id}</td>
+                      <td className="text-xs">
+                        <div>{line?.description ?? it.line_id}</div>
+                        {isVehicle && lineUnits.length > 0 && (
+                          <div className="mt-1 space-y-0.5">
+                            {lineUnits.slice(0, it.qty || lineUnits.length).map(u => (
+                              <div key={u.alloc_line_id} className="text-[10px] text-muted-foreground" dir="ltr">
+                                <span className="font-mono font-semibold text-foreground">{u.vin}</span>
+                                {" · "}{u.color}{u.trim ? " · " + u.trim : ""}
+                                {u.engine_no ? <span className="ml-1 text-[9px]">⚙ {u.engine_no}</span> : null}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </td>
                       <td className="num text-xs">{it.qty}</td>
                       <td className="text-xs">
                         {it.condition === "ok" ? <Badge variant="outline">سليم</Badge>
@@ -231,6 +246,7 @@ export default function GRNDetail() {
                       <td className="text-xs font-mono">{it.bin || "—"}</td>
                       <td className="text-[10px] text-muted-foreground">
                         {it.vin_pending && <span className="mr-1">VIN معلق</span>}
+                        {isVehicle && !it.vin_pending && lineUnits.length > 0 && <span className="mr-1 text-success">VIN ✓</span>}
                         {it.chassis_verified && <span className="mr-1 text-success">شاسيه ✓</span>}
                         {it.sku_verified && <span className="mr-1 text-success">SKU ✓</span>}
                         {it.barcode_verified && <span className="mr-1 text-success">باركود ✓</span>}
