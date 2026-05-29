@@ -37,19 +37,28 @@ type RowState = {
 
 export function GRNReceiptDialog({ open, onOpenChange, grn, onRecorded }: Props) {
   const progress = useMemo(() => purchasingService.poReceivingProgress(grn.po_id), [grn.po_id, open]);
+  const unitsByLine = useMemo(
+    () => groupUnitsByPoLine(getPoVehicleUnits(grn.po_id)),
+    [grn.po_id, open],
+  );
 
   const [rows, setRows] = useState<RowState[]>(() =>
-    progress.lines.map(l => ({
-      line_id: l.line_id,
-      description: l.description,
-      kind: l.kind,
-      ordered: l.ordered,
-      alreadyReceived: l.received,
-      remaining: l.remaining,
-      qty: 0,
-      condition: "ok" as const,
-      vin_pending: l.kind === "vehicle",
-    })),
+    progress.lines.map(l => {
+      const hasVins = l.kind === "vehicle" && (unitsByLine.get(l.line_id)?.length ?? 0) > 0;
+      return {
+        line_id: l.line_id,
+        description: l.description,
+        kind: l.kind,
+        ordered: l.ordered,
+        alreadyReceived: l.received,
+        remaining: l.remaining,
+        qty: 0,
+        condition: "ok" as const,
+        // VINs already exist in allocation → no "pending" flag
+        vin_pending: l.kind === "vehicle" ? !hasVins : undefined,
+        chassis_verified: hasVins ? true : undefined,
+      };
+    }),
   );
 
   function upd(idx: number, patch: Partial<RowState>) {
