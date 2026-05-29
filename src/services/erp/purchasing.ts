@@ -904,7 +904,13 @@ export const purchasingService = {
     const db = load();
     const po = db.pos.find(p => p.id === input.po_id);
     if (!po) return undefined;
-    if (!["approved", "ordered", "partially_received", "completed"].includes(po.status)) return undefined;
+    if (po.status === "cancelled") return undefined;
+    // Auto-approve a draft PO when invoicing (PR→PO auto-creates draft; invoicing implies acceptance)
+    if (po.status === "draft") {
+      po.status = "approved";
+      po.approved_at = isoNow();
+      po.audit = [...(po.audit ?? []), makeAudit({ role: "purchasing_manager", action: "اعتماد تلقائي عند إصدار الفاتورة", from_status: "draft", to_status: "approved" })];
+    }
     const year = new Date().getFullYear();
     const seq = db.invoices.filter(i => i.code.startsWith(`PINV-${year}`)).length + 44;
     const vatPct = input.vat_pct ?? 15;
