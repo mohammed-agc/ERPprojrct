@@ -442,35 +442,45 @@ export default function SalesOrderDetail() {
                     onChange={(vid) => onPickVehicle(i, vid)}
                     disabled={!canEditLines}
                     placeholder="اختر مركبة (VIN · الصانع · الموديل · السنة · اللون)..."
-                    searchKeys={["name","brand","model","vin","year","color"] as any}
-                    displayValue={(v: any) =>
-                      `${v.vin || "بدون VIN"} · ${v.brand} ${v.model} ${v.year}${v.color ? " · " + v.color : ""}`
-                    }
+                    searchKeys={["name","brand","model","vin","year","color","notes"] as any}
+                    displayValue={(v: any) => {
+                      const id = vehicleIdentity(v);
+                      const trimPart = id.trim ? ` ${id.trim}` : "";
+                      const enginePart = id.engine ? ` · المحرك ${id.engine}` : "";
+                      return `${id.vin || "بدون VIN"} · ${id.manufacturer} ${id.model}${trimPart} ${id.year}${id.color ? " · " + id.color : ""}${enginePart}`;
+                    }}
                     columns={[
                       { key: "vin", header: "VIN", className: "text-[11px] font-mono", render: (v: any) => <span dir="ltr" className="num truncate">{v.vin || "—"}</span> },
+                      { key: "engine", header: "المحرك", className: "text-[11px] font-mono", render: (v: any) => <span dir="ltr" className="num truncate">{vehicleIdentity(v).engine || "—"}</span> },
                       { key: "brand", header: "الصانع", className: "font-medium", render: (v: any) => <span>{v.brand}</span> },
-                      { key: "model", header: "الموديل", render: (v: any) => <span>{v.model}</span> },
+                      { key: "model", header: "الموديل", render: (v: any) => <span>{v.model}{vehicleIdentity(v).trim ? <span className="text-muted-foreground"> · {vehicleIdentity(v).trim}</span> : null}</span> },
                       { key: "year", header: "السنة", render: (v: any) => <span className="num">{v.year}</span> },
                       { key: "color", header: "اللون", render: (v: any) => <span className="text-muted-foreground">{v.color || "—"}</span> },
                       { key: "price", header: "السعر", className: "text-left", render: (v: any) => <span className="num">{Number(v.sale_price).toLocaleString("ar-SA")}</span> },
                     ]}
                   />
-                  {/* Vehicle identification chips */}
-                  {veh && (
-                    <div className="flex flex-wrap items-center gap-1 px-2 mt-1 text-[10.5px]">
-                      <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono" dir="ltr">VIN: {veh.vin || "—"}</span>
-                      <span className="px-1.5 py-0.5 rounded bg-muted">الصانع: {veh.brand}</span>
-                      <span className="px-1.5 py-0.5 rounded bg-muted">الموديل: {veh.model}</span>
-                      <span className="px-1.5 py-0.5 rounded bg-muted num">السنة: {veh.year}</span>
-                      {veh.color && <span className="px-1.5 py-0.5 rounded bg-muted">اللون: {veh.color}</span>}
-                    </div>
-                  )}
-                  {/* Editable auto-built description */}
-                  <input
-                    className="erp-input text-[11px] mt-1 w-full"
+                  {/* Vehicle identification chips — VIN-bound traceability */}
+                  {veh && (() => {
+                    const id = vehicleIdentity(veh);
+                    return (
+                      <div className="flex flex-wrap items-center gap-1 px-2 mt-1 text-[10.5px]">
+                        <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono" dir="ltr">VIN: {id.vin || "—"}</span>
+                        {id.engine && <span className="px-1.5 py-0.5 rounded bg-success/10 text-success font-mono" dir="ltr">المحرك: {id.engine}</span>}
+                        <span className="px-1.5 py-0.5 rounded bg-muted">الصانع: {id.manufacturer}</span>
+                        <span className="px-1.5 py-0.5 rounded bg-muted">الموديل: {id.model}</span>
+                        {id.trim && <span className="px-1.5 py-0.5 rounded bg-muted">الفئة: {id.trim}</span>}
+                        <span className="px-1.5 py-0.5 rounded bg-muted num">السنة: {id.year}</span>
+                        {id.color && <span className="px-1.5 py-0.5 rounded bg-muted">اللون: {id.color}</span>}
+                      </div>
+                    );
+                  })()}
+                  {/* Editable auto-built description (multi-line — preserves VIN/engine for invoice) */}
+                  <textarea
+                    className="erp-input text-[11px] mt-1 w-full leading-snug"
+                    rows={2}
                     value={l.description}
                     onChange={e => updateLine(i, { description: e.target.value })}
-                    placeholder="الوصف — يُولَّد تلقائياً من المركبة، قابل للتعديل"
+                    placeholder="الوصف — يُولَّد تلقائياً من المركبة (VIN + المحرك)، قابل للتعديل"
                     disabled={!canEditLines}
                   />
                 </td>
