@@ -21,6 +21,7 @@ import { inventoryService } from "@/services/erp/inventory";
 import { GRNReceiptDialog } from "@/components/erp/GRNReceiptDialog";
 import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
 import { makeAudit, type AuditEntry, type ErpGovRole } from "@/services/erp/erpRoles";
+import { getPoVehicleUnits, groupUnitsByPoLine, type PoVehicleUnit } from "@/lib/poVehicleUnits";
 
 export default function GRNDetail() {
   const { id = "" } = useParams();
