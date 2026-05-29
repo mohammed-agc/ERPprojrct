@@ -1,14 +1,16 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus, FileText } from "lucide-react";
+import { Search, Plus, FileText, ShieldCheck } from "lucide-react";
 import {
   purchasingService, PO_LABEL, PO_TONE, fmtSAR, fmtDate, type POStatus,
 } from "@/services/erp/purchasing";
 import { PurchaseOrderDialog } from "@/components/erp/PurchaseOrderDialog";
+import { SupplierConfirmationDialog } from "@/components/erp/SupplierConfirmationDialog";
 
 const PAYMENT_LABEL: Record<string, string> = {
   cash: "نقدي", net_30: "30 يوم", net_60: "60 يوم", net_90: "90 يوم", credit_line: "حد ائتماني",
