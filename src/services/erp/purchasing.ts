@@ -423,6 +423,94 @@ function seed(): DB {
   };
 }
 
+type PRToPOInput = {
+  supplier_id?: string;
+  branch_destination?: string;
+  expected_delivery?: string;
+  payment_term?: PaymentTerm;
+  agreement_type?: "spot" | "framework" | "consignment";
+  submit?: boolean;
+  actor?: string;
+  markConverted?: boolean;
+};
+
+function normalizeDB(input: Partial<DB>): DB {
+  const fallback = seed();
+  return {
+    suppliers: Array.isArray(input.suppliers) && input.suppliers.length > 0 ? input.suppliers : fallback.suppliers,
+    prs: Array.isArray(input.prs) ? input.prs : fallback.prs,
+    pos: Array.isArray(input.pos) ? input.pos : fallback.pos,
+    shipments: Array.isArray(input.shipments) ? input.shipments : [],
+    grns: Array.isArray(input.grns) ? input.grns : [],
+    inspections: Array.isArray(input.inspections) ? input.inspections : [],
+    invoices: Array.isArray(input.invoices) ? input.invoices : [],
+    payments: Array.isArray(input.payments) ? input.payments : [],
+  };
+}
+
+function createPOFromApprovedPR(db: DB, pr: PurchaseRequest, input: PRToPOInput = {}): PurchaseOrder | undefined {
+  const existing = (pr.po_id ? db.pos.find(p => p.id === pr.po_id) : undefined) ?? db.pos.find(p => p.pr_id === pr.id);
+  if (existing) {
+    pr.po_id = existing.id;
+    if (input.markConverted) pr.status = "converted_to_po";
+    return existing;
+  }
+
+  const defaultSupplier = db.suppliers[0] ?? seed().suppliers[0];
+  if (!db.suppliers.some(s => s.id === defaultSupplier.id)) db.suppliers.unshift(defaultSupplier);
+  const supplierId = input.supplier_id ?? defaultSupplier.id;
+  const year = new Date().getFullYear();
+  const seq = db.pos.filter(p => p.code.startsWith(`PO-${year}`)).length + 233;
+  const items = pr.items.map(i => ({ id: uid("li"), kind: i.kind, description: i.description, qty: i.qty, unit_cost: i.unit_cost }));
+  const po: PurchaseOrder = {
+    id: uid("po"),
+    code: `PO-${year}-${String(seq).padStart(4, "0")}`,
+    supplier_id: supplierId,
+    pr_id: pr.id,
+    branch_destination: input.branch_destination ?? pr.branch,
+    expected_delivery: input.expected_delivery ?? addDays(14),
+    payment_term: input.payment_term ?? "net_30",
+    agreement_type: input.agreement_type ?? "spot",
+    items,
+    status: input.submit ? "approved" : "draft",
+    total: items.reduce((s, i) => s + i.qty * i.unit_cost, 0),
+    created_at: isoNow(),
+    approved_at: input.submit ? isoNow() : undefined,
+    audit: [makeAudit({
+      role: "purchasing_manager",
+      actor: input.actor,
+      action: "إنشاء أمر الشراء تلقائياً من طلب الشراء",
+      to_status: input.submit ? "approved" : "draft",
+      note: `تم الربط مع ${pr.code}`,
+    })],
+    approvals: input.submit ? [makeApproval({ role: "purchasing_manager", actor: input.actor, decision: "approved", note: "اعتماد تلقائي من طلب شراء معتمد" })] : [],
+  };
+
+  db.pos.unshift(po);
+  pr.po_id = po.id;
+  if (input.markConverted) pr.status = "converted_to_po";
+  pr.audit = [...(pr.audit ?? []), makeAudit({
+    role: "purchasing_manager",
+    actor: input.actor,
+    action: "إنشاء وربط أمر شراء تلقائياً",
+    from_status: "approved",
+    to_status: pr.status,
+    note: `تم إنشاء ${po.code}`,
+  })];
+  return po;
+}
+
+function repairApprovedPRs(db: DB): boolean {
+  let changed = false;
+  for (const pr of db.prs) {
+    if (pr.status === "approved" && !pr.po_id && !db.pos.some(po => po.pr_id === pr.id)) {
+      const po = createPOFromApprovedPR(db, pr, { actor: pr.approver ?? "النظام" });
+      changed = Boolean(po) || changed;
+    }
+  }
+  return changed;
+}
+
 
 
 function load(): DB {
@@ -430,15 +518,14 @@ function load(): DB {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) {
-      const s = seed();
+      const s = normalizeDB(seed());
+      repairApprovedPRs(s);
       localStorage.setItem(LS_KEY, JSON.stringify(s));
       return s;
     }
-    const parsed = JSON.parse(raw) as Partial<DB>;
-    // Backfill new collections for existing local DBs
-    if (!parsed.invoices) parsed.invoices = [];
-    if (!parsed.payments) parsed.payments = [];
-    return parsed as DB;
+    const parsed = normalizeDB(JSON.parse(raw) as Partial<DB>);
+    if (repairApprovedPRs(parsed)) save(parsed);
+    return parsed;
   } catch {
     return seed();
   }
@@ -669,27 +756,26 @@ export const purchasingService = {
   listPRs(): PurchaseRequest[] {
     return load().prs.slice().sort((a, b) => b.created_at.localeCompare(a.created_at));
   },
-  approvePR(id: string, approver = "م. عبدالله") {
+  approvePR(id: string, approver = "م. عبدالله"): PurchaseOrder | undefined {
     const db = load();
     const pr = db.prs.find(p => p.id === id); if (!pr) return;
     const from = pr.status;
-    pr.status = "approved"; pr.approved_at = isoNow(); pr.approver = approver;
-    pr.audit = [...(pr.audit ?? []), makeAudit({ role: "purchasing_manager", actor: approver, action: "اعتماد طلب الشراء", from_status: from, to_status: "approved" })];
-    pr.approvals = [...(pr.approvals ?? []), makeApproval({ role: "purchasing_manager", actor: approver, decision: "approved" })];
-    save(db);
-
-    // Auto-create PO from approved PR (Governance v1.3: PR → Approved → PO Created)
-    const defaultSupplier = db.suppliers[0];
-    if (defaultSupplier) {
-      this.convertPRToPO(id, {
-        supplier_id: defaultSupplier.id,
-        branch_destination: pr.branch,
-        expected_delivery: addDays(14),
-        payment_term: "net_30",
-        agreement_type: "spot",
-        submit: false,
-      });
+    pr.status = "approved"; pr.approved_at = pr.approved_at ?? isoNow(); pr.approver = approver;
+    if (from !== "approved" || !(pr.approvals ?? []).some(a => a.decision === "approved")) {
+      pr.audit = [...(pr.audit ?? []), makeAudit({ role: "purchasing_manager", actor: approver, action: "اعتماد طلب الشراء", from_status: from, to_status: "approved" })];
+      pr.approvals = [...(pr.approvals ?? []), makeApproval({ role: "purchasing_manager", actor: approver, decision: "approved" })];
     }
+    const po = createPOFromApprovedPR(db, pr, {
+      supplier_id: db.suppliers[0]?.id,
+      branch_destination: pr.branch,
+      expected_delivery: addDays(14),
+      payment_term: "net_30",
+      agreement_type: "spot",
+      submit: false,
+      actor: approver,
+    });
+    save(db);
+    return po;
   },
 
   rejectPR(id: string, approver = "م. عبدالله", note?: string) {
@@ -798,20 +884,9 @@ export const purchasingService = {
   }): PurchaseOrder | undefined {
     const db = load();
     const pr = db.prs.find(p => p.id === prId);
-    if (!pr || pr.status !== "approved") return undefined;
-    const po = this.createPO({
-      supplier_id: input.supplier_id,
-      branch_destination: input.branch_destination ?? pr.branch,
-      expected_delivery: input.expected_delivery ?? addDays(14),
-      payment_term: input.payment_term ?? "net_30",
-      agreement_type: input.agreement_type ?? "spot",
-      items: pr.items.map(i => ({ kind: i.kind, description: i.description, qty: i.qty, unit_cost: i.unit_cost })),
-      pr_id: pr.id, submit: input.submit,
-    });
-    // mark PR as converted
-    const fresh = load();
-    const prx = fresh.prs.find(x => x.id === prId);
-    if (prx) { prx.status = "converted_to_po"; prx.po_id = po.id; save(fresh); }
+    if (!pr || (pr.status !== "approved" && pr.status !== "converted_to_po")) return undefined;
+    const po = createPOFromApprovedPR(db, pr, { ...input, markConverted: true });
+    save(db);
     return po;
   },
 
