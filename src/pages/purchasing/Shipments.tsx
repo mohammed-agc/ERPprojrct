@@ -129,7 +129,7 @@ export default function Shipments() {
                     </td>
                   </tr>
                 )}
-                </>
+                </Fragment>
               );
             })}
           </tbody>
