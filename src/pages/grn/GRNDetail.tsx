@@ -19,6 +19,8 @@ import {
 } from "@/services/erp/purchasing";
 import { inventoryService } from "@/services/erp/inventory";
 import { GRNReceiptDialog } from "@/components/erp/GRNReceiptDialog";
+import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
+import { makeAudit, type AuditEntry, type ErpGovRole } from "@/services/erp/erpRoles";
 
 export default function GRNDetail() {
   const { id = "" } = useParams();
