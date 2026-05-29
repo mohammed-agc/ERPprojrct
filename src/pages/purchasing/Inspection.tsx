@@ -129,7 +129,7 @@ export default function Inspection() {
                       </span>
                     )}
                   </td>
-                  <td>
+                  <td onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-1">
                       {canDecide && (
                         <>
