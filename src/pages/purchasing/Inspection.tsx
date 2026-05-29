@@ -11,6 +11,7 @@ import {
 } from "@/services/erp/purchasing";
 import { VehicleIntakeDialog } from "@/components/erp/VehicleIntakeDialog";
 export default function Inspection() {
+  const nav = useNavigate();
   const [tick, setTick] = useState(0);
   const [q, setQ] = useState("");
   const [intakeOpen, setIntakeOpen] = useState(false);
