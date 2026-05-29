@@ -3,17 +3,20 @@ import { useParams, Link } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Check, X } from "lucide-react";
+import { Check, X, Printer } from "lucide-react";
 import {
   purchasingService, PR_LABEL, PR_TONE, URGENCY_LABEL, URGENCY_TONE, fmtSAR, fmtDate,
 } from "@/services/erp/purchasing";
+import { PrintablePurchaseDoc } from "@/components/erp/PrintablePurchaseDoc";
 import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
 import { makeAudit, type AuditEntry, type ErpGovRole } from "@/services/erp/erpRoles";
 
 export default function PurchaseRequestDetail() {
   const { id = "" } = useParams();
   const [tick, setTick] = useState(0);
+  const [printOpen, setPrintOpen] = useState(false);
   const refresh = () => setTick(t => t + 1);
 
   const pr = useMemo(() => purchasingService.listPRs().find(p => p.id === id), [id, tick]);

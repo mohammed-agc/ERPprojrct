@@ -75,10 +75,19 @@ export interface LineItem {
   kind: ItemKind;
   description: string;     // "Toyota Camry 2025 / GLE" or "Brake Pad Set"
   qty: number;
-  unit_cost: number;       // SAR
+  unit_cost: number;       // SAR (excl VAT)
   received_qty?: number;
   inspected_qty?: number;
   approved_qty?: number;
+  /* ===== ERP enrichment (Product Master + per-line attributes) ===== */
+  product_id?: string;     // FK → masterData.products
+  product_code?: string;   // denormalized snapshot
+  brand?: string;
+  model?: string;
+  year?: number;
+  color_id?: string;       // FK → masterData.vehicle_colors (vehicles only)
+  color_name?: string;     // denormalized snapshot
+  vat_pct?: number;        // default 15
 }
 
 export interface PurchaseRequest {
@@ -792,7 +801,7 @@ export const purchasingService = {
   createPR(input: {
     requester: string; department: string; branch: string;
     urgency: Urgency; justification: string;
-    items: { kind: ItemKind; description: string; qty: number; unit_cost: number }[];
+    items: (Partial<LineItem> & { kind: ItemKind; description: string; qty: number; unit_cost: number })[];
     submit?: boolean;
   }): PurchaseRequest {
     const db = load();
@@ -821,7 +830,7 @@ export const purchasingService = {
   createPO(input: {
     supplier_id: string; branch_destination: string; expected_delivery: string;
     payment_term: PaymentTerm; agreement_type: "spot" | "framework" | "consignment";
-    items: { kind: ItemKind; description: string; qty: number; unit_cost: number }[];
+    items: (Partial<LineItem> & { kind: ItemKind; description: string; qty: number; unit_cost: number })[];
     pr_id?: string; submit?: boolean;
   }): PurchaseOrder {
     const db = load();

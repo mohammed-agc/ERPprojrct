@@ -97,6 +97,8 @@ const GRNDashboard = lazy(() => import("./pages/grn/GRNDashboard"));
 const GRNList = lazy(() => import("./pages/grn/GRNList"));
 const GRNDetail = lazy(() => import("./pages/grn/GRNDetail"));
 
+const ProductsMaster = lazy(() => import("./pages/master/Products"));
+const ColorsMaster = lazy(() => import("./pages/master/Colors"));
 
 import { ErpAuthError } from "@/services/erp";
 
@@ -226,6 +228,8 @@ const App = () => (
               <Route path="/grn" element={<GRNDashboard />} />
               <Route path="/grn/list" element={<GRNList />} />
               <Route path="/grn/:id" element={<GRNDetail />} />
+              <Route path="/master/products" element={<ProductsMaster />} />
+              <Route path="/master/colors" element={<ColorsMaster />} />
               <Route path="/reports" element={<ComingSoon title="التقارير والإحصاءات" />} />
             </Route>
             <Route path="*" element={<NotFound />} />
