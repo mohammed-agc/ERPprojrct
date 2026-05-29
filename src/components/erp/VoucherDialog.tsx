@@ -100,7 +100,7 @@ export function VoucherDialog({ open, onOpenChange, type, accounts, defaultAccou
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-xs">المبلغ *</Label>
-            <Input type="number" step="0.01" className="h-8" value={amount} onChange={e => setAmount(e.target.value)} />
+            <AmountInput value={amount} onChange={setAmount} min={0} className="h-8" placeholder="0.00" />
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-xs">طريقة الدفع</Label>
