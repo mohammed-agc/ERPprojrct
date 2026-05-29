@@ -677,7 +677,21 @@ export const purchasingService = {
     pr.audit = [...(pr.audit ?? []), makeAudit({ role: "purchasing_manager", actor: approver, action: "اعتماد طلب الشراء", from_status: from, to_status: "approved" })];
     pr.approvals = [...(pr.approvals ?? []), makeApproval({ role: "purchasing_manager", actor: approver, decision: "approved" })];
     save(db);
+
+    // Auto-create PO from approved PR (Governance v1.3: PR → Approved → PO Created)
+    const defaultSupplier = db.suppliers[0];
+    if (defaultSupplier) {
+      this.convertPRToPO(id, {
+        supplier_id: defaultSupplier.id,
+        branch_destination: pr.branch,
+        expected_delivery: addDays(14),
+        payment_term: "net_30",
+        agreement_type: "spot",
+        submit: false,
+      });
+    }
   },
+
   rejectPR(id: string, approver = "م. عبدالله", note?: string) {
     const db = load();
     const pr = db.prs.find(p => p.id === id); if (!pr) return;
