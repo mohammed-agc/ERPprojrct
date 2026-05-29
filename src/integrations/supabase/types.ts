@@ -561,7 +561,22 @@ export type Database = {
     }
     Enums: {
       account_type: "asset" | "liability" | "equity" | "revenue" | "expense"
-      app_role: "admin" | "manager" | "employee"
+      app_role:
+        | "admin"
+        | "manager"
+        | "employee"
+        | "general_manager"
+        | "purchasing_officer"
+        | "purchasing_manager"
+        | "sales_officer"
+        | "sales_manager"
+        | "accountant"
+        | "treasury_officer"
+        | "inventory_officer"
+        | "receiving_officer"
+        | "inspection_officer"
+        | "workshop_manager"
+        | "spare_parts_manager"
       department_code:
         | "vehicles"
         | "spare_parts"
@@ -702,7 +717,23 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["asset", "liability", "equity", "revenue", "expense"],
-      app_role: ["admin", "manager", "employee"],
+      app_role: [
+        "admin",
+        "manager",
+        "employee",
+        "general_manager",
+        "purchasing_officer",
+        "purchasing_manager",
+        "sales_officer",
+        "sales_manager",
+        "accountant",
+        "treasury_officer",
+        "inventory_officer",
+        "receiving_officer",
+        "inspection_officer",
+        "workshop_manager",
+        "spare_parts_manager",
+      ],
       department_code: [
         "vehicles",
         "spare_parts",
