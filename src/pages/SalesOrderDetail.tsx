@@ -401,13 +401,6 @@ export default function SalesOrderDetail() {
             )}
 
             {lines.map((l, i) => {
-              const onLastKey = (e: React.KeyboardEvent) => {
-                if (e.key === "Enter" && canEditLines && i === lines.length - 1) {
-                  e.preventDefault();
-                  addLine();
-                }
-              };
-              return (
               const veh = vehicles.find(v => v.id === l.vehicle_id);
               return (
               <tr key={l.id ?? `new-${i}`}>
