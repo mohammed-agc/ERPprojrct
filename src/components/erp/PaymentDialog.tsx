@@ -78,7 +78,7 @@ export function PaymentDialog({
 
   const [method, setMethod] = useState<PaymentMethod>("cash");
   const [accountId, setAccountId] = useState<string>(accounts[0]?.id ?? "");
-  const [amount, setAmount] = useState<string>("");
+  const [amount, setAmount] = useState<number | undefined>(undefined);
   const [paymentDate, setPaymentDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
