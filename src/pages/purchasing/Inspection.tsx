@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,6 @@ import {
   purchasingService, INSP_LABEL, INSP_TONE, fmtDate, type InspectionRecord, type PurchaseOrder,
 } from "@/services/erp/purchasing";
 import { VehicleIntakeDialog } from "@/components/erp/VehicleIntakeDialog";
-
 export default function Inspection() {
   const [tick, setTick] = useState(0);
   const [q, setQ] = useState("");
