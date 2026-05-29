@@ -100,11 +100,17 @@ export function PaymentDialog({
   const isPartial = numericAmount > 0 && numericAmount < outstanding;
   const overpay = numericAmount > outstanding;
 
+  // Invoice status reflects the CURRENT state of the invoice (before this draft payment).
+  // Rules:
+  //   outstanding === total  → unpaid
+  //   outstanding > 0 && paid > 0 → partial
+  //   outstanding === 0      → paid in full
   const paymentStatus: "unpaid" | "partial" | "paid" = useMemo(() => {
-    if (numericAmount <= 0) return alreadyPaid > 0 ? "partial" : "unpaid";
-    if (isFull) return "paid";
-    return "partial";
-  }, [numericAmount, isFull, alreadyPaid]);
+    if (total <= 0) return "unpaid";
+    if (outstanding <= 0.005) return "paid";
+    if (alreadyPaid > 0) return "partial";
+    return "unpaid";
+  }, [total, outstanding, alreadyPaid]);
 
   const statusBadge = {
     unpaid:  <Badge variant="destructive">غير مدفوعة</Badge>,
