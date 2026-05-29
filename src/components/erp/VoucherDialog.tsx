@@ -28,7 +28,7 @@ export function VoucherDialog({ open, onOpenChange, type, accounts, defaultAccou
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [accountId, setAccountId] = useState(defaultAccountId ?? accounts[0]?.id ?? "");
   const [counterparty, setCounterparty] = useState("");
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState<number | undefined>(undefined);
   const [method, setMethod] = useState<PaymentMethod>("cash");
   const [reference, setReference] = useState("");
   const [linkedInvoice, setLinkedInvoice] = useState("");
