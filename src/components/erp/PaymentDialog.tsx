@@ -220,20 +220,17 @@ export function PaymentDialog({
               <span>المبلغ المدفوع</span>
               <button
                 type="button"
-                onClick={() => setAmount(outstanding.toFixed(2))}
+                onClick={() => setAmount(outstanding)}
                 className="text-[10px] text-primary hover:underline"
               >
                 المبلغ الكامل
               </button>
             </Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
+            <AmountInput
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="h-9 tabular-nums font-mono"
-              dir="ltr"
+              onChange={setAmount}
+              min={0}
+              placeholder="0.00"
             />
             {overpay && (
               <p className="text-[10px] text-destructive">المبلغ يتجاوز المستحق</p>
