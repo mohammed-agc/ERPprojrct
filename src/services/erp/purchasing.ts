@@ -82,12 +82,18 @@ export interface LineItem {
   /* ===== ERP enrichment (Product Master + per-line attributes) ===== */
   product_id?: string;     // FK → masterData.products
   product_code?: string;   // denormalized snapshot
-  brand?: string;
-  model?: string;
+  manufacturer_id?: string;// FK → masterData.manufacturers
+  manufacturer?: string;   // denormalized snapshot (e.g. "Toyota")
+  model_id?: string;       // FK → masterData.vehicle_models
+  brand?: string;          // legacy / parts
+  model?: string;          // model name snapshot
+  trim_id?: string;        // FK → masterData.trims
+  trim?: string;           // trim name snapshot (e.g. "LE")
   year?: number;
   color_id?: string;       // FK → masterData.vehicle_colors (vehicles only)
   color_name?: string;     // denormalized snapshot
-  vat_pct?: number;        // default 15
+  color_hex?: string;
+  vat_pct?: number;        // 0 or 15 — default 15
 }
 
 export interface PurchaseRequest {

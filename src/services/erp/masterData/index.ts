@@ -8,12 +8,15 @@
  */
 import { localStorageProductsRepo } from "./productsRepo";
 import { localStorageColorsRepo } from "./colorsRepo";
+import { localStorageVehicleCatalogRepo } from "./vehicleCatalogRepo";
 import type { ProductCategory } from "./types";
 
 export const productsService = localStorageProductsRepo;
 export const colorsService = localStorageColorsRepo;
+export const vehicleCatalogService = localStorageVehicleCatalogRepo;
 
 export * from "./types";
+export type { Manufacturer, VehicleModel, VehicleTrim } from "./vehicleCatalogRepo";
 
 /** Derive product category from a free-text department label (Arabic). */
 export function categoryFromDepartment(dept?: string): ProductCategory | null {
