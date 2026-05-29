@@ -22,7 +22,9 @@ export default function PurchaseRequestDetail() {
   if (!pr) return <div className="p-6 text-sm text-muted-foreground">طلب الشراء غير موجود</div>;
 
   const po = pr.po_id ? purchasingService.getPO(pr.po_id) : undefined;
+  const supplier = pr.supplier_id ? purchasingService.getSupplier(pr.supplier_id) : undefined;
   const totalEst = pr.items.reduce((s, i) => s + i.qty * i.unit_cost, 0);
+
 
   // Synthesize audit from timestamps if not present
   const audit: AuditEntry[] = pr.audit && pr.audit.length > 0 ? pr.audit : [
