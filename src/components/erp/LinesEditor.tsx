@@ -16,6 +16,7 @@ import { ColorCell } from "./master/ColorCell";
 import { ProductPicker } from "./ProductPicker";
 
 /* ===== Public draft shape — superset of purchasing.LineItem input fields ===== */
+/* ===== Public draft shape — superset of purchasing.LineItem input fields ===== */
 export interface LineDraft {
   kind: ItemKind;                       // vehicle | part
   product_id?: string; product_code?: string;
@@ -29,6 +30,8 @@ export interface LineDraft {
   qty: number;
   unit_cost: number;
   vat_pct: number;
+  /** internal: true once user has edited description by hand */
+  _descTouched?: boolean;
 }
 
 export const emptyLine = (): LineDraft => ({
