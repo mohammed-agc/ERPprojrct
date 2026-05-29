@@ -440,3 +440,18 @@ export const allocationService = {
     return undefined;
   },
 };
+
+/* ----- Register VIN governance gate with purchasing (avoids circular import) ----- */
+import { _registerVinGate } from "./purchasing";
+_registerVinGate((poId) => {
+  const allocs = allocationService.list().filter(a => a.po_id === poId && a.status !== "cancelled");
+  if (allocs.length === 0) {
+    return { ok: false, reason: "يجب إنشاء تخصيص مركبات وتحديد VIN لكل وحدة قبل إصدار الفاتورة" };
+  }
+  for (const a of allocs) {
+    const r = allocationService.validateAllVINs(a.id);
+    if (!r.ok) return { ok: false, reason: `التخصيص ${a.code}: ${r.reason}` };
+  }
+  return { ok: true };
+});
+
