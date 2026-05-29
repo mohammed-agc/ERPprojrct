@@ -1,10 +1,6 @@
 /**
  * ERP frontend visibility layer.
  * Pure UI logic — NOT a backend authorization mechanism.
- *
- * Future backend integration:
- *   canPerform(action, state, permissionSet)
- * where permissionSet comes from the server.
  */
 
 export type SalesOrderState =
@@ -29,20 +25,62 @@ export type SalesAction =
   | "print";
 
 export type ErpRole =
-  | "sales_employee"
+  | "admin"
+  | "general_manager"
+  | "purchasing_officer"
+  | "purchasing_manager"
+  | "sales_officer"
   | "sales_manager"
+  | "sales_employee"
   | "accountant"
+  | "treasury_officer"
   | "cashier"
+  | "inventory_officer"
+  | "receiving_officer"
+  | "inspection_officer"
   | "delivery_officer"
-  | "admin";
+  | "workshop_manager"
+  | "spare_parts_manager"
+  | "employee";
 
 export const ROLE_LABELS: Record<ErpRole, string> = {
-  sales_employee: "موظف مبيعات",
-  sales_manager: "مدير مبيعات",
-  accountant: "محاسب",
-  cashier: "أمين صندوق",
-  delivery_officer: "مسؤول تسليم",
   admin: "مدير النظام",
+  general_manager: "مدير عام",
+  purchasing_officer: "مسؤول مشتريات",
+  purchasing_manager: "مدير مشتريات",
+  sales_officer: "مسؤول مبيعات",
+  sales_manager: "مدير مبيعات",
+  sales_employee: "موظف مبيعات",
+  accountant: "محاسب",
+  treasury_officer: "أمين خزينة",
+  cashier: "أمين صندوق",
+  inventory_officer: "مسؤول مخزون",
+  receiving_officer: "مسؤول استلام",
+  inspection_officer: "مسؤول فحص",
+  delivery_officer: "مسؤول تسليم",
+  workshop_manager: "مدير ورشة",
+  spare_parts_manager: "مدير قطع غيار",
+  employee: "موظف",
+};
+
+export const ROLE_DESCRIPTIONS: Record<ErpRole, string> = {
+  admin: "صلاحية كاملة على النظام والإعدادات وإدارة المستخدمين",
+  general_manager: "إشراف شامل على كل الوحدات التشغيلية مع اعتمادات عليا",
+  purchasing_officer: "إنشاء طلبات وأوامر الشراء والمتابعة مع الموردين",
+  purchasing_manager: "اعتماد أوامر الشراء والعقود والتخصيصات",
+  sales_officer: "إصدار عروض الأسعار وأوامر البيع وخدمة العملاء",
+  sales_manager: "اعتماد الخصومات وأوامر البيع وإدارة فريق المبيعات",
+  sales_employee: "إدخال أوامر البيع الأساسية",
+  accountant: "قيود اليومية والفواتير والتقارير المالية",
+  treasury_officer: "إدارة المقبوضات والمدفوعات والتحويلات والتسوية البنكية",
+  cashier: "تحصيل المدفوعات النقدية من العملاء",
+  inventory_officer: "حركات المخزون والتحويلات وإدارة المستودعات",
+  receiving_officer: "استلام البضائع وإصدار إشعارات الاستلام (GRN)",
+  inspection_officer: "فحص واعتماد المركبات والبضائع الواردة",
+  delivery_officer: "تنسيق وتنفيذ تسليمات العملاء",
+  workshop_manager: "إدارة الورشة وأوامر العمل والصيانة",
+  spare_parts_manager: "إدارة مخزون قطع الغيار ومبيعاتها",
+  employee: "صلاحية أساسية محدودة",
 };
 
 export const STATE_LABELS: Record<SalesOrderState, string> = {
@@ -70,19 +108,34 @@ export const ACTION_LABELS: Record<SalesAction, string> = {
 
 /** role -> set of actions allowed (regardless of state) */
 const ROLE_ACTIONS: Record<ErpRole, Set<SalesAction>> = {
-  sales_employee: new Set(["save", "edit_header", "edit_lines", "edit_pricing", "print"]),
-  sales_manager: new Set([
-    "save", "edit_header", "edit_lines", "edit_pricing",
-    "confirm", "cancel", "approve_discount", "print",
-  ]),
-  accountant: new Set(["invoice", "print"]),
-  cashier: new Set(["receive_payment", "print"]),
-  delivery_officer: new Set(["deliver", "print"]),
   admin: new Set([
     "save", "edit_header", "edit_lines", "edit_pricing",
     "confirm", "cancel", "approve_discount",
     "invoice", "receive_payment", "deliver", "print",
   ]),
+  general_manager: new Set([
+    "save", "edit_header", "edit_lines", "edit_pricing",
+    "confirm", "cancel", "approve_discount",
+    "invoice", "receive_payment", "deliver", "print",
+  ]),
+  sales_employee: new Set(["save", "edit_header", "edit_lines", "edit_pricing", "print"]),
+  sales_officer: new Set(["save", "edit_header", "edit_lines", "edit_pricing", "confirm", "print"]),
+  sales_manager: new Set([
+    "save", "edit_header", "edit_lines", "edit_pricing",
+    "confirm", "cancel", "approve_discount", "print",
+  ]),
+  accountant: new Set(["invoice", "print"]),
+  treasury_officer: new Set(["receive_payment", "print"]),
+  cashier: new Set(["receive_payment", "print"]),
+  delivery_officer: new Set(["deliver", "print"]),
+  purchasing_officer: new Set(["print"]),
+  purchasing_manager: new Set(["print"]),
+  inventory_officer: new Set(["print"]),
+  receiving_officer: new Set(["print"]),
+  inspection_officer: new Set(["print"]),
+  workshop_manager: new Set(["print"]),
+  spare_parts_manager: new Set(["print"]),
+  employee: new Set(["print"]),
 };
 
 /** action -> set of states where the action is operationally valid */
@@ -116,12 +169,12 @@ export function canPerform(
   if (state === "cancelled") {
     return { allowed: false, reason: "cancelled", message: "الأمر ملغى — لا تتوفر إجراءات تشغيلية" };
   }
-  const roleSet = ROLE_ACTIONS[role];
+  const roleSet = ROLE_ACTIONS[role] ?? new Set<SalesAction>();
   if (!roleSet.has(action)) {
     return {
       allowed: false,
       reason: "role",
-      message: `هذا الإجراء خارج صلاحيات: ${ROLE_LABELS[role]}`,
+      message: `هذا الإجراء خارج صلاحيات: ${ROLE_LABELS[role] ?? role}`,
     };
   }
   const stateSet = ACTION_STATES[action];
