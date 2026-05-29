@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import {
   purchasingService, type GRNReceiptItem, type ReceivingNote,
 } from "@/services/erp/purchasing";
+import { getPoVehicleUnits, groupUnitsByPoLine } from "@/lib/poVehicleUnits";
 
 interface Props {
   open: boolean;
@@ -36,19 +37,28 @@ type RowState = {
 
 export function GRNReceiptDialog({ open, onOpenChange, grn, onRecorded }: Props) {
   const progress = useMemo(() => purchasingService.poReceivingProgress(grn.po_id), [grn.po_id, open]);
+  const unitsByLine = useMemo(
+    () => groupUnitsByPoLine(getPoVehicleUnits(grn.po_id)),
+    [grn.po_id, open],
+  );
 
   const [rows, setRows] = useState<RowState[]>(() =>
-    progress.lines.map(l => ({
-      line_id: l.line_id,
-      description: l.description,
-      kind: l.kind,
-      ordered: l.ordered,
-      alreadyReceived: l.received,
-      remaining: l.remaining,
-      qty: 0,
-      condition: "ok" as const,
-      vin_pending: l.kind === "vehicle",
-    })),
+    progress.lines.map(l => {
+      const hasVins = l.kind === "vehicle" && (unitsByLine.get(l.line_id)?.length ?? 0) > 0;
+      return {
+        line_id: l.line_id,
+        description: l.description,
+        kind: l.kind,
+        ordered: l.ordered,
+        alreadyReceived: l.received,
+        remaining: l.remaining,
+        qty: 0,
+        condition: "ok" as const,
+        // VINs already exist in allocation → no "pending" flag
+        vin_pending: l.kind === "vehicle" ? !hasVins : undefined,
+        chassis_verified: hasVins ? true : undefined,
+      };
+    }),
   );
 
   function upd(idx: number, patch: Partial<RowState>) {
@@ -98,11 +108,25 @@ export function GRNReceiptDialog({ open, onOpenChange, grn, onRecorded }: Props)
               </tr>
             </thead>
             <tbody>
-              {rows.map((r, i) => (
+              {rows.map((r, i) => {
+                const units = r.kind === "vehicle" ? (unitsByLine.get(r.line_id) ?? []) : [];
+                const previewCount = Math.max(r.alreadyReceived + r.qty, 0) || units.length;
+                return (
                 <tr key={r.line_id}>
                   <td className="text-xs">
                     <div className="font-medium">{r.description}</div>
                     <div className="text-[10px] text-muted-foreground">{r.kind === "vehicle" ? "مركبة" : "قطعة"}</div>
+                    {units.length > 0 && (
+                      <div className="mt-1 space-y-0.5 max-h-24 overflow-y-auto pr-1">
+                        {units.slice(0, previewCount).map((u, idx) => (
+                          <div key={u.alloc_line_id} className="text-[10px]" dir="ltr">
+                            <span className="text-muted-foreground">{idx + 1}.</span>{" "}
+                            <span className="font-mono font-semibold">{u.vin}</span>
+                            <span className="text-muted-foreground"> · {u.color}{u.trim ? " · " + u.trim : ""}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </td>
                   <td className="num text-xs">{r.ordered}</td>
                   <td className="num text-xs text-muted-foreground">{r.alreadyReceived}</td>
@@ -159,7 +183,8 @@ export function GRNReceiptDialog({ open, onOpenChange, grn, onRecorded }: Props)
                     )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

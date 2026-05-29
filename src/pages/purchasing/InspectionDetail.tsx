@@ -11,6 +11,7 @@ import {
 import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
 import { VehicleIntakeDialog } from "@/components/erp/VehicleIntakeDialog";
 import { makeAudit, type AuditEntry, type ErpGovRole } from "@/services/erp/erpRoles";
+import { getPoVehicleUnits, groupUnitsByPoLine } from "@/lib/poVehicleUnits";
 
 export default function InspectionDetail() {
   const { id = "" } = useParams();
@@ -91,20 +92,39 @@ export default function InspectionDetail() {
           <div className="bg-card border border-border rounded-lg overflow-hidden">
             <div className="px-3 py-2 border-b border-border font-semibold text-xs">نتائج الفحص حسب البند</div>
             <table className="erp-table text-xs">
-              <thead><tr><th>الصنف</th><th>VIN / مرجع</th><th>ناجح</th><th>راسب</th><th>ملاحظات</th></tr></thead>
+              <thead><tr><th>الصنف</th><th>VIN / مرجع</th><th>اللون / المحرك</th><th>ناجح</th><th>راسب</th><th>ملاحظات</th></tr></thead>
               <tbody>
-                {ins.items.map((it, i) => {
-                  const line = po?.items.find(l => l.id === it.line_id);
-                  return (
-                    <tr key={i}>
-                      <td>{line?.description ?? it.line_id}</td>
-                      <td className="font-mono text-[10px]">{line?.kind === "vehicle" ? (line as any).vin ?? "—" : "—"}</td>
-                      <td className="num text-success">{it.passed}</td>
-                      <td className="num text-destructive">{it.failed}</td>
-                      <td>{it.remarks ?? "—"}</td>
-                    </tr>
-                  );
-                })}
+                {(() => {
+                  const unitsByLine = groupUnitsByPoLine(getPoVehicleUnits(po?.id));
+                  return ins.items.flatMap((it, i) => {
+                    const line = po?.items.find(l => l.id === it.line_id);
+                    const units = line?.kind === "vehicle" ? (unitsByLine.get(line.id) ?? []) : [];
+                    if (units.length === 0) {
+                      return [(
+                        <tr key={i}>
+                          <td>{line?.description ?? it.line_id}</td>
+                          <td className="font-mono text-[10px]">—</td>
+                          <td className="text-[10px]">—</td>
+                          <td className="num text-success">{it.passed}</td>
+                          <td className="num text-destructive">{it.failed}</td>
+                          <td>{it.remarks ?? "—"}</td>
+                        </tr>
+                      )];
+                    }
+                    return units.map((u, j) => (
+                      <tr key={`${i}_${j}`}>
+                        <td>
+                          {j === 0 ? line!.description : <span className="text-muted-foreground">↳</span>}
+                        </td>
+                        <td className="font-mono text-[10px]" dir="ltr">{u.vin}</td>
+                        <td className="text-[10px]">{u.color}{u.trim ? " · " + u.trim : ""}<div className="text-muted-foreground" dir="ltr">⚙ {u.engine_no}</div></td>
+                        <td className="num text-success">{j === 0 ? it.passed : ""}</td>
+                        <td className="num text-destructive">{j === 0 ? it.failed : ""}</td>
+                        <td>{j === 0 ? (it.remarks ?? "—") : ""}</td>
+                      </tr>
+                    ));
+                  });
+                })()}
               </tbody>
             </table>
           </div>
