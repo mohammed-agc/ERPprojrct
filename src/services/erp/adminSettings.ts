@@ -1,0 +1,132 @@
+/**
+ * Admin settings persistence layer.
+ * Stored in localStorage to align with the rest of the ERP modules.
+ */
+
+const KEY = "sarat.admin.settings.v1";
+
+export interface CompanyInfo {
+  name_ar: string;
+  name_en: string;
+  vat_number: string;
+  cr_number: string;
+  address: string;
+  phone: string;
+  email: string;
+  logo_url: string;
+}
+
+export interface Branch {
+  id: string;
+  code: string;
+  name_ar: string;
+  city: string;
+  phone: string;
+  is_active: boolean;
+}
+
+export interface Warehouse {
+  id: string;
+  code: string;
+  name_ar: string;
+  branch_id: string | null;
+  type: "vehicles" | "parts" | "mixed";
+  is_active: boolean;
+}
+
+export interface TaxSettings {
+  default_vat_pct: number;
+  vat_registration_no: string;
+  inclusive_default: boolean;
+}
+
+export interface NumberSequence {
+  doc_type: string;
+  prefix: string;
+  start: number;
+  length: number;
+}
+
+export interface PrintTemplate {
+  doc_type: string;
+  header_text: string;
+  footer_text: string;
+  show_logo: boolean;
+  show_vat: boolean;
+}
+
+export interface AdminSettings {
+  company: CompanyInfo;
+  branches: Branch[];
+  warehouses: Warehouse[];
+  tax: TaxSettings;
+  sequences: NumberSequence[];
+  templates: PrintTemplate[];
+}
+
+const DEFAULTS: AdminSettings = {
+  company: {
+    name_ar: "شركة سرات للسيارات",
+    name_en: "Sarat Automotive Co.",
+    vat_number: "300000000000003",
+    cr_number: "1010000000",
+    address: "الرياض، المملكة العربية السعودية",
+    phone: "+966 11 000 0000",
+    email: "info@sarat.sa",
+    logo_url: "",
+  },
+  branches: [
+    { id: "br-main", code: "BR-01", name_ar: "الفرع الرئيسي", city: "الرياض", phone: "+966 11 000 0001", is_active: true },
+  ],
+  warehouses: [
+    { id: "wh-vehicles", code: "WH-VEH", name_ar: "مستودع المركبات", branch_id: "br-main", type: "vehicles", is_active: true },
+    { id: "wh-parts", code: "WH-PRT", name_ar: "مستودع قطع الغيار", branch_id: "br-main", type: "parts", is_active: true },
+  ],
+  tax: {
+    default_vat_pct: 15,
+    vat_registration_no: "300000000000003",
+    inclusive_default: false,
+  },
+  sequences: [
+    { doc_type: "PR", prefix: "PR-", start: 1001, length: 4 },
+    { doc_type: "PO", prefix: "PO-", start: 1001, length: 4 },
+    { doc_type: "GRN", prefix: "GRN-", start: 1001, length: 4 },
+    { doc_type: "PI", prefix: "PI-", start: 1001, length: 4 },
+    { doc_type: "SO", prefix: "SO-", start: 1001, length: 4 },
+    { doc_type: "SI", prefix: "SI-", start: 1001, length: 4 },
+    { doc_type: "RC", prefix: "RC-", start: 1001, length: 4 },
+    { doc_type: "PY", prefix: "PY-", start: 1001, length: 4 },
+  ],
+  templates: [
+    { doc_type: "SI", header_text: "فاتورة ضريبية", footer_text: "شكراً لتعاملكم معنا", show_logo: true, show_vat: true },
+    { doc_type: "PO", header_text: "أمر شراء", footer_text: "", show_logo: true, show_vat: true },
+    { doc_type: "GRN", header_text: "إشعار استلام بضاعة", footer_text: "", show_logo: true, show_vat: false },
+  ],
+};
+
+function read(): AdminSettings {
+  if (typeof window === "undefined") return DEFAULTS;
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return DEFAULTS;
+    const parsed = JSON.parse(raw);
+    return { ...DEFAULTS, ...parsed };
+  } catch {
+    return DEFAULTS;
+  }
+}
+
+function write(s: AdminSettings) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(KEY, JSON.stringify(s));
+}
+
+export const adminSettings = {
+  get: () => read(),
+  saveCompany: (c: CompanyInfo) => { const s = read(); s.company = c; write(s); },
+  saveBranches: (b: Branch[]) => { const s = read(); s.branches = b; write(s); },
+  saveWarehouses: (w: Warehouse[]) => { const s = read(); s.warehouses = w; write(s); },
+  saveTax: (t: TaxSettings) => { const s = read(); s.tax = t; write(s); },
+  saveSequences: (q: NumberSequence[]) => { const s = read(); s.sequences = q; write(s); },
+  saveTemplates: (t: PrintTemplate[]) => { const s = read(); s.templates = t; write(s); },
+};

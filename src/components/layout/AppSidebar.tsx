@@ -157,6 +157,7 @@ const groups: { title: string; items: NavItem[] }[] = [
       { label: "الهيكل التنظيمي", to: "/organization", icon: Building2 },
       { label: "مصفوفة الصلاحيات", to: "/permissions", icon: ShieldCheck },
       { label: "المستخدمون والصلاحيات", to: "/users", icon: UserCog },
+      { label: "مركز إدارة النظام", to: "/admin", icon: Shield },
     ],
   },
 ];

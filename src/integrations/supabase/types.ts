@@ -55,6 +55,45 @@ export type Database = {
           },
         ]
       }
+      audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          document_code: string | null
+          document_id: string | null
+          document_type: string | null
+          id: string
+          module: string
+          payload: Json | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          document_code?: string | null
+          document_id?: string | null
+          document_type?: string | null
+          id?: string
+          module: string
+          payload?: Json | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          document_code?: string | null
+          document_id?: string | null
+          document_type?: string | null
+          id?: string
+          module?: string
+          payload?: Json | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           address: string | null
@@ -561,7 +600,22 @@ export type Database = {
     }
     Enums: {
       account_type: "asset" | "liability" | "equity" | "revenue" | "expense"
-      app_role: "admin" | "manager" | "employee"
+      app_role:
+        | "admin"
+        | "manager"
+        | "employee"
+        | "general_manager"
+        | "purchasing_officer"
+        | "purchasing_manager"
+        | "sales_officer"
+        | "sales_manager"
+        | "accountant"
+        | "treasury_officer"
+        | "inventory_officer"
+        | "receiving_officer"
+        | "inspection_officer"
+        | "workshop_manager"
+        | "spare_parts_manager"
       department_code:
         | "vehicles"
         | "spare_parts"
@@ -702,7 +756,23 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["asset", "liability", "equity", "revenue", "expense"],
-      app_role: ["admin", "manager", "employee"],
+      app_role: [
+        "admin",
+        "manager",
+        "employee",
+        "general_manager",
+        "purchasing_officer",
+        "purchasing_manager",
+        "sales_officer",
+        "sales_manager",
+        "accountant",
+        "treasury_officer",
+        "inventory_officer",
+        "receiving_officer",
+        "inspection_officer",
+        "workshop_manager",
+        "spare_parts_manager",
+      ],
       department_code: [
         "vehicles",
         "spare_parts",
