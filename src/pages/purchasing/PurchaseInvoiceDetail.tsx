@@ -15,8 +15,9 @@ import {
 } from "@/services/erp/purchasing";
 import { allocationService } from "@/services/erp/allocations";
 import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
+import { DocPrintActions } from "@/components/erp/DocPrintActions";
+import { PrintablePurchaseDoc } from "@/components/erp/PrintablePurchaseDoc";
 import { makeAudit, type AuditEntry } from "@/services/erp/erpRoles";
-
 
 export default function PurchaseInvoiceDetail() {
   const { id = "" } = useParams();
@@ -44,9 +45,41 @@ export default function PurchaseInvoiceDetail() {
   const remaining = inv.total - inv.paid;
   const responsibleRole = inv.status === "paid" ? "purchasing_officer" : "accounting";
 
+  const printable = (
+    <PrintablePurchaseDoc
+      title={inv.code}
+      docType="purchase_invoice"
+      documentNo={inv.code}
+      documentDate={fmtDate(inv.issued_at)}
+      watermark={inv.status === "paid" ? "مدفوعة" : inv.status === "cancelled" ? "ملغاة" : "أصلية"}
+      partyTitle="المورد"
+      partyName={supplier?.name ?? "—"}
+      partyMeta={[
+        { label: "رقم المورد", value: supplier?.code ?? "—" },
+        { label: "أمر الشراء", value: po?.code ?? "—" },
+        { label: "تاريخ الاستحقاق", value: fmtDate(inv.due_date) },
+      ]}
+      meta={[
+        { label: "الحالة", value: PINV_LABEL[inv.status] },
+        { label: "المدفوع", value: fmtSAR(inv.paid) },
+        { label: "المتبقي", value: fmtSAR(remaining) },
+      ]}
+      items={po?.items ?? []}
+      subtotal={inv.subtotal}
+      vatAmount={inv.vat_amount}
+      total={inv.total}
+      notes={inv.notes}
+    />
+  );
+
   return (
     <div className="p-4 lg:p-6 space-y-4" dir="rtl">
-      <PageHeader title={`فاتورة شراء ${inv.code}`} subtitle={supplier?.name ?? ""} />
+      <PageHeader
+        title={`فاتورة شراء ${inv.code}`}
+        subtitle={supplier?.name ?? ""}
+        actions={<DocPrintActions doc={printable} />}
+      />
+
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">

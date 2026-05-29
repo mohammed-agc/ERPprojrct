@@ -3,20 +3,19 @@ import { useParams, Link } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Check, X, Printer } from "lucide-react";
+import { Check, X } from "lucide-react";
 import {
   purchasingService, PR_LABEL, PR_TONE, URGENCY_LABEL, URGENCY_TONE, fmtSAR, fmtDate,
 } from "@/services/erp/purchasing";
 import { PrintablePurchaseDoc } from "@/components/erp/PrintablePurchaseDoc";
+import { DocPrintActions } from "@/components/erp/DocPrintActions";
 import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
 import { makeAudit, type AuditEntry, type ErpGovRole } from "@/services/erp/erpRoles";
 
 export default function PurchaseRequestDetail() {
   const { id = "" } = useParams();
   const [tick, setTick] = useState(0);
-  const [printOpen, setPrintOpen] = useState(false);
   const refresh = () => setTick(t => t + 1);
 
   const pr = useMemo(() => purchasingService.listPRs().find(p => p.id === id), [id, tick]);
@@ -43,9 +42,43 @@ export default function PurchaseRequestDetail() {
   };
   const reject = () => { purchasingService.rejectPR(pr.id); toast.error("تم الرفض"); refresh(); };
 
+  const subtotal = pr.items.reduce((s, i) => s + i.qty * i.unit_cost, 0);
+  const vatAmount = pr.items.reduce((s, i) => s + i.qty * i.unit_cost * ((i.vat_pct ?? 15) / 100), 0);
+
+  const printable = (
+    <PrintablePurchaseDoc
+      title={pr.code}
+      docType="purchase_request"
+      documentNo={pr.code}
+      documentDate={fmtDate(pr.created_at)}
+      watermark={pr.status === "approved" ? "معتمد" : pr.status === "rejected" ? "مرفوض" : "مسودة"}
+      partyTitle="مقدم الطلب"
+      partyName={pr.requester}
+      partyMeta={[
+        { label: "القسم", value: pr.department },
+        { label: "الفرع", value: pr.branch },
+        { label: "الإلحاح", value: URGENCY_LABEL[pr.urgency] },
+      ]}
+      meta={[
+        { label: "الحالة", value: PR_LABEL[pr.status] },
+        { label: "أمر شراء مرتبط", value: po?.code ?? "—" },
+      ]}
+      items={pr.items}
+      subtotal={subtotal}
+      vatAmount={vatAmount}
+      total={subtotal + vatAmount}
+      notes={pr.justification}
+    />
+  );
+
   return (
     <div className="p-4 lg:p-6 space-y-4" dir="rtl">
-      <PageHeader title={`طلب شراء ${pr.code}`} subtitle={pr.requester} />
+      <PageHeader
+        title={`طلب شراء ${pr.code}`}
+        subtitle={pr.requester}
+        actions={<DocPrintActions doc={printable} />}
+      />
+
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">

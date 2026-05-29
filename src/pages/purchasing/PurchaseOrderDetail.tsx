@@ -10,6 +10,8 @@ import {
 } from "@/services/erp/purchasing";
 import { allocationService } from "@/services/erp/allocations";
 import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
+import { DocPrintActions } from "@/components/erp/DocPrintActions";
+import { PrintablePurchaseDoc } from "@/components/erp/PrintablePurchaseDoc";
 import { SupplierConfirmationDialog } from "@/components/erp/SupplierConfirmationDialog";
 import { makeAudit, type AuditEntry, type ErpGovRole } from "@/services/erp/erpRoles";
 
@@ -59,9 +61,41 @@ export default function PurchaseOrderDetail() {
     nextActions.push({ label: "تسجيل تأكيد المورد", role: "purchasing_manager", onClick: () => setConfirmOpen(true) });
   }
 
+  const subtotal = po.items.reduce((s, i) => s + i.qty * i.unit_cost, 0);
+  const vatAmount = po.items.reduce((s, i) => s + i.qty * i.unit_cost * ((i.vat_pct ?? 15) / 100), 0);
+  const printable = (
+    <PrintablePurchaseDoc
+      title={po.code}
+      docType="purchase_order"
+      documentNo={po.code}
+      documentDate={fmtDate(po.created_at)}
+      watermark={po.status === "approved" || po.status === "allocated" || po.status === "invoiced" ? "معتمد" : "مسودة"}
+      partyTitle="المورد"
+      partyName={supplier?.name ?? "—"}
+      partyMeta={[
+        { label: "رقم المورد", value: supplier?.code ?? "—" },
+        { label: "الفرع", value: po.branch_destination },
+        { label: "شروط الدفع", value: po.payment_term },
+      ]}
+      meta={[
+        { label: "الحالة", value: PO_LABEL[po.status] },
+        { label: "الوصول المتوقع", value: fmtDate(po.expected_delivery) },
+      ]}
+      items={po.items}
+      subtotal={subtotal}
+      vatAmount={vatAmount}
+      total={subtotal + vatAmount}
+    />
+  );
+
   return (
     <div className="p-4 lg:p-6 space-y-4" dir="rtl">
-      <PageHeader title={`أمر شراء ${po.code}`} subtitle={supplier?.name ?? ""} />
+      <PageHeader
+        title={`أمر شراء ${po.code}`}
+        subtitle={supplier?.name ?? ""}
+        actions={<DocPrintActions doc={printable} />}
+      />
+
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">

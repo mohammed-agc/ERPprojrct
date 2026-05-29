@@ -7,7 +7,7 @@ import {
   TrendingUp, ArrowLeftRight, PieChart, Landmark, ArrowDownCircle, ArrowUpCircle, CheckSquare,
   Vault, Banknote, Target, Layers, GitBranch, Share2, Gauge,
   Shield, CalendarRange, CalendarCheck, CalendarX, FileSearch, Lock, Hourglass, AlertTriangle,
-  ClipboardList, FileText, Ship, PackageCheck, Trophy, ShoppingBag, Warehouse
+  ClipboardList, FileText, Ship, PackageCheck, Trophy, ShoppingBag, Warehouse, Database, Palette
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -30,6 +30,13 @@ const groups: { title: string; items: NavItem[] }[] = [
     items: [
       { label: "الرئيسية", to: "/", icon: LayoutDashboard },
       { label: "جهات الاتصال", to: "/contacts", icon: Contact2 },
+    ],
+  },
+  {
+    title: "البيانات الرئيسية",
+    items: [
+      { label: "كتالوج المنتجات", to: "/master/products", icon: Database },
+      { label: "ألوان المركبات", to: "/master/colors", icon: Palette },
     ],
   },
   {
