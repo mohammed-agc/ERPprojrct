@@ -22,6 +22,7 @@ import {
   formatSaudiAddress, hasRole, toggleRole, complianceScore,
 } from "@/lib/contactMeta";
 import { SupplierIntelligence } from "@/components/erp/SupplierIntelligence";
+import { AccountStatement } from "@/components/erp/AccountStatement";
 import { cn } from "@/lib/utils";
 
 
@@ -141,6 +142,10 @@ export default function ContactDetail() {
           <TabsTrigger value="addresses" className="text-xs">العناوين المتعددة</TabsTrigger>
           <TabsTrigger value="compliance" className="text-xs">الامتثال والوثائق</TabsTrigger>
           <TabsTrigger value="financial" className="text-xs">المالي والائتمان</TabsTrigger>
+          <TabsTrigger value="statement" className="text-xs gap-1">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
+            الحساب المالي
+          </TabsTrigger>
           <TabsTrigger value="related" className="text-xs">جهات مرتبطة</TabsTrigger>
           <TabsTrigger value="timeline" className="text-xs">السجل ERP</TabsTrigger>
           {hasRole(meta, "vendor") && (
