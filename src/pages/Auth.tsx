@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -74,6 +74,11 @@ export default function Auth() {
                 <Button type="submit" className="w-full" disabled={busy}>
                   {busy ? "جاري الدخول..." : "دخول"}
                 </Button>
+                <div className="text-center">
+                  <Link to="/forgot-password" className="text-xs text-muted-foreground hover:text-foreground">
+                    نسيت كلمة المرور؟
+                  </Link>
+                </div>
               </form>
             </TabsContent>
 
