@@ -116,7 +116,7 @@ export default function PurchaseRequests() {
                   <td><Badge className={URGENCY_TONE[p.urgency]}>{URGENCY_LABEL[p.urgency]}</Badge></td>
                   <td><Badge className={PR_TONE[p.status]}>{PR_LABEL[p.status]}</Badge></td>
                   <td className="text-xs">{fmtDate(p.created_at)}</td>
-                  <td className="whitespace-nowrap">
+                  <td className="whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                     {p.status === "pending" && (
                       <div className="flex gap-1">
                         <Button size="sm" variant="ghost" className="h-7 px-2 text-success" onClick={() => onApprove(p.id)}>
