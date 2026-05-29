@@ -63,9 +63,17 @@ export default function AppLayout({ children }: { children?: ReactNode }) {
             <NotificationsCenter />
             <ShortcutsDialog />
             <div className="h-5 w-px bg-border mx-1" />
-            <div className="text-sm text-left hidden sm:block">
-              <div className="font-medium text-foreground leading-tight text-xs">{profile?.full_name || user.email}</div>
-              <div className="text-[10px] text-muted-foreground">{roles.join(" • ") || "موظف"}</div>
+            <div className="text-sm text-left hidden sm:block max-w-[220px]">
+              <div className="font-medium text-foreground leading-tight text-xs truncate" title={profile?.full_name || user.email || ""}>
+                {profile?.full_name || user.email}
+              </div>
+              <div className="text-[10px] text-muted-foreground truncate" title={user.email || ""}>
+                {user.email}
+              </div>
+              <div className="text-[10px] text-primary/80 truncate" title={roles.join(" • ")}>
+                {roles.length ? roles.join(" • ") : "موظف"}
+                {department ? <span className="text-muted-foreground"> · {department.name_ar}</span> : null}
+              </div>
             </div>
             <Button variant="ghost" size="sm" onClick={signOut} title="تسجيل الخروج" aria-label="تسجيل الخروج" className="h-8 w-8 p-0">
               <LogOut className="h-4 w-4" />
