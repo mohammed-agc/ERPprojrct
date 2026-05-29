@@ -25,6 +25,7 @@ const STATUS_OPTS: { value: PRStatus | "all"; label: string }[] = [
 ];
 
 export default function PurchaseRequests() {
+  const nav = useNavigate();
   const [tick, setTick] = useState(0);
   const refresh = () => setTick(t => t + 1);
   const [q, setQ] = useState("");
