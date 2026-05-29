@@ -252,6 +252,23 @@ const App = () => (
               <Route path="/master/products" element={<ProductsMaster />} />
               <Route path="/master/colors" element={<ColorsMaster />} />
               <Route path="/reports" element={<ComingSoon title="التقارير والإحصاءات" />} />
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="users" element={<AdminUsers />} />
+                <Route path="roles" element={<AdminRoles />} />
+                <Route path="permissions" element={<Permissions />} />
+                <Route path="sessions" element={<AdminSessions />} />
+                <Route path="login-history" element={<AdminLoginHistory />} />
+                <Route path="audit" element={<AdminAuditLog />} />
+                <Route path="settings/company" element={<AdminSettingsCompany />} />
+                <Route path="settings/branches" element={<AdminSettingsBranches />} />
+                <Route path="settings/warehouses" element={<AdminSettingsWarehouses />} />
+                <Route path="settings/tax" element={<AdminSettingsTax />} />
+                <Route path="settings/sequences" element={<AdminSettingsSequences />} />
+                <Route path="settings/templates" element={<AdminSettingsTemplates />} />
+                <Route path="master-data" element={<AdminMasterDataHub />} />
+                <Route path="uat" element={<AdminUatTools />} />
+              </Route>
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
