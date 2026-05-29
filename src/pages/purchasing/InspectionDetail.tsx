@@ -11,6 +11,7 @@ import {
 import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
 import { VehicleIntakeDialog } from "@/components/erp/VehicleIntakeDialog";
 import { makeAudit, type AuditEntry, type ErpGovRole } from "@/services/erp/erpRoles";
+import { getPoVehicleUnits, groupUnitsByPoLine } from "@/lib/poVehicleUnits";
 
 export default function InspectionDetail() {
   const { id = "" } = useParams();
