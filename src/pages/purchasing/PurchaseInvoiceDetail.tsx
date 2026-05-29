@@ -15,8 +15,9 @@ import {
 } from "@/services/erp/purchasing";
 import { allocationService } from "@/services/erp/allocations";
 import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
+import { DocPrintActions } from "@/components/erp/DocPrintActions";
+import { PrintablePurchaseDoc } from "@/components/erp/PrintablePurchaseDoc";
 import { makeAudit, type AuditEntry } from "@/services/erp/erpRoles";
-
 
 export default function PurchaseInvoiceDetail() {
   const { id = "" } = useParams();
