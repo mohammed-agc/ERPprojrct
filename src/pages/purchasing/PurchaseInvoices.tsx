@@ -4,18 +4,19 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Search, Receipt, Wallet, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  purchasingService, PINV_LABEL, PINV_TONE, PAYMENT_METHOD_LABEL,
-  fmtSAR, fmtDate, type InvoiceStatus, type PaymentMethod,
+  purchasingService, PINV_LABEL, PINV_TONE,
+  fmtSAR, fmtDate, type InvoiceStatus,
 } from "@/services/erp/purchasing";
 import { PurchaseInvoiceCreateDialog } from "@/components/erp/PurchaseInvoiceCreateDialog";
+import { PaymentDialog, type PaymentSubmitPayload, type PaymentInvoiceContext } from "@/components/erp/PaymentDialog";
+
+const METHOD_MAP: Record<string, "cash" | "bank_transfer" | "card" | "check" | "credit"> = {
+  cash: "cash", bank_transfer: "bank_transfer", card: "card", check: "check", credit: "credit",
+};
 
 
 const STATUS_OPTS: { value: InvoiceStatus | "all"; label: string }[] = [
