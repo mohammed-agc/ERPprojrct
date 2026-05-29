@@ -45,7 +45,7 @@ export function VoucherDialog({ open, onOpenChange, type, accounts, defaultAccou
   }, [open, type, defaultAccountId, accounts]);
 
   const submit = async () => {
-    if (!accountId || !counterparty || !amount) {
+    if (!accountId || !counterparty || !amount || amount <= 0) {
       toast.error("الحقول المطلوبة غير مكتملة");
       return;
     }
