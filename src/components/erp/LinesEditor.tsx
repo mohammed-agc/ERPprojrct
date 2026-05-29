@@ -115,7 +115,7 @@ export function LinesEditor({ items, onChange, lockedCategory, showTotals = true
             <span className="text-muted-foreground w-12 shrink-0">#{idx + 1}</span>
             <Input
               value={it.description}
-              onChange={(e) => onChange(items.map((x, i) => i === idx ? { ...x, description: e.target.value } : x))}
+              onChange={(e) => onChange(items.map((x, i) => i === idx ? { ...x, description: e.target.value, _descTouched: true } : x))}
               placeholder="الوصف يُولَّد تلقائياً من الحقول أعلاه — قابل للتعديل"
               className="h-7 text-[11px]"
             />
