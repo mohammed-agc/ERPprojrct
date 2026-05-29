@@ -88,14 +88,14 @@ export function PaymentDialog({
     if (open && invoice) {
       setMethod("cash");
       setAccountId(accounts[0]?.id ?? "");
-      setAmount(outstanding.toFixed(2));
+      setAmount(outstanding > 0 ? outstanding : undefined);
       setPaymentDate(new Date().toISOString().slice(0, 10));
       setReference("");
       setNotes("");
     }
   }, [open, invoice?.id]);
 
-  const numericAmount = Number(amount) || 0;
+  const numericAmount = amount ?? 0;
   const remaining = Math.max(0, outstanding - numericAmount);
   const isFull = numericAmount >= outstanding && outstanding > 0;
   const isPartial = numericAmount > 0 && numericAmount < outstanding;
