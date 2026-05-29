@@ -4,18 +4,19 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Search, Receipt, Wallet, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  purchasingService, PINV_LABEL, PINV_TONE, PAYMENT_METHOD_LABEL,
-  fmtSAR, fmtDate, type InvoiceStatus, type PaymentMethod,
+  purchasingService, PINV_LABEL, PINV_TONE,
+  fmtSAR, fmtDate, type InvoiceStatus,
 } from "@/services/erp/purchasing";
 import { PurchaseInvoiceCreateDialog } from "@/components/erp/PurchaseInvoiceCreateDialog";
+import { PaymentDialog, type PaymentSubmitPayload, type PaymentInvoiceContext } from "@/components/erp/PaymentDialog";
+
+const METHOD_MAP: Record<string, "cash" | "bank_transfer" | "cheque" | "credit_utilization"> = {
+  cash: "cash", bank_transfer: "bank_transfer", card: "bank_transfer", check: "cheque", credit: "credit_utilization",
+};
 
 
 const STATUS_OPTS: { value: InvoiceStatus | "all"; label: string }[] = [
@@ -58,6 +59,26 @@ export default function PurchaseInvoices() {
   }), [filtered]);
 
   const activeInv = invs.find(i => i.id === payOpen);
+  const activeSupplier = activeInv ? suppliers.find(s => s.id === activeInv.supplier_id) : null;
+  const paymentCtx: PaymentInvoiceContext | null = activeInv ? {
+    id: activeInv.id, invoice_no: activeInv.code,
+    customer_name: activeSupplier?.name, total: activeInv.total, paid_amount: activeInv.paid,
+  } : null;
+  const [submitting, setSubmitting] = useState(false);
+  const handleSubmitPayment = async (p: PaymentSubmitPayload) => {
+    setSubmitting(true);
+    try {
+      const r = purchasingService.recordPurchasePayment({
+        invoice_id: p.invoiceId, amount: p.amount,
+        method: METHOD_MAP[p.method] ?? "bank_transfer",
+        reference: p.reference || undefined,
+      });
+      if (!r) { toast.error("تعذر تسجيل الدفعة"); return; }
+      toast.success(`تم تسجيل الدفعة ${r.code}`);
+      setPayOpen(null); refresh();
+    } finally { setSubmitting(false); }
+  };
+
 
   return (
     <div>
@@ -135,73 +156,15 @@ export default function PurchaseInvoices() {
         </table>
       </div>
 
-      {activeInv && (
-        <PaymentDialog
-          invoice={activeInv}
-          onClose={() => setPayOpen(null)}
-          onPaid={() => { setPayOpen(null); refresh(); }}
-        />
-      )}
+      <PaymentDialog
+        open={!!payOpen}
+        onOpenChange={(o) => !o && setPayOpen(null)}
+        invoice={paymentCtx}
+        submitting={submitting}
+        onSubmit={handleSubmitPayment}
+      />
       <PurchaseInvoiceCreateDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={refresh} />
 
     </div>
-  );
-}
-
-function PaymentDialog({ invoice, onClose, onPaid }: {
-  invoice: ReturnType<typeof purchasingService.getPurchaseInvoice> & {} extends infer T ? any : any;
-  onClose: () => void; onPaid: () => void;
-}) {
-  const remaining = invoice.total - invoice.paid;
-  const [amount, setAmount] = useState<number>(remaining);
-  const [method, setMethod] = useState<PaymentMethod>("bank_transfer");
-  const [reference, setReference] = useState("");
-
-  const submit = () => {
-    if (amount <= 0) return toast.error("أدخل مبلغاً صحيحاً");
-    const p = purchasingService.recordPurchasePayment({
-      invoice_id: invoice.id, amount, method, reference: reference || undefined,
-    });
-    if (!p) return toast.error("تعذر تسجيل الدفعة");
-    toast.success(`تم تسجيل الدفعة ${p.code}`);
-    onPaid();
-  };
-
-  return (
-    <Dialog open onOpenChange={(v) => !v && onClose()}>
-      <DialogContent dir="rtl" className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>تسجيل دفعة — {invoice.code}</DialogTitle>
-          <DialogDescription>
-            متبقي على الفاتورة: <span className="font-semibold num">{fmtSAR(remaining)}</span>
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs">المبلغ (ر.س)</Label>
-            <Input type="number" min={1} max={remaining} value={amount} onChange={e => setAmount(Number(e.target.value))} className="h-9 num" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">طريقة الدفع</Label>
-            <Select value={method} onValueChange={(v) => setMethod(v as PaymentMethod)}>
-              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {(Object.keys(PAYMENT_METHOD_LABEL) as PaymentMethod[]).map(m => (
-                  <SelectItem key={m} value={m}>{PAYMENT_METHOD_LABEL[m]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">المرجع</Label>
-            <Input value={reference} onChange={e => setReference(e.target.value)} placeholder="رقم الحوالة / الشيك" className="h-9" />
-          </div>
-        </div>
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onClose}>إلغاء</Button>
-          <Button onClick={submit}>تسجيل الدفعة</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }

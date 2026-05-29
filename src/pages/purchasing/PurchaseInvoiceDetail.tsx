@@ -3,21 +3,22 @@ import { useParams, Link } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Wallet } from "lucide-react";
 import {
   purchasingService, PINV_LABEL, PINV_TONE, PAYMENT_METHOD_LABEL,
-  fmtSAR, fmtDate, type PaymentMethod,
+  fmtSAR, fmtDate,
 } from "@/services/erp/purchasing";
 import { allocationService } from "@/services/erp/allocations";
 import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
 import { DocPrintActions } from "@/components/erp/DocPrintActions";
 import { PrintablePurchaseDoc } from "@/components/erp/PrintablePurchaseDoc";
 import { makeAudit, type AuditEntry } from "@/services/erp/erpRoles";
+import { PaymentDialog, type PaymentSubmitPayload, type PaymentInvoiceContext } from "@/components/erp/PaymentDialog";
+
+const METHOD_MAP: Record<string, "cash" | "bank_transfer" | "cheque" | "credit_utilization"> = {
+  cash: "cash", bank_transfer: "bank_transfer", card: "bank_transfer", check: "cheque", credit: "credit_utilization",
+};
 
 export default function PurchaseInvoiceDetail() {
   const { id = "" } = useParams();
@@ -180,63 +181,50 @@ export default function PurchaseInvoiceDetail() {
         </div>
       </div>
 
-      <PayDialog
+      <PaymentDialogHost
         open={payOpen}
         onClose={() => setPayOpen(false)}
         invoiceId={inv.id}
         invoiceCode={inv.code}
-        remaining={remaining}
-        onPaid={() => { setPayOpen(false); refresh(); toast.success("تم تسجيل الدفعة"); }}
+        supplierName={supplier?.name}
+        total={inv.total}
+        paid={inv.paid}
+        onPaid={() => { setPayOpen(false); refresh(); }}
       />
     </div>
   );
 }
 
-function PayDialog({ open, onClose, invoiceId, invoiceCode, remaining, onPaid }: {
+function PaymentDialogHost({ open, onClose, invoiceId, invoiceCode, supplierName, total, paid, onPaid }: {
   open: boolean; onClose: () => void; invoiceId: string; invoiceCode: string;
-  remaining: number; onPaid: () => void;
+  supplierName?: string; total: number; paid: number; onPaid: () => void;
 }) {
-  const [amount, setAmount] = useState(remaining);
-  const [method, setMethod] = useState<PaymentMethod>("bank_transfer");
-  const [reference, setReference] = useState("");
-
-  const submit = () => {
-    if (amount <= 0) return toast.error("أدخل مبلغاً صحيحاً");
-    const p = purchasingService.recordPurchasePayment({
-      invoice_id: invoiceId, amount, method, reference: reference || undefined,
-    });
-    if (!p) return toast.error("تعذر تسجيل الدفعة");
-    onPaid();
+  const [submitting, setSubmitting] = useState(false);
+  const ctx: PaymentInvoiceContext = {
+    id: invoiceId, invoice_no: invoiceCode, customer_name: supplierName, total, paid_amount: paid,
   };
-
+  const handle = async (p: PaymentSubmitPayload) => {
+    setSubmitting(true);
+    try {
+      const r = purchasingService.recordPurchasePayment({
+        invoice_id: p.invoiceId, amount: p.amount,
+        method: METHOD_MAP[p.method] ?? "bank_transfer",
+        reference: p.reference || undefined,
+      });
+      if (!r) { toast.error("تعذر تسجيل الدفعة"); return; }
+      toast.success(`تم تسجيل الدفعة ${r.code}`);
+      onPaid();
+    } finally { setSubmitting(false); }
+  };
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent dir="rtl" className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>تسجيل دفعة — {invoiceCode}</DialogTitle>
-          <DialogDescription>متبقي: <span className="font-semibold">{fmtSAR(remaining)}</span></DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3 text-xs">
-          <div><Label className="text-xs">المبلغ</Label><Input type="number" value={amount} onChange={e => setAmount(Number(e.target.value))} className="h-9" /></div>
-          <div>
-            <Label className="text-xs">طريقة الدفع</Label>
-            <Select value={method} onValueChange={(v) => setMethod(v as PaymentMethod)}>
-              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {(Object.keys(PAYMENT_METHOD_LABEL) as PaymentMethod[]).map(m => (
-                  <SelectItem key={m} value={m}>{PAYMENT_METHOD_LABEL[m]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div><Label className="text-xs">المرجع</Label><Input value={reference} onChange={e => setReference(e.target.value)} className="h-9" /></div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>إلغاء</Button>
-          <Button onClick={submit}>تسجيل</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <PaymentDialog
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      invoice={ctx}
+      submitting={submitting}
+      onSubmit={handle}
+    />
   );
 }
+
 
