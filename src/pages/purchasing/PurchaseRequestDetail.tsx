@@ -33,7 +33,11 @@ export default function PurchaseRequestDetail() {
     pr.status === "draft" || pr.status === "pending" ? "purchasing_manager" :
     pr.status === "approved" ? "purchasing_officer" : "purchasing_officer";
 
-  const approve = () => { purchasingService.approvePR(pr.id); toast.success("تم الاعتماد"); refresh(); };
+  const approve = () => {
+    const generatedPO = purchasingService.approvePR(pr.id);
+    toast.success(generatedPO ? `تم الاعتماد وإنشاء أمر الشراء ${generatedPO.code}` : "تم الاعتماد");
+    refresh();
+  };
   const reject = () => { purchasingService.rejectPR(pr.id); toast.error("تم الرفض"); refresh(); };
 
   return (
@@ -57,7 +61,7 @@ export default function PurchaseRequestDetail() {
               <div><div className="text-[10px] text-muted-foreground">التاريخ</div><div>{fmtDate(pr.created_at)}</div></div>
               <div><div className="text-[10px] text-muted-foreground">عدد الأصناف</div><div>{pr.items.length}</div></div>
               <div><div className="text-[10px] text-muted-foreground">إجمالي تقديري</div><div className="font-bold">{fmtSAR(totalEst)}</div></div>
-              <div><div className="text-[10px] text-muted-foreground">أمر الشراء</div>
+              <div><div className="text-[10px] text-muted-foreground">أمر الشراء المرتبط</div>
                 <div>{po ? <Link to={`/purchasing/orders/${po.id}`} className="text-primary hover:underline font-mono">{po.code}</Link> : "—"}</div>
               </div>
             </div>
