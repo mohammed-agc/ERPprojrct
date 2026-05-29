@@ -377,9 +377,6 @@ export default function GRNDetail() {
     </div>
   );
 }
-    </div>
-  );
-}
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
