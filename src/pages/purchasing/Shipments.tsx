@@ -33,8 +33,13 @@ const CUSTOMS_TONE: Record<string, string> = {
 export default function Shipments() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<ShipmentStatus | "all">("all");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const shipments = useMemo(() => purchasingService.listShipments(), []);
   const pos = useMemo(() => purchasingService.listPOs(), []);
+
+  const toggle = (id: string) => setExpanded(prev => {
+    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+  });
 
   const filtered = useMemo(() => {
     const qv = q.trim().toLowerCase();
