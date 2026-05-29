@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ProductCombobox } from "@/components/erp/ProductCombobox";
 import { NumberCell } from "@/components/erp/master/NumberCell";
+import { parseVehicleMeta } from "@/lib/vehicleMeta";
 import { WorkflowStepper } from "@/components/erp/WorkflowStepper";
 import { ActionButton } from "@/components/erp/ActionButton";
 import { RoleSwitcher } from "@/components/erp/RoleSwitcher";
@@ -38,6 +39,31 @@ const calcLine = (l: Line) => {
   return Number(afterDisc.toFixed(2));
 };
 
+/** Derive identity (VIN, engine, trim, …) from a vehicle row (incl. notes meta). */
+function vehicleIdentity(v: any) {
+  const meta = parseVehicleMeta(v?.notes ?? null);
+  return {
+    vin: v?.vin || "",
+    engine: meta.engine || "",
+    chassis: meta.chassis || "",
+    trim: meta.trim || "",
+    manufacturer: v?.brand || "",
+    model: v?.model || "",
+    year: v?.year ?? "",
+    color: v?.color || "",
+  };
+}
+
+/** Compose the full VIN-bound description used on SO line, Invoice line, Delivery. */
+function buildVehicleDescription(v: any): string {
+  const id = vehicleIdentity(v);
+  const head = [id.manufacturer, id.model, id.trim, id.year, id.color].filter(Boolean).join(" ");
+  const tags: string[] = [];
+  if (id.vin) tags.push(`VIN: ${id.vin}`);
+  if (id.engine) tags.push(`المحرك: ${id.engine}`);
+  return tags.length ? `${head}\n${tags.join(" · ")}` : (head || v?.name || "");
+}
+
 export default function SalesOrderDetail() {
   const { id } = useParams();
   const nav = useNavigate();
@@ -54,7 +80,7 @@ export default function SalesOrderDetail() {
     const [{ data: o }, { data: c }, { data: v }, { data: ls }] = await Promise.all([
       supabase.from("sales_orders").select("*, customers(name, vat_number)").eq("id", id).maybeSingle(),
       supabase.from("customers").select("id, name, code, vat_number, phone, city"),
-      supabase.from("vehicles").select("id, name, brand, model, year, vin, sale_price, status").eq("status", "available"),
+      supabase.from("vehicles").select("id, name, brand, model, year, vin, sale_price, status, color, notes").eq("status", "available"),
       supabase.from("sales_order_lines").select("*").eq("order_id", id).order("line_no"),
     ]);
     setOrder(o); setCustomers(c ?? []); setVehicles(v ?? []);
@@ -86,9 +112,13 @@ export default function SalesOrderDetail() {
     }
     const v = vehicles.find(x => x.id === vid);
     if (!v) return;
-    // Auto-build description: Manufacturer Model Year Color
-    const desc = [v.brand, v.model, v.year, v.color].filter(Boolean).join(" ");
-    updateLine(i, { vehicle_id: vid, description: desc || v.name, unit_price: Number(v.sale_price) });
+    if (!v.vin) {
+      toast.error("لا يمكن إضافة مركبة بدون VIN — أكمل إدخال المخزون أولاً");
+      return;
+    }
+    // Auto-build description: includes VIN + engine for full traceability
+    const desc = buildVehicleDescription(v);
+    updateLine(i, { vehicle_id: vid, description: desc, unit_price: Number(v.sale_price) });
   };
 
   const addLine = () => {
