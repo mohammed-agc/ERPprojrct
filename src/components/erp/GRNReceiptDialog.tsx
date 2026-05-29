@@ -108,11 +108,25 @@ export function GRNReceiptDialog({ open, onOpenChange, grn, onRecorded }: Props)
               </tr>
             </thead>
             <tbody>
-              {rows.map((r, i) => (
+              {rows.map((r, i) => {
+                const units = r.kind === "vehicle" ? (unitsByLine.get(r.line_id) ?? []) : [];
+                const previewCount = Math.max(r.alreadyReceived + r.qty, 0) || units.length;
+                return (
                 <tr key={r.line_id}>
                   <td className="text-xs">
                     <div className="font-medium">{r.description}</div>
                     <div className="text-[10px] text-muted-foreground">{r.kind === "vehicle" ? "مركبة" : "قطعة"}</div>
+                    {units.length > 0 && (
+                      <div className="mt-1 space-y-0.5 max-h-24 overflow-y-auto pr-1">
+                        {units.slice(0, previewCount).map((u, idx) => (
+                          <div key={u.alloc_line_id} className="text-[10px]" dir="ltr">
+                            <span className="text-muted-foreground">{idx + 1}.</span>{" "}
+                            <span className="font-mono font-semibold">{u.vin}</span>
+                            <span className="text-muted-foreground"> · {u.color}{u.trim ? " · " + u.trim : ""}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </td>
                   <td className="num text-xs">{r.ordered}</td>
                   <td className="num text-xs text-muted-foreground">{r.alreadyReceived}</td>
