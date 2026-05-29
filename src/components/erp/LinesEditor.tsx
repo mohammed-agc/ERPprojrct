@@ -296,18 +296,10 @@ function LineRow({
 
 function autoDescription(it: LineDraft): LineDraft {
   if (it.kind !== "vehicle") return it;
+  if (it._descTouched) return it;
   const parts = [it.manufacturer, it.model, it.trim, it.year ? String(it.year) : "", it.color_name]
     .filter(Boolean).join(" ");
-  // Only overwrite when user hasn't customised, OR description matches previous auto value.
-  const prev = it.description?.trim() ?? "";
-  const looksAuto = prev === "" || autoMatches(prev);
-  return looksAuto ? { ...it, description: parts } : it;
-}
-
-// Heuristic — description is auto if it's empty or matches the cascade-only pattern.
-function autoMatches(s: string): boolean {
-  // very loose: tokens are short alphanumeric + Arabic words separated by spaces
-  return /^[A-Za-z0-9\u0600-\u06FF\s\-]+$/.test(s);
+  return { ...it, description: parts };
 }
 
 /* Helper to expose color hex on the in-memory list for color picker integration */
