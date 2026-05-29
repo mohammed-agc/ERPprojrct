@@ -3,21 +3,22 @@ import { useParams, Link } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Wallet } from "lucide-react";
 import {
   purchasingService, PINV_LABEL, PINV_TONE, PAYMENT_METHOD_LABEL,
-  fmtSAR, fmtDate, type PaymentMethod,
+  fmtSAR, fmtDate,
 } from "@/services/erp/purchasing";
 import { allocationService } from "@/services/erp/allocations";
 import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
 import { DocPrintActions } from "@/components/erp/DocPrintActions";
 import { PrintablePurchaseDoc } from "@/components/erp/PrintablePurchaseDoc";
 import { makeAudit, type AuditEntry } from "@/services/erp/erpRoles";
+import { PaymentDialog, type PaymentSubmitPayload, type PaymentInvoiceContext } from "@/components/erp/PaymentDialog";
+
+const METHOD_MAP: Record<string, "cash" | "bank_transfer" | "cheque" | "credit_utilization"> = {
+  cash: "cash", bank_transfer: "bank_transfer", card: "bank_transfer", check: "cheque", credit: "credit_utilization",
+};
 
 export default function PurchaseInvoiceDetail() {
   const { id = "" } = useParams();
