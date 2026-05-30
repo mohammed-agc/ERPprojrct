@@ -184,6 +184,7 @@ export default function PurchaseInvoices() {
         open={!!payOpen}
         onOpenChange={(o) => !o && setPayOpen(null)}
         invoice={paymentCtx}
+        supplierCredit={supplierCreditCtx}
         submitting={submitting}
         onSubmit={handleSubmitPayment}
       />
