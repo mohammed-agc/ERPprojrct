@@ -498,6 +498,7 @@ function normalizeDB(input: Partial<DB>): DB {
     inspections: Array.isArray(input.inspections) ? input.inspections : [],
     invoices: Array.isArray(input.invoices) ? input.invoices : [],
     payments: Array.isArray(input.payments) ? input.payments : [],
+    supplier_ledger: Array.isArray(input.supplier_ledger) ? input.supplier_ledger : [],
   };
 }
 
