@@ -293,10 +293,10 @@ export function PrintableInvoiceDoc(p: PrintableInvoiceDocProps) {
         </tfoot>
       </table>
 
-      {/* === Financial Summary === */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+      {/* === Financial Summary (kept together on one page) === */}
+      <div className="avoid-break grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
         {showCredit && p.credit && (
-          <div className="border border-amber-300 bg-amber-50 dark:bg-amber-500/10 rounded p-3 text-[10.5px]">
+          <div className="avoid-break border border-amber-300 bg-amber-50 dark:bg-amber-500/10 rounded p-3 text-[10.5px]">
             <div className="text-[10px] font-bold text-amber-900 dark:text-amber-300 mb-1.5">معلومات الحد الائتماني للمورد</div>
             <div className="space-y-0.5 font-mono">
               <CreditAcctRow label="الحد الائتماني" value={p.credit.credit_limit} />
@@ -306,7 +306,7 @@ export function PrintableInvoiceDoc(p: PrintableInvoiceDocProps) {
             </div>
           </div>
         )}
-        <div className={`${showCredit ? "" : "md:col-start-2"} border border-border rounded text-[10.5px] overflow-hidden`}>
+        <div className={`avoid-break ${showCredit ? "" : "md:col-start-2"} border border-border rounded text-[10.5px] overflow-hidden`}>
           <div className="bg-muted/60 px-3 py-1.5 text-[10px] font-bold">الملخص المالي</div>
           <div className="p-3 space-y-1">
             <div className="flex justify-between"><span className="text-muted-foreground">إجمالي قيمة المركبات</span><span className="font-mono">{fmtSAR(p.totalVehicleValue)}</span></div>
@@ -323,13 +323,13 @@ export function PrintableInvoiceDoc(p: PrintableInvoiceDocProps) {
       </div>
 
       {p.notes && (
-        <div className="text-[10px] border-t border-border pt-2 mt-2 mb-3">
+        <div className="text-[10px] border-t border-border pt-2 mt-2 mb-3 avoid-break">
           <span className="text-muted-foreground font-semibold">ملاحظات: </span>{p.notes}
         </div>
       )}
 
-      {/* === Signatures === */}
-      <footer className="grid grid-cols-3 gap-6 mt-8 pt-5 border-t-2 border-primary text-[10px]">
+      {/* === Signatures (kept together) === */}
+      <footer className="avoid-break grid grid-cols-3 gap-6 mt-6 pt-4 print:mt-4 print:pt-3 border-t-2 border-primary text-[10px]">
         {sigLabels.map(role => (
           <div key={role} className="text-center">
             <div className="h-12 border-b border-dashed border-muted-foreground/40 mb-1" />
