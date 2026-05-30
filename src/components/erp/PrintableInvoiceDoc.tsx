@@ -133,6 +133,17 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
   );
 }
 
+/** Accounting-style aligned row: label · dotted leader · right-aligned number. */
+function CreditAcctRow({ label, value, bold }: { label: string; value: number; bold?: boolean }) {
+  return (
+    <div className={`flex items-baseline gap-2 ${bold ? "font-bold" : ""}`}>
+      <span className={`shrink-0 ${bold ? "text-amber-900 dark:text-amber-200" : "text-muted-foreground"}`}>{label}</span>
+      <span className="flex-1 border-b border-dotted border-amber-400/60 translate-y-[-2px]" aria-hidden />
+      <span className="font-mono tabular-nums text-right min-w-[110px]">{fmtSAR(value)}</span>
+    </div>
+  );
+}
+
 function ErpRefBadges({ variant, refs }: { variant: "purchase" | "sales"; refs?: InvoiceErpRefs }) {
   if (!refs) return null;
   const items: { label: string; value?: string }[] = variant === "purchase"
