@@ -22,6 +22,20 @@ export default function SupplierIncentives() {
   const perms = useIncentivePermissions();
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | IncentiveProgramStatus>("all");
+  const [backendCheck, setBackendCheck] = useState<{ loading: boolean; allowed: boolean; reason?: string }>({
+    loading: true, allowed: false,
+  });
+
+  // Authoritative server-side gate. UI hint (`perms.canView`) may be optimistic;
+  // this edge-function call is what actually authorizes listing.
+  useEffect(() => {
+    let cancelled = false;
+    checkIncentiveAccess("view").then((r) => {
+      if (cancelled) return;
+      setBackendCheck({ loading: false, allowed: r.allowed, reason: r.reason });
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const suppliers = useMemo(() => purchasingService.listSuppliers(), []);
   const programs = useMemo(() => purchasingService.listIncentivePrograms(), []);
