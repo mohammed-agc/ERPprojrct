@@ -14,10 +14,12 @@ import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
 import { DocPrintActions } from "@/components/erp/DocPrintActions";
 import { PrintablePurchaseDoc } from "@/components/erp/PrintablePurchaseDoc";
 import { makeAudit, type AuditEntry } from "@/services/erp/erpRoles";
-import { PaymentDialog, type PaymentSubmitPayload, type PaymentInvoiceContext } from "@/components/erp/PaymentDialog";
+import { PaymentDialog, type PaymentSubmitPayload, type PaymentInvoiceContext, type SupplierCreditContext } from "@/components/erp/PaymentDialog";
 
 const METHOD_MAP: Record<string, "cash" | "bank_transfer" | "cheque" | "credit_utilization"> = {
-  cash: "cash", bank_transfer: "bank_transfer", card: "bank_transfer", check: "cheque", credit: "credit_utilization",
+  cash: "cash", bank_transfer: "bank_transfer", pos: "bank_transfer", card: "bank_transfer",
+  check: "cheque", cheque: "cheque",
+  credit: "credit_utilization", supplier_credit: "credit_utilization", credit_utilization: "credit_utilization",
 };
 
 export default function PurchaseInvoiceDetail() {
