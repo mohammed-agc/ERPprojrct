@@ -1004,6 +1004,14 @@ export const purchasingService = {
     db.invoices.unshift(inv);
     // Advance PO into ordered state once invoice issued
     if (po.status === "approved") po.status = "ordered", po.ordered_at = isoNow();
+    // Supplier ledger: invoice increases the supplier liability (credit side).
+    // Issuance does NOT consume the credit line — that happens at settlement.
+    db.supplier_ledger.unshift({
+      id: uid("sl"), supplier_id: inv.supplier_id, at: inv.issued_at,
+      kind: "invoice", reference: inv.code, invoice_id: inv.id,
+      description: `إصدار فاتورة شراء ${inv.code}`,
+      debit: 0, credit: inv.total, credit_delta: 0,
+    });
     save(db);
     return inv;
   },
