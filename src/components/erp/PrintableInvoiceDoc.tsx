@@ -72,8 +72,6 @@ export interface PrintableInvoiceDocProps {
   seller: InvoiceParty;
   buyer: InvoiceParty;
 
-  erpRefs?: InvoiceErpRefs;
-
   items: InvoiceLine[];
   /** if any item.vin is set, vehicle count is shown */
   showVehicleCount?: boolean;
@@ -236,8 +234,6 @@ export function PrintableInvoiceDoc(p: PrintableInvoiceDocProps) {
           </span>
         </div>
       </div>
-
-      <ErpRefBadges variant={p.variant} refs={p.erpRefs} />
 
       {/* === Items === */}
       <table className="erp-table text-[10.5px] w-full my-3">

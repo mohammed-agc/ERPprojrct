@@ -119,13 +119,6 @@ export default function PurchaseInvoiceDetail() {
         contact: supplier?.contact,
         address: supplier?.country,
       }}
-      erpRefs={{
-        pr: pr?.code,
-        po: po?.code,
-        alc: alc?.code,
-        alc_conf: alcConf,
-        pi: inv.code,
-      }}
       items={invoiceLines}
       totalVehicleValue={inv.subtotal}
       totalDiscounts={0}
