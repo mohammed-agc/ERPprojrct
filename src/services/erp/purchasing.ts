@@ -1033,6 +1033,7 @@ export const purchasingService = {
     if (inv.status === "paid" || inv.status === "cancelled") return undefined;
     const remaining = inv.total - inv.paid;
     const amount = Math.min(input.amount, remaining);
+    if (amount <= 0) return undefined;
     const year = new Date().getFullYear();
     const seq = db.payments.filter(p => p.code.startsWith(`PPAY-${year}`)).length + 33;
     const pay: PurchasePayment = {
@@ -1044,11 +1045,34 @@ export const purchasingService = {
     };
     db.payments.unshift(pay);
     inv.paid += amount;
-    inv.status = inv.paid >= inv.total ? "paid" : "partially_paid";
-    // Credit utilization affects supplier balance
+    inv.status = computeInvoiceStatus(inv);
+    const sup = db.suppliers.find(s => s.id === inv.supplier_id);
     if (input.method === "credit_utilization") {
-      const sup = db.suppliers.find(s => s.id === inv.supplier_id);
-      if (sup) sup.utilized = Math.max(0, sup.utilized - amount);
+      // Settling via supplier credit CONSUMES the credit line.
+      if (sup) sup.utilized = Math.max(0, sup.utilized + amount);
+      // Ledger: payment leg (debit invoice) + credit utilization mirror
+      db.supplier_ledger.unshift({
+        id: uid("sl"), supplier_id: inv.supplier_id, at: pay.paid_at,
+        kind: "payment_credit", reference: pay.code,
+        invoice_id: inv.id, payment_id: pay.id,
+        description: `تسوية فاتورة ${inv.code} عبر الحد الائتماني`,
+        debit: amount, credit: 0, credit_delta: 0,
+      });
+      db.supplier_ledger.unshift({
+        id: uid("sl"), supplier_id: inv.supplier_id, at: pay.paid_at,
+        kind: "credit_utilization", reference: pay.code,
+        invoice_id: inv.id, payment_id: pay.id,
+        description: `استخدام حد ائتماني — ${inv.code}`,
+        debit: 0, credit: 0, credit_delta: amount,
+      });
+    } else {
+      db.supplier_ledger.unshift({
+        id: uid("sl"), supplier_id: inv.supplier_id, at: pay.paid_at,
+        kind: "payment_cash", reference: pay.code,
+        invoice_id: inv.id, payment_id: pay.id,
+        description: `سداد فاتورة ${inv.code} — ${PAYMENT_METHOD_LABEL[input.method] ?? input.method}`,
+        debit: amount, credit: 0, credit_delta: 0,
+      });
     }
     save(db);
     return pay;
