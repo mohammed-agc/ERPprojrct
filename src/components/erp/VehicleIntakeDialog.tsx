@@ -300,7 +300,6 @@ export function VehicleIntakeDialog({ open, onOpenChange, inspection, po, onCrea
                         </div>
                       )}
                     </td>
-                    <td><Input dir="ltr" className="h-7 font-mono text-xs" value={r.chassis} onChange={e => update(r.uid, { chassis: e.target.value })} /></td>
                     <td><Input dir="ltr" className="h-7 font-mono text-xs" value={r.engine} onChange={e => update(r.uid, { engine: e.target.value })} /></td>
                     <td><Input className="h-7 text-xs" value={r.color} onChange={e => update(r.uid, { color: e.target.value })} /></td>
                     <td><Input className="h-7 text-xs num" type="number" dir="ltr" value={r.mileage} onChange={e => update(r.uid, { mileage: Number(e.target.value) })} /></td>
