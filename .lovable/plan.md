@@ -1,119 +1,91 @@
-# مركز إدارة النظام (System Administration)
+# Purchasing Governance v1.4 — Implementation Plan
 
-بناء قسم إداري موحّد متاح للمسؤولين فقط، يجمع كل أدوات الحوكمة والمستخدمين والإعدادات والبيانات الرئيسية والتدقيق وأدوات الـ UAT في واجهة واحدة بنمط ERP المؤسسي.
+Two coordinated frontend changes on top of the existing `purchasingService` / `allocationService` / `inventoryService` mock layer. No DB schema changes are needed: supplier credit, allocations, invoices, GRN, inspection, and vehicle intake already exist as services — we wire them into a coherent flow.
 
-## 1. البنية والتنقل
+---
 
-مسار جذر جديد `/admin` محمي بـ `isAdmin` فقط (redirect إلى Dashboard إن لم يكن مسؤولاً). يُضاف في الشريط الجانبي قسم منفصل **"إدارة النظام"** بأيقونة `ShieldCheck`، يظهر فقط حين `isAdmin === true`.
+## 1. Supplier Credit Management in Payment Dialog
 
-```text
-/admin                         → Admin Dashboard (KPIs)
-/admin/users                   → المستخدمون
-/admin/roles                   → الأدوار
-/admin/permissions             → مصفوفة الصلاحيات
-/admin/sessions                → الجلسات النشطة
-/admin/login-history           → سجل تسجيل الدخول
-/admin/audit                   → مركز التدقيق
-/admin/settings/company        → بيانات الشركة
-/admin/settings/branches       → الفروع
-/admin/settings/warehouses     → المستودعات
-/admin/settings/tax            → إعدادات الضريبة
-/admin/settings/sequences      → تسلسل المستندات
-/admin/settings/templates      → قوالب الطباعة
-/admin/master-data             → مركز البيانات الرئيسية (روابط)
-/admin/uat                     → أدوات UAT
+**Goal:** When paying a Purchase Invoice, show the supplier's live credit position and allow mixed settlement (Credit + Cash/Transfer/POS/Cheque).
+
+### Changes
+- Extend `PaymentDialog` (or create a thin `SupplierPaymentDialog` wrapper used by `PurchaseInvoices` and `PurchaseInvoiceDetail`) to accept supplier credit context:
+  - `credit_limit`, `credit_utilized`, `credit_remaining`, `credit_expiry`, `credit_status`.
+- New **Supplier Credit Summary** card at the top of the dialog:
+  - 4 KPI tiles: Limit / Utilized / Remaining / Current Invoice.
+  - Status badge (Active / Expired / Suspended).
+  - Auto verdict:
+    - `remaining >= invoice_due` → green "✓ الائتمان يغطي الفاتورة" + enable **Pay via Credit**.
+    - `remaining < invoice_due` → amber "⚠ الائتمان لا يغطي الفاتورة بالكامل" + propose **Mixed Settlement** with auto-split (credit = remaining, cash = invoice − remaining).
+- Payment method selector expanded to: `cash | bank_transfer | pos | supplier_credit | mixed | cheque`.
+- **Mixed mode**: two inputs (Credit portion, Cash/Transfer portion) with live validation `credit ≤ remaining` and `credit + cash = invoice_due`.
+- `purchasingService.recordPurchasePayment` already exists; add a sibling `recordMixedPurchasePayment({invoice_id, credit_amount, cash_amount, cash_method, reference})` that:
+  1. Calls `supplierCreditService.utilize(supplier_id, credit_amount, invoice_code)` (already present) when `credit_amount > 0`.
+  2. Calls existing `recordPurchasePayment` for the cash portion with method `credit_utilization` for the credit leg and the chosen cash method for the rest.
+  3. Marks invoice `paid` only when `credit + cash + prior_paid = total`.
+- Supplier Account Statement already aggregates payments by supplier — credit utilization entries flow in automatically via the existing payments ledger; verify the entries carry `method: "credit_utilization"` so they render correctly.
+
+### Files
+- `src/components/erp/PaymentDialog.tsx` — add `supplierCredit` prop, credit summary block, mixed mode UI, POS method.
+- `src/services/erp/purchasing.ts` — add `recordMixedPurchasePayment`; reuse existing supplier-credit utilization.
+- `src/pages/purchasing/PurchaseInvoices.tsx` + `src/pages/purchasing/PurchaseInvoiceDetail.tsx` — pass supplier credit context into the dialog; route mixed submits through the new service call.
+
+---
+
+## 2. Connected Receiving → Inspection → Inventory Workflow
+
+**Goal:** Single VIN-driven flow. User enters Invoice # or PO #; system loads everything; no re-entry.
+
+### New unified screen: `ReceivingWorkbench`
+Route: `/purchasing/receiving/workbench` (added to sidebar next to existing Receiving list, which remains as the registry).
+
+Three-step stepper inside one page (no navigation away):
+
+```
+[1] Load Document  →  [2] Receive & Inspect  →  [3] Post to Inventory
 ```
 
-## 2. لوحة المسؤول (KPIs)
+**Step 1 — Load:**
+- Input + autocomplete for Purchase Invoice # OR Purchase Order #.
+- On select: resolve supplier, PO, linked invoice(s), and confirmed allocation lines via `getPoVehicleUnits(poId)` (already implemented). Show read-only summary card with supplier / PO / invoice / allocation code.
+- Gate: invoice must be `paid` (per spec "Paid → Ready For Receiving") — show banner + block step 2 otherwise.
 
-بطاقات أعلى الصفحة:
-- إجمالي المستخدمين / المستخدمون النشطون (آخر 30 يوم)
-- الموافقات المعلّقة
-- أوامر الشراء المفتوحة
-- قيمة المخزون
-- الذمم المدينة المستحقة
-- الذمم الدائنة المستحقة
+**Step 2 — Receive & Inspect (combined table, one row per VIN):**
+Columns prefilled from allocation (no edit on identity):
+`VIN · Engine No · Manufacturer · Model · Trim · Year · Color · Cost`
+Editable per row:
+- Physical condition (ok / minor_damage / damaged)
+- VIN verified ✓
+- Engine verified ✓
+- Color/Model/Trim verified ✓
+- Result: `passed | rejected | pending`
+- Notes
+Bulk actions: "Verify all", "Pass all OK".
 
-كل بطاقة قابلة للنقر تنقل إلى الوحدة المعنية. تُجمع القيم من الخدمات الحالية: `purchasingService`, `salesService`, `inventoryService`, `accountingService`, وعدد المستخدمين من `profiles`.
+Creating the GRN + Inspection records happens together when the user clicks **Confirm Receiving & Inspection**:
+- `purchasingService.createGRN(...)` from selected lines (existing).
+- `purchasingService.recordInspection(...)` with per-line passed/failed (existing) — triggers the existing `inventoryIntegration.onInspectionApproved` hook.
 
-## 3. إدارة المستخدمين
+**Step 3 — Post to Inventory:**
+- Lists `passed` VINs only.
+- Single button **"Post Vehicles to Inventory"** calls the existing `VehicleIntakeDialog` payload path (`recordVehicleIntake` + Supabase `vehicles` insert) using data already in hand — no manual fields.
+- On success: success screen with links to Vehicle Inventory filtered by these VINs, plus "Start another" reset.
 
-تطوير `UsersAdmin.tsx` الحالي إلى صفحة موسّعة:
-- جدول: الاسم • البريد • القسم • الأدوار • آخر دخول • الحالة
-- إجراءات: تعيين قسم • إضافة/إزالة دور • إعادة تعيين كلمة مرور (عبر `supabase.auth.admin` في Edge Function) • تعطيل/تفعيل
-- تبويبات فرعية: **الجلسات النشطة** و**سجل تسجيل الدخول** (يُقرأ من `auth.audit_log_entries` عبر Edge Function بصلاحية service_role).
+### VIN Governance Verification
+Add a helper `assertVinChainIntact(vin)` (in `src/lib/vinChain.ts`) that confirms a VIN exists in: allocation → invoice line note/ref → GRN → inspection → inventory. Surfaced as a small "VIN chain ✓" badge per row in step 2/3 (read-only, doesn't block).
 
-## 4. الأدوار الافتراضية
+### Files
+- `src/pages/purchasing/ReceivingWorkbench.tsx` — new unified screen.
+- `src/lib/vinChain.ts` — new helper.
+- `src/App.tsx` — register route.
+- `src/components/layout/AppSidebar.tsx` — add "ورشة الاستلام" entry under Purchasing.
+- `src/services/erp/purchasing.ts` — minor: ensure `listPurchaseInvoices` exposes `po_id` lookup by invoice number (already does); add `findInvoiceOrPoByCode(code)` convenience.
 
-توسيع enum `app_role` ليشمل القائمة المطلوبة:
-`admin, general_manager, purchasing_officer, purchasing_manager, sales_officer, sales_manager, accountant, treasury_officer, inventory_officer, receiving_officer, inspection_officer, workshop_manager, spare_parts_manager, employee`.
+The existing standalone Receiving and Inspection pages stay as registries for audit, but the *operational* path becomes the Workbench.
 
-صفحة `/admin/roles` تعرض الأدوار مع وصف عربي ومعدل المستخدمين لكل دور.
+---
 
-## 5. مصفوفة الصلاحيات
-
-استخدام `usePermissionMatrix` الموجود مع توسيع البُعدين:
-- **الأفعال السبعة:** View, Create, Edit, Approve, Delete, Print, Export.
-- **الوحدات:** Purchasing, Sales, Inventory, Accounting, Treasury, Master Data, Admin.
-
-شبكة قابلة للتحرير (Checkbox) مع زر حفظ موحّد. الحفظ يبقى في `permissions` provider الحالي (mock) مع إعداد البنية للهجرة لاحقاً إلى جدول `role_permissions`.
-
-## 6. مركز التدقيق
-
-تطوير `AuditCenter.tsx` ليقرأ من جدول جديد `audit_log` (user_id, action, module, document_type, document_id, document_code, payload jsonb, created_at) مع فلاتر: المستخدم • الوحدة • النوع • النطاق الزمني • بحث نصي. تصدير CSV.
-
-## 7. إعدادات النظام
-
-كل صفحة في `/admin/settings/*` تعرض نموذجاً قابلاً للحفظ مخزّن في localStorage envelope `sarat.admin.settings.v1` (نمط بقية الـ ERP) مع توحيد الواجهة:
-- بيانات الشركة (الاسم، الرقم الضريبي، السجل، العنوان، الشعار، أرقام التواصل).
-- الفروع، المستودعات: CRUD بسيط.
-- الضريبة: نسبة افتراضية، طريقة احتساب، رقم تسجيل.
-- تسلسل المستندات: لكل نوع (PR, PO, GRN, SI, ...) بادئة + رقم بداية + طول الرقم.
-- قوالب الطباعة: اختيار شعار/ألوان/تذييل لكل مستند.
-
-## 8. مركز البيانات الرئيسية
-
-صفحة هبوط `/admin/master-data` تعرض شبكة بطاقات تنقل إلى الصفحات الموجودة: المنتجات، الشركات المصنعة، الموديلات، الفئات، الألوان، جهات الاتصال.
-
-## 9. أدوات UAT
-
-صفحة `/admin/uat` تجمع:
-- زر "تهيئة بيئة الاختبار" (يستدعي `resetTransactional`).
-- زر "زرع بيانات تجريبية" (يستدعي دوال seed الموجودة في كل service).
-- لوحة "فحص سلامة البيانات" تشغّل تحقّقات: فواتير بلا قيود، حركات مخزون بلا VIN، تخصيصات يتيمة، ...
-
-## 10. الأمان
-
-- جميع مسارات `/admin/*` محمية بـ `RequireAdmin` wrapper يستخدم `useAuth().isAdmin`.
-- إعادة تعيين كلمات المرور وقراءة سجلات auth تتم حصراً عبر Edge Function `admin-users` التي تتحقق من JWT + صلاحية admin قبل استخدام service_role.
-- جدول `audit_log` بـ RLS: قراءة لـ admin/manager فقط، إدراج للجميع المصادَق عليهم.
-
-## التفاصيل التقنية
-
-**ملفات جديدة:**
-- `src/pages/admin/AdminLayout.tsx` (RequireAdmin + sub-sidebar)
-- `src/pages/admin/AdminDashboard.tsx`
-- `src/pages/admin/Users.tsx` (يستبدل UsersAdmin)
-- `src/pages/admin/Roles.tsx`
-- `src/pages/admin/Sessions.tsx`
-- `src/pages/admin/LoginHistory.tsx`
-- `src/pages/admin/AuditLog.tsx`
-- `src/pages/admin/settings/{Company,Branches,Warehouses,Tax,Sequences,Templates}.tsx`
-- `src/pages/admin/MasterDataHub.tsx`
-- `src/pages/admin/UatTools.tsx`
-- `src/services/erp/adminSettings.ts` (localStorage envelope)
-- `src/services/erp/auditLog.ts`
-- `supabase/functions/admin-users/index.ts`
-
-**ملفات معدّلة:**
-- `src/App.tsx` (مسارات `/admin/*`)
-- `src/components/layout/AppSidebar.tsx` (قسم إدارة النظام)
-- `src/lib/erpPermissions.ts` (إضافة الأدوار)
-
-**هجرات DB:**
-1. توسيع `app_role` enum بالأدوار الجديدة.
-2. إنشاء `public.audit_log` + RLS + GRANT.
-
-## ما هو خارج النطاق
-- تنفيذ منطق صلاحيات كامل في الـ backend لكل عملية (يظل في الطبقة الأمامية حالياً مع جاهزية للترحيل).
-- واجهة تحرير قوالب الطباعة بالـ drag-and-drop (يُكتفى بالحقول الأساسية).
+## Out of Scope
+- No DB schema migrations (all data already lives in service layer / existing tables).
+- No changes to Sales/Delivery — only verifying VIN appears unchanged downstream (it already does via `inventoryIntegration.onDeliveryCompleted`).
+- No new permissions — uses existing purchasing permission codes.
