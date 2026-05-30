@@ -360,8 +360,7 @@ export default function VehicleDetail() {
               <Car className="h-4 w-4 text-primary" /> المواصفات
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-y-3 gap-x-4 text-sm">
-              <Spec label="VIN" value={vehicle.vin} mono />
-              <Spec label="رقم الهيكل" value={meta.chassis} mono />
+              <Spec label="رقم الهيكل (VIN)" value={vehicle.vin} mono />
               <Spec label="رقم المحرك" value={meta.engine} mono />
               <Spec label="السنة" value={vehicle.year} />
               <Spec label="اللون" value={vehicle.color} />
