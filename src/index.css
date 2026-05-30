@@ -202,11 +202,28 @@
     border-color: #ccc !important;
   }
 
-  /* Natural pagination: tables flow across pages, headers repeat */
-  table { page-break-inside: auto; break-inside: auto; }
-  thead { display: table-header-group; }
-  tfoot { display: table-footer-group; }
-  tr, h1, h2, h3 { page-break-inside: avoid; break-inside: avoid; }
+  /* Natural pagination: tables flow across pages, thead repeats on every page.
+     `display: table-header-group` is what tells the print engine to repeat the
+     header band. It must be set on <thead> AND the table must NOT be wrapped
+     in any ancestor with overflow:hidden / position:absolute / display:flex —
+     those break the table-header-group repeat in Chromium and WebKit. */
+  table { page-break-inside: auto !important; break-inside: auto !important; border-collapse: collapse !important; }
+  thead { display: table-header-group !important; break-inside: avoid !important; }
+  tfoot { display: table-footer-group !important; break-inside: avoid !important; }
+  tbody { break-inside: auto !important; }
+  tr    { page-break-inside: avoid !important; break-inside: avoid !important; }
+  h1, h2, h3 { page-break-inside: avoid; break-inside: avoid; }
+
+  /* Repeated header rows must keep their fill color on every page */
+  .erp-table thead, .erp-table thead tr, .erp-table thead th {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Ensure no ancestor of the items table suppresses thead repetition */
+  .print-area, .print-area * {
+    overflow: visible !important;
+  }
 
   /* Keep-together blocks (Financial Summary, Signatures, etc.) */
   .avoid-break, .keep-together {
