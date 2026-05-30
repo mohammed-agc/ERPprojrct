@@ -162,16 +162,66 @@ export default function Invoices() {
                   <td><Badge variant={statusMap[r.status]?.variant}>{statusMap[r.status]?.label}</Badge></td>
                   <td>{paymentBadge(payStatus)}</td>
                   <td className="text-left">
-                    <ActionButton
-                      size="sm"
-                      variant="outline"
-                      permission={payPerm}
-                      hideIfDenied
-                      onClick={() => openPayment(r)}
-                      disabled={payStatus === "paid"}
-                    >
-                      <Banknote className="h-3.5 w-3.5 ml-1" /> تسجيل دفعة
-                    </ActionButton>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <DocPrintActions
+                        size="sm"
+                        doc={
+                          <PrintableInvoiceDoc
+                            variant="sales"
+                            statusKind={r.status === "paid" ? "paid" : r.status === "cancelled" ? "cancelled" : r.status === "draft" ? "draft" : "approved"}
+                            statusLabel={statusMap[r.status]?.label ?? r.status}
+                            invoice_no={r.invoice_no}
+                            invoice_date={r.invoice_date}
+                            supply_date={r.invoice_date}
+                            branch={r.branch ?? undefined}
+                            payment_method={r.payment_method ?? "—"}
+                            payment_method_key={r.payment_method}
+                            seller={{
+                              name: "ساراط للسيارات",
+                              cr_number: "1010000000",
+                              vat_number: "300000000000003",
+                              address: "المملكة العربية السعودية — الرياض",
+                              contact: "+966 11 000 0000",
+                            }}
+                            buyer={{ name: r.customers?.name ?? "—" }}
+                            erpRefs={{
+                              so: r.sales_order_no ?? r.sales_order_id ?? undefined,
+                              si: r.invoice_no,
+                            }}
+                            items={
+                              (vehs.length > 0 ? vehs : [null]).map((v): InvoiceLine => v ? {
+                                vin: v.vin,
+                                description: `${v.brand ?? ""} ${v.model ?? ""}`.trim() || v.name || "مركبة",
+                                color: v.color,
+                                model_year: v.year,
+                                base_price: Number(r.subtotal) / Math.max(1, vehs.length),
+                                discount: 0,
+                                vat_pct: 15,
+                              } : {
+                                description: "بنود الفاتورة",
+                                base_price: Number(r.subtotal),
+                                vat_pct: 15,
+                              })
+                            }
+                            totalVehicleValue={Number(r.subtotal)}
+                            netBeforeVat={Number(r.subtotal)}
+                            vatAmount={Number(r.vat_amount)}
+                            finalTotal={total}
+                            notes={r.notes ?? undefined}
+                          />
+                        }
+                      />
+                      <ActionButton
+                        size="sm"
+                        variant="outline"
+                        permission={payPerm}
+                        hideIfDenied
+                        onClick={() => openPayment(r)}
+                        disabled={payStatus === "paid"}
+                      >
+                        <Banknote className="h-3.5 w-3.5 ml-1" /> تسجيل دفعة
+                      </ActionButton>
+                    </div>
                   </td>
                 </tr>
               );
