@@ -536,6 +536,8 @@ function normalizeDB(input: Partial<DB>): DB {
     invoices: Array.isArray(input.invoices) ? input.invoices : [],
     payments: Array.isArray(input.payments) ? input.payments : [],
     supplier_ledger: Array.isArray(input.supplier_ledger) ? input.supplier_ledger : [],
+    incentive_programs: Array.isArray(input.incentive_programs) ? input.incentive_programs : [],
+    incentive_claims: Array.isArray(input.incentive_claims) ? input.incentive_claims : [],
   };
 }
 
