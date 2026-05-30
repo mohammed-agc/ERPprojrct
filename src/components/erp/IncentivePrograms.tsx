@@ -16,6 +16,7 @@ import {
 } from "@/services/erp/purchasing";
 import { cn } from "@/lib/utils";
 import { useIncentivePermissions } from "@/lib/incentivePermissions";
+import { ensureIncentiveAccess } from "@/lib/incentiveAuthzApi";
 import { useAuth } from "@/contexts/AuthContext";
 
 const STATUS_LABEL: Record<IncentiveProgramStatus, string> = {
@@ -65,7 +66,10 @@ export function IncentivePrograms({ supplierId }: { supplierId: string }) {
           <Trophy className="h-3.5 w-3.5 text-warning" /> برامج الحوافز
         </CardTitle>
         {perms.canManage && (
-          <Button size="sm" className="h-7 px-2 text-[11px]" onClick={() => setCreateOpen(true)}>
+          <Button size="sm" className="h-7 px-2 text-[11px]" onClick={async () => {
+            try { await ensureIncentiveAccess("manage"); } catch (e) { toast.error((e as Error).message); return; }
+            setCreateOpen(true);
+          }}>
             <Plus className="h-3 w-3 ml-1" /> برنامج جديد
           </Button>
         )}
@@ -100,11 +104,15 @@ export function IncentivePrograms({ supplierId }: { supplierId: string }) {
                 </div>
                 {perms.canManage && (
                   <div className="flex items-center gap-1">
-                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditProgram(p)}>
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={async () => {
+                      try { await ensureIncentiveAccess("manage"); } catch (e) { toast.error((e as Error).message); return; }
+                      setEditProgram(p);
+                    }}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
                     <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                      onClick={() => {
+                      onClick={async () => {
+                        try { await ensureIncentiveAccess("manage"); } catch (e) { toast.error((e as Error).message); return; }
                         if (confirm(`حذف برنامج "${p.name}"؟`)) {
                           purchasingService.deleteIncentiveProgram(p.id);
                           toast.success("تم حذف البرنامج"); refresh();
@@ -236,7 +244,8 @@ function PendingClaimRow({
         <>
           <Button
             size="sm" className="h-6 px-2 text-[10px]"
-            onClick={() => {
+            onClick={async () => {
+              try { await ensureIncentiveAccess("approve"); } catch (e) { toast.error((e as Error).message); return; }
               const r = purchasingService.approveIncentiveClaim(claim.id, approver);
               if ("error" in r) { toast.error(r.error); return; }
               onApproved();
@@ -293,10 +302,12 @@ function ProgramFormDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seedFrom, open]);
 
-  const submit = () => {
+  const submit = async () => {
     if (!form.name.trim()) { toast.error("اسم البرنامج مطلوب"); return; }
     if (form.target_vehicles <= 0) { toast.error("الهدف يجب أن يكون أكبر من صفر"); return; }
     if (form.end_date < form.start_date) { toast.error("تاريخ النهاية قبل تاريخ البداية"); return; }
+    try { await ensureIncentiveAccess("manage"); }
+    catch (e) { toast.error((e as Error).message); return; }
     purchasingService.upsertIncentiveProgram({
       id: program?.id,
       supplier_id: supplierId,
@@ -404,7 +415,9 @@ function ClaimDialog({
 
   if (!program || !perf) return null;
 
-  const submit = () => {
+  const submit = async () => {
+    try { await ensureIncentiveAccess("manage"); }
+    catch (e) { toast.error((e as Error).message); return; }
     const r = purchasingService.createIncentiveClaim({
       program_id: program.id, amount: Number(amount), mode, reference: reference || undefined,
       requested_by: profile?.full_name || undefined,
@@ -486,8 +499,10 @@ function RejectDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
-          <Button variant="destructive" onClick={() => {
+          <Button variant="destructive" onClick={async () => {
             if (!reason.trim()) { toast.error("سبب الرفض مطلوب"); return; }
+            try { await ensureIncentiveAccess("approve"); }
+            catch (e) { toast.error((e as Error).message); return; }
             const r = purchasingService.rejectIncentiveClaim(
               claim.id, profile?.full_name || "مدير المشتريات", reason.trim(),
             );

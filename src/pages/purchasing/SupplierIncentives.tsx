@@ -1,12 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trophy, Target, TrendingUp, Info, Search, Sparkles, ExternalLink, ShieldAlert } from "lucide-react";
+import { Trophy, Target, TrendingUp, Info, Search, Sparkles, ExternalLink, ShieldAlert, Loader2 } from "lucide-react";
 import { purchasingService, fmtSAR, fmtDate, type IncentiveProgramStatus } from "@/services/erp/purchasing";
 import { useIncentivePermissions } from "@/lib/incentivePermissions";
+import { checkIncentiveAccess } from "@/lib/incentiveAuthzApi";
 
 const STATUS_LABEL: Record<IncentiveProgramStatus, string> = {
   active: "نشط", closed: "مغلق", achieved: "محقق",
@@ -21,6 +22,20 @@ export default function SupplierIncentives() {
   const perms = useIncentivePermissions();
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | IncentiveProgramStatus>("all");
+  const [backendCheck, setBackendCheck] = useState<{ loading: boolean; allowed: boolean; reason?: string }>({
+    loading: true, allowed: false,
+  });
+
+  // Authoritative server-side gate. UI hint (`perms.canView`) may be optimistic;
+  // this edge-function call is what actually authorizes listing.
+  useEffect(() => {
+    let cancelled = false;
+    checkIncentiveAccess("view").then((r) => {
+      if (cancelled) return;
+      setBackendCheck({ loading: false, allowed: r.allowed, reason: r.reason });
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const suppliers = useMemo(() => purchasingService.listSuppliers(), []);
   const programs = useMemo(() => purchasingService.listIncentivePrograms(), []);
@@ -52,7 +67,19 @@ export default function SupplierIncentives() {
     remaining: filtered.reduce((s, r) => s + r.perf.remaining_incentive, 0),
   }), [filtered]);
 
-  if (!perms.canView) {
+  if (backendCheck.loading) {
+    return (
+      <div>
+        <PageHeader title="حوافز الموردين" subtitle="جاري التحقق من الصلاحية..." />
+        <div className="bg-card border border-border rounded-lg p-8 text-center">
+          <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto mb-2" />
+          <div className="text-xs text-muted-foreground">جاري التحقق من صلاحيات الوصول من الخادم...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!perms.canView || !backendCheck.allowed) {
     return (
       <div>
         <PageHeader title="حوافز الموردين" subtitle="وصول مقيّد" />
@@ -60,7 +87,7 @@ export default function SupplierIncentives() {
           <ShieldAlert className="h-8 w-8 text-destructive mx-auto mb-2" />
           <div className="text-sm font-semibold mb-1">لا تملك صلاحية الوصول</div>
           <div className="text-xs text-muted-foreground">
-            هذه الشاشة مخصصة لمستخدمي إدارة المشتريات أو المحاسبة فقط.
+            {backendCheck.reason ?? "هذه الشاشة مخصصة لمستخدمي إدارة المشتريات أو المحاسبة فقط."}
           </div>
         </div>
       </div>
