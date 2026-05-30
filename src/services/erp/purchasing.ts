@@ -282,6 +282,38 @@ export interface SupplierLedgerEntry {
   credit_delta: number;
 }
 
+/* ============================ Incentive Programs ============================ */
+export type IncentiveProgramStatus = "active" | "closed" | "achieved";
+
+export interface IncentiveProgram {
+  id: string;
+  supplier_id: string;
+  name: string;
+  start_date: string;            // ISO date (yyyy-mm-dd)
+  end_date: string;              // ISO date
+  target_vehicles: number;
+  incentive_per_vehicle: number; // SAR
+  brand?: string;                // optional filter (case-insensitive contains)
+  model?: string;                // optional filter (case-insensitive contains)
+  status: IncentiveProgramStatus;
+  notes?: string;
+  created_at: string;
+}
+
+export type IncentiveClaimMode = "claim" | "credit"; // cash payout vs offset against supplier credit/payable
+
+export interface IncentiveClaim {
+  id: string;
+  code: string;                  // INC-2026-0001
+  program_id: string;
+  supplier_id: string;
+  amount: number;
+  mode: IncentiveClaimMode;
+  reference?: string;
+  notes?: string;
+  created_at: string;
+}
+
 interface DB {
   suppliers: Supplier[];
   prs: PurchaseRequest[];
@@ -292,6 +324,8 @@ interface DB {
   invoices: PurchaseInvoice[];
   payments: PurchasePayment[];
   supplier_ledger: SupplierLedgerEntry[];
+  incentive_programs: IncentiveProgram[];
+  incentive_claims: IncentiveClaim[];
 }
 
 
