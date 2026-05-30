@@ -76,6 +76,7 @@ const AllocationConfirmations = lazy(() => import("./pages/purchasing/Allocation
 const AllocationConfirmationDetail = lazy(() => import("./pages/purchasing/AllocationConfirmationDetail"));
 const Shipments = lazy(() => import("./pages/purchasing/Shipments"));
 const Receiving = lazy(() => import("./pages/purchasing/Receiving"));
+const ReceivingWorkbench = lazy(() => import("./pages/purchasing/ReceivingWorkbench"));
 
 const Inspection = lazy(() => import("./pages/purchasing/Inspection"));
 const InspectionDetail = lazy(() => import("./pages/purchasing/InspectionDetail"));
