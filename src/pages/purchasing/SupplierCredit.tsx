@@ -9,7 +9,8 @@ import { SupplierStatementDialog } from "@/components/erp/SupplierStatementDialo
 
 export default function SupplierCredit() {
   const [q, setQ] = useState("");
-  const suppliers = useMemo(() => purchasingService.listSuppliers(), []);
+  const [stmtId, setStmtId] = useState<string | null>(null);
+  const suppliers = useMemo(() => purchasingService.listSuppliers(), [stmtId]);
 
   const filtered = useMemo(() => {
     const qv = q.trim().toLowerCase();
