@@ -256,6 +256,32 @@ export interface PurchasePayment {
   notes?: string;
 }
 
+/**
+ * Supplier ledger entry — single source of truth for supplier account
+ * statement, credit utilization, and remaining balance calculations.
+ * `credit` increases supplier liability (invoice issued).
+ * `debit`  decreases supplier liability (payment / settlement).
+ * `credit_delta` is the change applied to supplier.utilized (positive
+ * when the credit line is consumed, negative when it is released).
+ */
+export type SupplierLedgerKind =
+  | "invoice" | "payment_cash" | "payment_credit"
+  | "credit_utilization" | "adjustment";
+
+export interface SupplierLedgerEntry {
+  id: string;
+  supplier_id: string;
+  at: string;
+  kind: SupplierLedgerKind;
+  reference?: string;
+  invoice_id?: string;
+  payment_id?: string;
+  description: string;
+  debit: number;
+  credit: number;
+  credit_delta: number;
+}
+
 interface DB {
   suppliers: Supplier[];
   prs: PurchaseRequest[];
@@ -265,6 +291,7 @@ interface DB {
   inspections: InspectionRecord[];
   invoices: PurchaseInvoice[];
   payments: PurchasePayment[];
+  supplier_ledger: SupplierLedgerEntry[];
 }
 
 
