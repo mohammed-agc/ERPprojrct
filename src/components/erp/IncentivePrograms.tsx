@@ -8,13 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import { Trophy, Plus, Pencil, Trash2, CheckCircle2, Sparkles } from "lucide-react";
+import { Trophy, Plus, Pencil, Trash2, CheckCircle2, Sparkles, Clock, X, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import {
   purchasingService, fmtSAR, fmtDate,
-  type IncentiveProgram, type IncentiveProgramStatus, type IncentiveClaimMode,
+  type IncentiveProgram, type IncentiveProgramStatus, type IncentiveClaimMode, type IncentiveClaim,
 } from "@/services/erp/purchasing";
 import { cn } from "@/lib/utils";
+import { useIncentivePermissions } from "@/lib/incentivePermissions";
+import { useAuth } from "@/contexts/AuthContext";
 
 const STATUS_LABEL: Record<IncentiveProgramStatus, string> = {
   active: "نشط", closed: "مغلق", achieved: "محقق",
@@ -26,16 +28,35 @@ const STATUS_TONE: Record<IncentiveProgramStatus, string> = {
 };
 
 export function IncentivePrograms({ supplierId }: { supplierId: string }) {
+  const perms = useIncentivePermissions();
   const [tick, setTick] = useState(0);
   const refresh = () => setTick(t => t + 1);
   const [editProgram, setEditProgram] = useState<IncentiveProgram | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [claimProgram, setClaimProgram] = useState<IncentiveProgram | null>(null);
+  const [rejectClaim, setRejectClaim] = useState<IncentiveClaim | null>(null);
 
   const programs = useMemo(
     () => purchasingService.listIncentivePrograms(supplierId),
     [supplierId, tick],
   );
+
+  if (!perms.canView) {
+    return (
+      <Card>
+        <CardHeader className="p-3 pb-1">
+          <CardTitle className="text-xs flex items-center gap-1">
+            <Trophy className="h-3.5 w-3.5 text-warning" /> برامج الحوافز
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 pt-1">
+          <div className="text-[11px] text-muted-foreground text-center py-4">
+            لا تملك صلاحية عرض برامج الحوافز.
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -43,9 +64,11 @@ export function IncentivePrograms({ supplierId }: { supplierId: string }) {
         <CardTitle className="text-xs flex items-center gap-1">
           <Trophy className="h-3.5 w-3.5 text-warning" /> برامج الحوافز
         </CardTitle>
-        <Button size="sm" className="h-7 px-2 text-[11px]" onClick={() => setCreateOpen(true)}>
-          <Plus className="h-3 w-3 ml-1" /> برنامج جديد
-        </Button>
+        {perms.canManage && (
+          <Button size="sm" className="h-7 px-2 text-[11px]" onClick={() => setCreateOpen(true)}>
+            <Plus className="h-3 w-3 ml-1" /> برنامج جديد
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="p-3 pt-1 space-y-2">
         {programs.length === 0 && (
@@ -75,20 +98,22 @@ export function IncentivePrograms({ supplierId }: { supplierId: string }) {
                     {p.model && <> · الموديل: <b>{p.model}</b></>}
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditProgram(p)}>
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                    onClick={() => {
-                      if (confirm(`حذف برنامج "${p.name}"؟`)) {
-                        purchasingService.deleteIncentiveProgram(p.id);
-                        toast.success("تم حذف البرنامج"); refresh();
-                      }
-                    }}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
+                {perms.canManage && (
+                  <div className="flex items-center gap-1">
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditProgram(p)}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                      onClick={() => {
+                        if (confirm(`حذف برنامج "${p.name}"؟`)) {
+                          purchasingService.deleteIncentiveProgram(p.id);
+                          toast.success("تم حذف البرنامج"); refresh();
+                        }
+                      }}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Live performance grid */}
@@ -106,18 +131,38 @@ export function IncentivePrograms({ supplierId }: { supplierId: string }) {
                   style={{ width: `${pct}%` }} />
               </div>
 
-              {/* Earned / Claimed / Remaining */}
-              <div className="grid grid-cols-3 gap-1.5 pt-1 border-t border-border">
+              {/* Earned / Approved / Pending / Remaining */}
+              <div className="grid grid-cols-4 gap-1.5 pt-1 border-t border-border">
                 <Stat label="حافز مكتسب" value={fmtSAR(perf.earned)} />
-                <Stat label="مُطالب به" value={fmtSAR(perf.claimed)} tone="warning" />
-                <Stat label="متبقي للمطالبة" value={fmtSAR(perf.remaining_incentive)} tone="success" />
+                <Stat label="مُعتمد" value={fmtSAR(perf.claimed)} tone="success" />
+                <Stat label="قيد الاعتماد" value={fmtSAR(perf.pending)} tone="warning" />
+                <Stat label="متبقي" value={fmtSAR(perf.remaining_incentive)} />
               </div>
 
-              {/* Claim actions — only when eligible and remaining > 0 */}
-              {perf.eligible && perf.remaining_incentive > 0 && p.status !== "closed" && (
+              {/* Pending approval queue */}
+              {perf.pendingClaims.length > 0 && (
+                <div className="border border-warning/40 bg-warning/5 rounded p-2 space-y-1.5">
+                  <div className="text-[10.5px] font-semibold text-warning flex items-center gap-1">
+                    <Clock className="h-3 w-3" /> مطالبات بانتظار اعتماد المدير
+                    ({perf.pendingClaims.length})
+                  </div>
+                  {perf.pendingClaims.map(c => (
+                    <PendingClaimRow
+                      key={c.id}
+                      claim={c}
+                      canApprove={perms.canApprove}
+                      onApproved={() => { toast.success(`تم اعتماد ${c.code}`); refresh(); }}
+                      onReject={() => setRejectClaim(c)}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Submit-claim actions — only when eligible and remaining > 0 */}
+              {perms.canManage && perf.eligible && perf.remaining_incentive > 0 && p.status !== "closed" && (
                 <div className="flex items-center gap-2 pt-1">
                   <Button size="sm" className="h-7 text-[11px]" onClick={() => setClaimProgram(p)}>
-                    <CheckCircle2 className="h-3 w-3 ml-1" /> إنشاء مطالبة حافز
+                    <CheckCircle2 className="h-3 w-3 ml-1" /> تقديم مطالبة للاعتماد
                   </Button>
                   <Button size="sm" variant="outline" className="h-7 text-[11px]"
                     onClick={() => setClaimProgram({ ...p, notes: "credit" })}>
@@ -142,6 +187,11 @@ export function IncentivePrograms({ supplierId }: { supplierId: string }) {
         onOpenChange={(v) => !v && setClaimProgram(null)}
         onCreated={() => { refresh(); setClaimProgram(null); }}
       />
+      <RejectDialog
+        claim={rejectClaim}
+        onOpenChange={(v) => !v && setRejectClaim(null)}
+        onRejected={() => { refresh(); setRejectClaim(null); }}
+      />
     </Card>
   );
 }
@@ -157,6 +207,52 @@ function Stat({ label, value, sub, tone = "default" }: {
       <div className="text-[9.5px] text-muted-foreground">{label}</div>
       <div className={cn("text-xs font-bold num tabular-nums", c)}>{value}</div>
       {sub && <div className="text-[9px] text-muted-foreground">{sub}</div>}
+    </div>
+  );
+}
+
+/* ---------- Pending claim row ---------- */
+function PendingClaimRow({
+  claim, canApprove, onApproved, onReject,
+}: {
+  claim: IncentiveClaim;
+  canApprove: boolean;
+  onApproved: () => void;
+  onReject: () => void;
+}) {
+  const { profile } = useAuth();
+  const approver = profile?.full_name || "مدير المشتريات";
+  return (
+    <div className="flex items-center gap-2 text-[11px] bg-background/60 rounded px-2 py-1.5">
+      <div className="flex-1 min-w-0">
+        <div className="font-mono font-semibold">{claim.code}</div>
+        <div className="text-[10px] text-muted-foreground truncate">
+          {claim.mode === "credit" ? "خصم من الحد الائتماني" : "مطالبة حافز (ذمم)"}
+          {claim.requested_by ? ` · طلب: ${claim.requested_by}` : ""}
+        </div>
+      </div>
+      <div className="num tabular-nums font-semibold">{fmtSAR(claim.amount)}</div>
+      {canApprove ? (
+        <>
+          <Button
+            size="sm" className="h-6 px-2 text-[10px]"
+            onClick={() => {
+              const r = purchasingService.approveIncentiveClaim(claim.id, approver);
+              if ("error" in r) { toast.error(r.error); return; }
+              onApproved();
+            }}>
+            <ShieldCheck className="h-3 w-3 ml-0.5" /> اعتماد
+          </Button>
+          <Button size="sm" variant="outline" className="h-6 px-2 text-[10px] text-destructive border-destructive/40"
+            onClick={onReject}>
+            <X className="h-3 w-3" /> رفض
+          </Button>
+        </>
+      ) : (
+        <Badge variant="outline" className="text-[10px] gap-1">
+          <Clock className="h-2.5 w-2.5" /> بانتظار المدير
+        </Badge>
+      )}
     </div>
   );
 }
@@ -284,7 +380,7 @@ function ProgramFormDialog({
   );
 }
 
-/* ---------- Claim dialog ---------- */
+/* ---------- Claim dialog (submit for approval) ---------- */
 function ClaimDialog({
   program, onOpenChange, onCreated,
 }: {
@@ -292,6 +388,7 @@ function ClaimDialog({
   onOpenChange: (v: boolean) => void;
   onCreated: () => void;
 }) {
+  const { profile } = useAuth();
   const perf = program ? purchasingService.programPerformance(program) : null;
   const defaultMode: IncentiveClaimMode = program?.notes === "credit" ? "credit" : "claim";
   const [mode, setMode] = useState<IncentiveClaimMode>(defaultMode);
@@ -310,9 +407,10 @@ function ClaimDialog({
   const submit = () => {
     const r = purchasingService.createIncentiveClaim({
       program_id: program.id, amount: Number(amount), mode, reference: reference || undefined,
+      requested_by: profile?.full_name || undefined,
     });
     if ("error" in r) { toast.error(r.error); return; }
-    toast.success(`تم إنشاء المطالبة ${r.code}`);
+    toast.success(`تم إرسال المطالبة ${r.code} بانتظار اعتماد المدير`);
     onCreated();
   };
 
@@ -323,9 +421,14 @@ function ClaimDialog({
           <DialogTitle>مطالبة حافز · {program.name}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 py-2">
-          <div className="grid grid-cols-3 gap-2 text-xs">
+          <div className="bg-warning/10 border border-warning/40 rounded p-2 text-[11px] text-warning-foreground">
+            <b>سياسة الاعتماد:</b> المطالبة تُسجَّل بحالة <b>بانتظار اعتماد المدير</b>.
+            لن يتم ترحيل قيد دفتر المورد ولا تحرير الحد الائتماني إلا بعد اعتماد المدير.
+          </div>
+          <div className="grid grid-cols-4 gap-2 text-xs">
             <Stat label="مكتسب" value={fmtSAR(perf.earned)} tone="success" />
-            <Stat label="مُطالب به" value={fmtSAR(perf.claimed)} tone="warning" />
+            <Stat label="معتمد" value={fmtSAR(perf.claimed)} tone="success" />
+            <Stat label="معلّق" value={fmtSAR(perf.pending)} tone="warning" />
             <Stat label="المتبقي" value={fmtSAR(perf.remaining_incentive)} />
           </div>
           <div>
@@ -350,7 +453,48 @@ function ClaimDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
-          <Button onClick={submit}>تأكيد المطالبة</Button>
+          <Button onClick={submit}>إرسال للاعتماد</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ---------- Reject dialog ---------- */
+function RejectDialog({
+  claim, onOpenChange, onRejected,
+}: {
+  claim: IncentiveClaim | null;
+  onOpenChange: (v: boolean) => void;
+  onRejected: () => void;
+}) {
+  const { profile } = useAuth();
+  const [reason, setReason] = useState("");
+  useMemo(() => { setReason(""); }, [claim?.id]);
+  if (!claim) return null;
+
+  return (
+    <Dialog open={!!claim} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>رفض المطالبة {claim.code}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-2 py-2">
+          <Label className="text-xs">سبب الرفض</Label>
+          <Input value={reason} onChange={e => setReason(e.target.value)}
+            placeholder="مطلوب لتوثيق سبب الرفض" className="h-9 text-sm" />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
+          <Button variant="destructive" onClick={() => {
+            if (!reason.trim()) { toast.error("سبب الرفض مطلوب"); return; }
+            const r = purchasingService.rejectIncentiveClaim(
+              claim.id, profile?.full_name || "مدير المشتريات", reason.trim(),
+            );
+            if ("error" in r) { toast.error(r.error); return; }
+            toast.success(`تم رفض المطالبة ${claim.code}`);
+            onRejected();
+          }}>تأكيد الرفض</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
