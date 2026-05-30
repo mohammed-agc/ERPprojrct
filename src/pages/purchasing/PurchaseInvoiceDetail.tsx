@@ -74,7 +74,7 @@ export default function PurchaseInvoiceDetail() {
   const invoiceLines = allocLines.length > 0 ? allocLines : fallbackLines;
 
   // Locate ERP refs
-  const pr = po?.pr_id ? purchasingService.getPR?.(po.pr_id) : undefined;
+  const pr = po?.pr_id ? purchasingService.listPRs().find(r => r.id === po.pr_id) : undefined;
   const alc = allocs[0];
   const alcConf = alc?.confirmation_id;
 
