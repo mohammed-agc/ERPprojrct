@@ -103,8 +103,8 @@ export function ProcurementWorkflow({
   };
 
   const markReceived = async () => {
-    if (!p.vin_verified || !p.chassis_verified) {
-      toast.error("يجب التحقق من VIN ورقم الهيكل");
+    if (!p.vin_verified) {
+      toast.error("يجب التحقق من رقم الهيكل (VIN)");
       return;
     }
     await persist({
