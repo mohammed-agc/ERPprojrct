@@ -1395,6 +1395,9 @@ export const purchasingService = {
   /** Find the inspection currently linked to a GRN, if any. */
   getInspectionByGRN(grnId: string) {
     return load().inspections.find(i => i.grn_id === grnId);
+  },
+
+
 
   /** Record vehicle inventory ids created from an approved inspection (VIN governance). */
   recordVehicleIntake(inspectionId: string, vehicleIds: string[]) {
