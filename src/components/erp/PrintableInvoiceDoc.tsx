@@ -286,11 +286,12 @@ export function PrintableInvoiceDoc(p: PrintableInvoiceDocProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
         {showCredit && p.credit && (
           <div className="border border-amber-300 bg-amber-50 dark:bg-amber-500/10 rounded p-3 text-[10.5px]">
-            <div className="text-[10px] font-bold text-amber-900 dark:text-amber-300 mb-1.5">معلومات الحد الائتماني</div>
-            <div className="space-y-1">
-              <div className="flex justify-between"><span className="text-muted-foreground">الحد الائتماني</span><span className="font-mono font-semibold">{fmtSAR(p.credit.credit_limit)}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">المستخدم</span><span className="font-mono">{fmtSAR(p.credit.credit_used)}</span></div>
-              <div className="flex justify-between border-t border-amber-300 pt-1"><span className="font-bold">المتبقي</span><span className="font-mono font-bold">{fmtSAR(p.credit.credit_remaining)}</span></div>
+            <div className="text-[10px] font-bold text-amber-900 dark:text-amber-300 mb-1.5">معلومات الحد الائتماني للمورد</div>
+            <div className="space-y-0.5 font-mono">
+              <CreditAcctRow label="الحد الائتماني" value={p.credit.credit_limit} />
+              <CreditAcctRow label="المستخدم"      value={p.credit.credit_used} />
+              <div className="border-t border-amber-400/70 my-1" />
+              <CreditAcctRow label="المتبقي"        value={p.credit.credit_remaining} bold />
             </div>
           </div>
         )}
