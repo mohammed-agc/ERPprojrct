@@ -99,6 +99,12 @@ export default function SupplierCredit() {
           );
         })}
       </div>
+
+      <SupplierStatementDialog
+        supplierId={stmtId}
+        open={!!stmtId}
+        onOpenChange={(v) => !v && setStmtId(null)}
+      />
     </div>
   );
 }
