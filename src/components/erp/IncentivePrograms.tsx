@@ -499,8 +499,10 @@ function RejectDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
-          <Button variant="destructive" onClick={() => {
+          <Button variant="destructive" onClick={async () => {
             if (!reason.trim()) { toast.error("سبب الرفض مطلوب"); return; }
+            try { await ensureIncentiveAccess("approve"); }
+            catch (e) { toast.error((e as Error).message); return; }
             const r = purchasingService.rejectIncentiveClaim(
               claim.id, profile?.full_name || "مدير المشتريات", reason.trim(),
             );
