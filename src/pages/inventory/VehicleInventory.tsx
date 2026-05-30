@@ -99,7 +99,7 @@ export default function VehicleInventory() {
         landed_cost: Number(v.cost_price) || 0,
         status: mapDbStatus(v.status),
         reserved_for: meta.reservation?.customer_name,
-        reserved_until: meta.reservation?.until,
+        reserved_until: meta.reservation?.expires_at,
         received_at: v.created_at,
         aging_days: daysBetween(v.created_at),
         notes: meta.note,
