@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, AlertTriangle, CalendarClock, ShieldCheck } from "lucide-react";
+import { Search, AlertTriangle, CalendarClock, ShieldCheck, FileText } from "lucide-react";
 import { purchasingService, fmtSAR, fmtDate } from "@/services/erp/purchasing";
+import { SupplierStatementDialog } from "@/components/erp/SupplierStatementDialog";
 
 export default function SupplierCredit() {
   const [q, setQ] = useState("");
