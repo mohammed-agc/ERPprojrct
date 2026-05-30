@@ -67,7 +67,19 @@ export default function SupplierIncentives() {
     remaining: filtered.reduce((s, r) => s + r.perf.remaining_incentive, 0),
   }), [filtered]);
 
-  if (!perms.canView) {
+  if (backendCheck.loading) {
+    return (
+      <div>
+        <PageHeader title="حوافز الموردين" subtitle="جاري التحقق من الصلاحية..." />
+        <div className="bg-card border border-border rounded-lg p-8 text-center">
+          <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto mb-2" />
+          <div className="text-xs text-muted-foreground">جاري التحقق من صلاحيات الوصول من الخادم...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!perms.canView || !backendCheck.allowed) {
     return (
       <div>
         <PageHeader title="حوافز الموردين" subtitle="وصول مقيّد" />
@@ -75,7 +87,7 @@ export default function SupplierIncentives() {
           <ShieldAlert className="h-8 w-8 text-destructive mx-auto mb-2" />
           <div className="text-sm font-semibold mb-1">لا تملك صلاحية الوصول</div>
           <div className="text-xs text-muted-foreground">
-            هذه الشاشة مخصصة لمستخدمي إدارة المشتريات أو المحاسبة فقط.
+            {backendCheck.reason ?? "هذه الشاشة مخصصة لمستخدمي إدارة المشتريات أو المحاسبة فقط."}
           </div>
         </div>
       </div>
