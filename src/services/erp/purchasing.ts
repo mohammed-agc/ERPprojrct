@@ -301,6 +301,7 @@ export interface IncentiveProgram {
 }
 
 export type IncentiveClaimMode = "claim" | "credit"; // cash payout vs offset against supplier credit/payable
+export type IncentiveClaimStatus = "pending_approval" | "approved" | "rejected";
 
 export interface IncentiveClaim {
   id: string;
@@ -311,6 +312,13 @@ export interface IncentiveClaim {
   mode: IncentiveClaimMode;
   reference?: string;
   notes?: string;
+  status: IncentiveClaimStatus;
+  requested_by?: string;
+  approved_by?: string;
+  approved_at?: string;
+  rejected_by?: string;
+  rejected_at?: string;
+  rejection_reason?: string;
   created_at: string;
 }
 
