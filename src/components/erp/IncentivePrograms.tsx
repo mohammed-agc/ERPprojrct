@@ -302,10 +302,12 @@ function ProgramFormDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seedFrom, open]);
 
-  const submit = () => {
+  const submit = async () => {
     if (!form.name.trim()) { toast.error("اسم البرنامج مطلوب"); return; }
     if (form.target_vehicles <= 0) { toast.error("الهدف يجب أن يكون أكبر من صفر"); return; }
     if (form.end_date < form.start_date) { toast.error("تاريخ النهاية قبل تاريخ البداية"); return; }
+    try { await ensureIncentiveAccess("manage"); }
+    catch (e) { toast.error((e as Error).message); return; }
     purchasingService.upsertIncentiveProgram({
       id: program?.id,
       supplier_id: supplierId,
