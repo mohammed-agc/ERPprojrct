@@ -314,17 +314,23 @@ export function PaymentDialog({
             </Select>
           </div>
 
-          {/* Account */}
+          {/* Account — only for methods that move cash/bank funds */}
           <div className="space-y-1">
             <Label className="text-xs">الحساب المالي</Label>
-            <Select value={accountId} onValueChange={setAccountId}>
-              <SelectTrigger className="h-9"><SelectValue placeholder="اختر الحساب" /></SelectTrigger>
-              <SelectContent>
-                {accounts.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>{a.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {needsFinancialAccount ? (
+              <Select value={accountId} onValueChange={setAccountId}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="اختر الحساب" /></SelectTrigger>
+                <SelectContent>
+                  {accounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>{a.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="h-9 rounded-md border bg-muted/40 px-3 flex items-center text-xs text-muted-foreground">
+                غير مطلوب — دفع عبر ائتمان مورد
+              </div>
+            )}
           </div>
 
           {method === "mixed" ? (
