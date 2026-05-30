@@ -8,6 +8,8 @@ import { canPerform } from "@/lib/erpPermissions";
 import { Banknote } from "lucide-react";
 import { toast } from "sonner";
 import { PaymentDialog, PaymentSubmitPayload, PaymentInvoiceContext } from "@/components/erp/PaymentDialog";
+import { DocPrintActions } from "@/components/erp/DocPrintActions";
+import { PrintableInvoiceDoc, type InvoiceLine } from "@/components/erp/PrintableInvoiceDoc";
 
 const statusMap: Record<string, { label: string; variant: any }> = {
   draft: { label: "مسودة", variant: "secondary" },
