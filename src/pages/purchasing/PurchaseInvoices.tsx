@@ -66,17 +66,39 @@ export default function PurchaseInvoices() {
     id: activeInv.id, invoice_no: activeInv.code,
     customer_name: activeSupplier?.name, total: activeInv.total, paid_amount: activeInv.paid,
   } : null;
+  const supplierCreditCtx: SupplierCreditContext | null = activeSupplier ? {
+    supplier_name: activeSupplier.name,
+    credit_limit: activeSupplier.credit_limit,
+    credit_utilized: activeSupplier.utilized,
+    credit_remaining: Math.max(0, activeSupplier.credit_limit - activeSupplier.utilized),
+    credit_expiry: activeSupplier.agreement_expiry,
+    credit_status: new Date(activeSupplier.agreement_expiry) < new Date()
+      ? "expired"
+      : activeSupplier.utilized > activeSupplier.credit_limit ? "suspended" : "active",
+  } : null;
   const [submitting, setSubmitting] = useState(false);
   const handleSubmitPayment = async (p: PaymentSubmitPayload) => {
     setSubmitting(true);
     try {
-      const r = purchasingService.recordPurchasePayment({
-        invoice_id: p.invoiceId, amount: p.amount,
-        method: METHOD_MAP[p.method] ?? "bank_transfer",
-        reference: p.reference || undefined,
-      });
-      if (!r) { toast.error("تعذر تسجيل الدفعة"); return; }
-      toast.success(`تم تسجيل الدفعة ${r.code}`);
+      if (p.method === "mixed") {
+        const res = purchasingService.recordMixedPurchasePayment({
+          invoice_id: p.invoiceId,
+          credit_amount: p.creditAmount ?? 0,
+          cash_amount: p.cashAmount ?? 0,
+          cash_method: METHOD_MAP[p.cashMethod ?? "bank_transfer"] ?? "bank_transfer",
+          reference: p.reference || undefined,
+        });
+        if (res.error) { toast.error(res.error); return; }
+        toast.success("تم تسجيل التسوية المختلطة");
+      } else {
+        const r = purchasingService.recordPurchasePayment({
+          invoice_id: p.invoiceId, amount: p.amount,
+          method: METHOD_MAP[p.method] ?? "bank_transfer",
+          reference: p.reference || undefined,
+        });
+        if (!r) { toast.error("تعذر تسجيل الدفعة"); return; }
+        toast.success(`تم تسجيل الدفعة ${r.code}`);
+      }
       setPayOpen(null); refresh();
     } finally { setSubmitting(false); }
   };
