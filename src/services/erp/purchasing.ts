@@ -508,6 +508,8 @@ function seed(): DB {
     invoices: [pinv1, pinv2],
     payments: [ppay1, ppay2],
     supplier_ledger: [],
+    incentive_programs: [],
+    incentive_claims: [],
   };
 }
 
