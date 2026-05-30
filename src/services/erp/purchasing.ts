@@ -741,6 +741,26 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   cheque: "شيك", credit_utilization: "استخدام حد ائتماني",
 };
 
+/**
+ * Canonical invoice payment status — single source of truth used by:
+ * Payment Dialog, Purchase Invoice Detail, Purchase Invoice Registry,
+ * and the Printable Invoice. Rules:
+ *   outstanding = 0          → paid
+ *   outstanding > 0 & paid>0 → partially_paid
+ *   paid = 0                 → issued (UNPAID)
+ * `cancelled` and `draft` are preserved.
+ */
+export function computeInvoiceStatus(
+  inv: { total: number; paid: number; status?: InvoiceStatus },
+): InvoiceStatus {
+  if (inv.status === "cancelled") return "cancelled";
+  if (inv.status === "draft") return "draft";
+  const outstanding = Math.max(0, (inv.total ?? 0) - (inv.paid ?? 0));
+  if (outstanding <= 0.001) return "paid";
+  if ((inv.paid ?? 0) > 0) return "partially_paid";
+  return "issued";
+}
+
 /** ERP purchasing workflow stages (governance steps). */
 export const PURCHASING_WORKFLOW = [
   { key: "pr", label: "طلب شراء" },
