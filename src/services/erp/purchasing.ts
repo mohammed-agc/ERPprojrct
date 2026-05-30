@@ -835,6 +835,43 @@ export const purchasingService = {
     return { vehicles: s.achieved, total: s.achieved * s.incentive_per_vehicle, target: s.monthly_target };
   },
 
+  /* ============ Supplier Ledger / Account Statement ============ */
+  listSupplierLedger(supplierId: string): SupplierLedgerEntry[] {
+    return load().supplier_ledger
+      .filter(e => e.supplier_id === supplierId)
+      .sort((a, b) => a.at.localeCompare(b.at));
+  },
+  /**
+   * Build a supplier account statement with running balance and a
+   * point-in-time credit utilization. The running balance reflects payable
+   * (credit - debit); `credit_used` is the supplier credit consumed.
+   */
+  supplierStatement(supplierId: string) {
+    const sup = load().suppliers.find(s => s.id === supplierId);
+    const lines = this.listSupplierLedger(supplierId);
+    let balance = 0;
+    let credit_used = 0;
+    const rows = lines.map(l => {
+      balance += (l.credit ?? 0) - (l.debit ?? 0);
+      credit_used += l.credit_delta ?? 0;
+      return { ...l, running_balance: balance, running_credit_used: credit_used };
+    });
+    const credit_limit = sup?.credit_limit ?? 0;
+    return {
+      supplier: sup,
+      rows,
+      totals: {
+        debit: lines.reduce((s, l) => s + (l.debit ?? 0), 0),
+        credit: lines.reduce((s, l) => s + (l.credit ?? 0), 0),
+        balance,
+        credit_limit,
+        credit_used,
+        credit_remaining: Math.max(0, credit_limit - credit_used),
+      },
+    };
+  },
+
+
   /* purchase requests */
   listPRs(): PurchaseRequest[] {
     return load().prs.slice().sort((a, b) => b.created_at.localeCompare(a.created_at));
