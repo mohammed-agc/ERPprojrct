@@ -161,7 +161,7 @@
 @media print {
   @page {
     size: A4;
-    margin: 14mm 12mm;
+    margin: 12mm 12mm;
   }
   html, body {
     background: #fff !important;
@@ -169,11 +169,22 @@
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  body * { visibility: hidden !important; }
-  .print-area, .print-area * { visibility: visible !important; }
+
+  /* Portal-based strategy: only the print host (portaled into <body>) renders.
+     Everything else at the top of <body> is removed from layout so content
+     flows naturally across pages — no absolute positioning, no blank pages. */
+  body > *:not(.doc-print-host) { display: none !important; }
+  .doc-print-host {
+    display: block !important;
+    position: static !important;
+    left: auto !important; top: auto !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
   .print-area {
-    position: absolute !important;
-    inset: 0 !important;
+    position: static !important;
     width: 100% !important;
     padding: 0 !important;
     margin: 0 !important;
@@ -181,17 +192,39 @@
     border: 0 !important;
     background: #fff !important;
   }
+
   .print\:hidden { display: none !important; }
-  /* Tighter tables for print */
+
+  /* Tight, predictable tables for print */
   .erp-table thead th,
   .erp-table tbody td {
     padding: 4px 6px !important;
     border-color: #ccc !important;
   }
-  /* Avoid awkward page breaks */
-  table, .avoid-break { page-break-inside: avoid; break-inside: avoid; }
-  tr, h1, h2, h3 { page-break-inside: avoid; break-inside: avoid; }
+
+  /* Natural pagination: tables flow across pages, headers repeat */
+  table { page-break-inside: auto; break-inside: auto; }
   thead { display: table-header-group; }
   tfoot { display: table-footer-group; }
+  tr, h1, h2, h3 { page-break-inside: avoid; break-inside: avoid; }
+
+  /* Keep-together blocks (Financial Summary, Signatures, etc.) */
+  .avoid-break, .keep-together {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Eliminate trailing empty space */
+  .print-area > *:last-child { margin-bottom: 0 !important; }
+}
+
+@media screen {
+  .doc-print-host {
+    position: fixed;
+    top: 0;
+    left: -100000px;
+    width: 210mm;
+    pointer-events: none;
+  }
 }
 
