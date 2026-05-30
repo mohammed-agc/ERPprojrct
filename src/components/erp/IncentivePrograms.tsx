@@ -16,6 +16,7 @@ import {
 } from "@/services/erp/purchasing";
 import { cn } from "@/lib/utils";
 import { useIncentivePermissions } from "@/lib/incentivePermissions";
+import { ensureIncentiveAccess } from "@/lib/incentiveAuthzApi";
 import { useAuth } from "@/contexts/AuthContext";
 
 const STATUS_LABEL: Record<IncentiveProgramStatus, string> = {
