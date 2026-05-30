@@ -415,7 +415,9 @@ function ClaimDialog({
 
   if (!program || !perf) return null;
 
-  const submit = () => {
+  const submit = async () => {
+    try { await ensureIncentiveAccess("manage"); }
+    catch (e) { toast.error((e as Error).message); return; }
     const r = purchasingService.createIncentiveClaim({
       program_id: program.id, amount: Number(amount), mode, reference: reference || undefined,
       requested_by: profile?.full_name || undefined,
