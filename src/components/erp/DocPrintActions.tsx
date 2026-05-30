@@ -1,4 +1,5 @@
-import { useState, ReactNode } from "react";
+import { useState, useEffect, ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Eye, Printer, FileDown } from "lucide-react";
@@ -15,25 +16,24 @@ interface Props {
  * Unified Preview / Print / Export PDF action bar.
  *
  * SINGLE SOURCE OF TRUTH:
- *   The same `doc` node (e.g. <PrintableInvoiceDoc />) drives all three modes.
+ *   The same `doc` node drives Preview, Print and PDF.
  *
- *   - Preview → opens an on-screen Dialog showing the doc.
- *   - Print / PDF → fires window.print(); the browser uses the always-mounted,
- *     off-screen copy below (NOT the dialog).
+ * Strategy:
+ *   - Preview → Radix Dialog (on-screen only, print:hidden).
+ *   - Print / PDF → an always-mounted copy portaled directly to <body> as a
+ *     top-level node (`.doc-print-host`). On screen it is positioned off-canvas;
+ *     on print, global CSS hides every other top-level body child via
+ *     `display:none` and lets the host flow naturally — so tables paginate,
+ *     thead repeats, and no trailing blank pages appear.
  *
- * Why an off-screen copy is required:
- *   Radix DialogContent uses CSS transforms (translate-x/y) which create a new
- *   containing block. The global print CSS positions `.print-area` with
- *   `position: absolute; inset: 0` to fill the A4 page — but a transformed
- *   ancestor clips it to the dialog box (max-w-5xl, max-h-[92vh], overflow-auto).
- *   That is why preview looked correct but print/PDF rendered cropped/different.
- *
- *   The off-screen `<div>` below is mounted directly in the page (no transform
- *   ancestors), so `.print-area` correctly fills the page when printing. The
- *   Dialog is hidden on print to prevent a duplicate, clipped print-area.
+ *   Portaling avoids transformed ancestors (Radix Dialog, layout wrappers)
+ *   which would otherwise turn `.print-area` into a clipped absolute box.
  */
 export function DocPrintActions({ doc, size = "sm" }: Props) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   return (
     <>
@@ -49,51 +49,15 @@ export function DocPrintActions({ doc, size = "sm" }: Props) {
         </Button>
       </div>
 
-      {/*
-        Always-mounted, transform-free copy used exclusively by the print pipeline.
-        Hidden on screen via fixed off-canvas positioning (NOT display:none or
-        visibility:hidden — those break print). On print, the global rules
-        (`body * { visibility: hidden }` + `.print-area, .print-area * { visibility: visible }`
-        + `.print-area { position: absolute; inset: 0 }`) take over and render
-        this copy as the full A4 document.
-      */}
-      {/*
-        Screen: positioned far off-canvas so the user never sees it.
-        Print: positioning is reset to `static` so it does NOT become the
-        containing block for `.print-area { position: absolute; inset: 0 }`.
-        Without that reset, the print-area would anchor to the off-screen
-        wrapper at left:-100000px and the printed pages would be blank.
-      */}
-      <div aria-hidden className="doc-print-host" style={{ width: "210mm" }}>
-        {doc}
-      </div>
-      <style>{`
-        @media screen {
-          .doc-print-host {
-            position: fixed;
-            top: 0;
-            left: -100000px;
-            pointer-events: none;
-          }
-        }
-        @media print {
-          .doc-print-host {
-            position: static !important;
-            left: auto !important;
-            top: auto !important;
-            width: auto !important;
-          }
-        }
-      `}</style>
+      {mounted &&
+        createPortal(
+          <div aria-hidden className="doc-print-host">
+            {doc}
+          </div>,
+          document.body
+        )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        {/*
-          Dialog is for ON-SCREEN preview only. It is hidden from print so it
-          cannot produce a second (clipped) .print-area inside the transformed
-          DialogContent. Without `print:hidden` here, the printed page would
-          show the dialog's cropped copy instead of (or on top of) the full
-          off-screen copy above.
-        */}
         <DialogContent
           dir="rtl"
           className="max-w-5xl max-h-[92vh] overflow-y-auto p-4 print:hidden"
