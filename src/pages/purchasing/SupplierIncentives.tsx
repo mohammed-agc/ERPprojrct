@@ -4,8 +4,9 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trophy, Target, TrendingUp, Info, Search, Sparkles, ExternalLink } from "lucide-react";
+import { Trophy, Target, TrendingUp, Info, Search, Sparkles, ExternalLink, ShieldAlert } from "lucide-react";
 import { purchasingService, fmtSAR, fmtDate, type IncentiveProgramStatus } from "@/services/erp/purchasing";
+import { useIncentivePermissions } from "@/lib/incentivePermissions";
 
 const STATUS_LABEL: Record<IncentiveProgramStatus, string> = {
   active: "نشط", closed: "مغلق", achieved: "محقق",
@@ -17,6 +18,7 @@ const STATUS_TONE: Record<IncentiveProgramStatus, string> = {
 };
 
 export default function SupplierIncentives() {
+  const perms = useIncentivePermissions();
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | IncentiveProgramStatus>("all");
 
@@ -50,12 +52,28 @@ export default function SupplierIncentives() {
     remaining: filtered.reduce((s, r) => s + r.perf.remaining_incentive, 0),
   }), [filtered]);
 
+  if (!perms.canView) {
+    return (
+      <div>
+        <PageHeader title="حوافز الموردين" subtitle="وصول مقيّد" />
+        <div className="bg-destructive/5 border border-destructive/30 rounded-lg p-6 text-center">
+          <ShieldAlert className="h-8 w-8 text-destructive mx-auto mb-2" />
+          <div className="text-sm font-semibold mb-1">لا تملك صلاحية الوصول</div>
+          <div className="text-xs text-muted-foreground">
+            هذه الشاشة مخصصة لمستخدمي إدارة المشتريات أو المحاسبة فقط.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <PageHeader
         title="حوافز الموردين"
         subtitle="تقرير الأداء والحوافز المكتسبة لكل برنامج — يُحتسب من فواتير الشراء المعتمدة فقط"
       />
+
 
       <div className="bg-primary/5 border border-primary/30 rounded-lg p-3 mb-4 flex items-start gap-2 text-xs">
         <Info className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
