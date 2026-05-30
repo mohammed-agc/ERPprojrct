@@ -473,6 +473,7 @@ function seed(): DB {
     inspections: [insp1, insp2],
     invoices: [pinv1, pinv2],
     payments: [ppay1, ppay2],
+    supplier_ledger: [],
   };
 }
 
