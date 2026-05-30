@@ -135,7 +135,6 @@ export default function Vehicles() {
       }
     }
     const meta: VehicleMeta = {
-      chassis: form.chassis,
       engine: form.engine,
       trim: form.trim,
       transmission: form.transmission,
