@@ -67,6 +67,7 @@ const groups: { title: string; items: NavItem[] }[] = [
       { label: "ائتمان الموردين", to: "/purchasing/credit", icon: ShieldCheck, deptCode: "vehicles" },
       { label: "حوافز الموردين", to: "/purchasing/incentives", icon: Trophy, deptCode: "vehicles" },
       { label: "الشحنات", to: "/purchasing/shipments", icon: Ship, deptCode: "vehicles" },
+      { label: "ورشة الاستلام والفحص", to: "/purchasing/receiving/workbench", icon: PackageCheck, deptCode: "vehicles" },
       { label: "الاستلام (GRN)", to: "/grn/list", icon: PackageCheck, deptCode: "vehicles" },
       { label: "الفحص والاعتماد", to: "/purchasing/inspection", icon: FileSearch, deptCode: "vehicles" },
 

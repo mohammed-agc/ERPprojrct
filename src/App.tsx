@@ -76,6 +76,7 @@ const AllocationConfirmations = lazy(() => import("./pages/purchasing/Allocation
 const AllocationConfirmationDetail = lazy(() => import("./pages/purchasing/AllocationConfirmationDetail"));
 const Shipments = lazy(() => import("./pages/purchasing/Shipments"));
 const Receiving = lazy(() => import("./pages/purchasing/Receiving"));
+const ReceivingWorkbench = lazy(() => import("./pages/purchasing/ReceivingWorkbench"));
 
 const Inspection = lazy(() => import("./pages/purchasing/Inspection"));
 const InspectionDetail = lazy(() => import("./pages/purchasing/InspectionDetail"));
@@ -186,6 +187,7 @@ const App = () => (
               <Route path="/purchasing/incentives" element={<SupplierIncentives />} />
               <Route path="/purchasing/shipments" element={<Shipments />} />
               <Route path="/purchasing/receiving" element={<Receiving />} />
+              <Route path="/purchasing/receiving/workbench" element={<ReceivingWorkbench />} />
               <Route path="/purchasing/inspection" element={<Inspection />} />
               <Route path="/purchasing/inspection/:id" element={<InspectionDetail />} />
               <Route path="/sales" element={<SalesDashboard />} />

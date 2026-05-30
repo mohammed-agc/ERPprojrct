@@ -1017,6 +1017,68 @@ export const purchasingService = {
     return pay;
   },
 
+  /**
+   * Record a MIXED settlement: part credit + part cash/transfer/cheque/pos.
+   * Both legs go through recordPurchasePayment so supplier credit utilization
+   * and the invoice ledger stay consistent. POS is recorded as bank_transfer.
+   */
+  recordMixedPurchasePayment(input: {
+    invoice_id: string;
+    credit_amount: number;
+    cash_amount: number;
+    cash_method: PaymentMethod; // cash | bank_transfer | cheque (pos→bank_transfer)
+    reference?: string;
+    notes?: string;
+  }): { credit?: PurchasePayment; cash?: PurchasePayment; error?: string } {
+    const inv = load().invoices.find(i => i.id === input.invoice_id);
+    if (!inv) return { error: "الفاتورة غير موجودة" };
+    if (inv.status === "paid" || inv.status === "cancelled") return { error: "الفاتورة مغلقة" };
+    const out: { credit?: PurchasePayment; cash?: PurchasePayment } = {};
+    if (input.credit_amount > 0) {
+      out.credit = this.recordPurchasePayment({
+        invoice_id: input.invoice_id, amount: input.credit_amount,
+        method: "credit_utilization", reference: input.reference,
+        notes: `تسوية مختلطة — ائتمان مورد. ${input.notes ?? ""}`.trim(),
+      });
+    }
+    if (input.cash_amount > 0) {
+      out.cash = this.recordPurchasePayment({
+        invoice_id: input.invoice_id, amount: input.cash_amount,
+        method: input.cash_method, reference: input.reference,
+        notes: `تسوية مختلطة — نقدي/بنكي. ${input.notes ?? ""}`.trim(),
+      });
+    }
+    return out;
+  },
+
+  /**
+   * Locate a PO + linked invoice from either a PO code or a Purchase Invoice code.
+   * Used by the Receiving Workbench to drive the whole flow off a single field.
+   */
+  findInvoiceOrPoByCode(code: string): {
+    po?: PurchaseOrder; invoice?: PurchaseInvoice; supplier?: Supplier;
+  } {
+    const q = code.trim().toUpperCase();
+    if (!q) return {};
+    const db = load();
+    const inv = db.invoices.find(i => i.code.toUpperCase() === q);
+    if (inv) {
+      const po = db.pos.find(p => p.id === inv.po_id);
+      const supplier = db.suppliers.find(s => s.id === inv.supplier_id);
+      return { po, invoice: inv, supplier };
+    }
+    const po = db.pos.find(p => p.code.toUpperCase() === q);
+    if (po) {
+      const invoices = db.invoices.filter(i => i.po_id === po.id);
+      const invoice = invoices.find(i => i.status === "paid")
+        ?? invoices.find(i => i.status === "partially_paid" || i.status === "issued")
+        ?? invoices[0];
+      const supplier = db.suppliers.find(s => s.id === po.supplier_id);
+      return { po, invoice, supplier };
+    }
+    return {};
+  },
+
   /** Aggregate paid total for a PO across all its invoices. */
   poPaymentSummary(poId: string) {
     const invs = this.invoicesForPO(poId);
@@ -1317,6 +1379,25 @@ export const purchasingService = {
       try { inventoryIntegration.onInspectionApproved(i, po); } catch (e) { console.warn("inv-integration:", e); }
     }
   },
+
+  /** Update per-line passed/failed counts on an inspection record (Workbench). */
+  updateInspectionItems(inspectionId: string, items: { line_id: string; passed: number; failed: number; remarks?: string }[]) {
+    const db = load();
+    const i = db.inspections.find(x => x.id === inspectionId); if (!i) return;
+    // Merge: replace counts for matching line_ids, keep any other items
+    const map = new Map(items.map(it => [it.line_id, it]));
+    i.items = i.items.map(it => map.get(it.line_id) ?? it);
+    // Append new lines not present yet
+    items.forEach(it => { if (!i.items.find(x => x.line_id === it.line_id)) i.items.push(it); });
+    save(db);
+  },
+
+  /** Find the inspection currently linked to a GRN, if any. */
+  getInspectionByGRN(grnId: string) {
+    return load().inspections.find(i => i.grn_id === grnId);
+  },
+
+
 
   /** Record vehicle inventory ids created from an approved inspection (VIN governance). */
   recordVehicleIntake(inspectionId: string, vehicleIds: string[]) {
