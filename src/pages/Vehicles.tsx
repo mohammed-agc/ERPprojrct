@@ -38,7 +38,6 @@ const emptyForm = {
   sale_price: 0,
   status: "available" as StatusKey,
   // extended (stored in notes JSON envelope)
-  chassis: "",
   engine: "",
   trim: "",
   transmission: "" as VehicleMeta["transmission"],
