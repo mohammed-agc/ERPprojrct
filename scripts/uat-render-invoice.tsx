@@ -170,7 +170,7 @@ function htmlFor(body: string, label: string) {
 </head><body><div class="doc-print-host">${body}</div></body></html>`;
 }
 
-for (const n of [1, 25]) {
+for (const n of [1, 25, 45]) {
   const out = `/tmp/uat-invoice-${n}.html`;
   writeFileSync(out, htmlFor(render(n), `${n} vehicles`));
   console.log("wrote", out);
