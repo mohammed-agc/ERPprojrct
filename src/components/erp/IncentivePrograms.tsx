@@ -244,7 +244,8 @@ function PendingClaimRow({
         <>
           <Button
             size="sm" className="h-6 px-2 text-[10px]"
-            onClick={() => {
+            onClick={async () => {
+              try { await ensureIncentiveAccess("approve"); } catch (e) { toast.error((e as Error).message); return; }
               const r = purchasingService.approveIncentiveClaim(claim.id, approver);
               if ("error" in r) { toast.error(r.error); return; }
               onApproved();
