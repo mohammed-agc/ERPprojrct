@@ -56,11 +56,16 @@ export default function SupplierCredit() {
                   <div className="font-semibold text-sm">{s.name}</div>
                   <div className="text-[11px] text-muted-foreground">{s.code} · {s.country} · {s.agreement_type === "framework" ? "إطارية" : s.agreement_type === "spot" ? "فورية" : "أمانة"}</div>
                 </div>
-                {c.over && (
-                  <Badge className="bg-destructive/10 text-destructive border border-destructive/40 gap-1">
-                    <AlertTriangle className="h-3 w-3" /> تجاوز الحد
-                  </Badge>
-                )}
+                <div className="flex items-center gap-2">
+                  {c.over && (
+                    <Badge className="bg-destructive/10 text-destructive border border-destructive/40 gap-1">
+                      <AlertTriangle className="h-3 w-3" /> تجاوز الحد
+                    </Badge>
+                  )}
+                  <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => setStmtId(s.id)}>
+                    <FileText className="h-3 w-3 ml-1" /> كشف حساب
+                  </Button>
+                </div>
               </div>
 
               <div className="grid grid-cols-3 gap-2 mb-3">
