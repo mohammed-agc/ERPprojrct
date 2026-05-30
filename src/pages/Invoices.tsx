@@ -184,10 +184,6 @@ export default function Invoices() {
                               contact: "+966 11 000 0000",
                             }}
                             buyer={{ name: r.customers?.name ?? "—" }}
-                            erpRefs={{
-                              so: r.sales_order_no ?? r.sales_order_id ?? undefined,
-                              si: r.invoice_no,
-                            }}
                             items={
                               (vehs.length > 0 ? vehs : [null]).map((v): InvoiceLine => v ? {
                                 vin: v.vin,
