@@ -12,7 +12,7 @@ import {
 import { allocationService } from "@/services/erp/allocations";
 import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
 import { DocPrintActions } from "@/components/erp/DocPrintActions";
-import { PrintablePurchaseDoc } from "@/components/erp/PrintablePurchaseDoc";
+import { PrintableInvoiceDoc, type InvoiceLine } from "@/components/erp/PrintableInvoiceDoc";
 import { makeAudit, type AuditEntry } from "@/services/erp/erpRoles";
 import { PaymentDialog, type PaymentSubmitPayload, type PaymentInvoiceContext, type SupplierCreditContext } from "@/components/erp/PaymentDialog";
 
