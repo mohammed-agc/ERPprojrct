@@ -101,11 +101,15 @@ export function IncentivePrograms({ supplierId }: { supplierId: string }) {
                 </div>
                 {perms.canManage && (
                   <div className="flex items-center gap-1">
-                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditProgram(p)}>
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={async () => {
+                      try { await ensureIncentiveAccess("manage"); } catch (e) { toast.error((e as Error).message); return; }
+                      setEditProgram(p);
+                    }}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
                     <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                      onClick={() => {
+                      onClick={async () => {
+                        try { await ensureIncentiveAccess("manage"); } catch (e) { toast.error((e as Error).message); return; }
                         if (confirm(`حذف برنامج "${p.name}"؟`)) {
                           purchasingService.deleteIncentiveProgram(p.id);
                           toast.success("تم حذف البرنامج"); refresh();
