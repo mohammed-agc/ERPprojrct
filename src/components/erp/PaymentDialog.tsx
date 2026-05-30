@@ -184,13 +184,16 @@ export function PaymentDialog({
     || creditStatus !== "active"
     || creditRemaining <= 0;
 
+  // Financial account is only required for methods that move cash/bank funds
+  const needsFinancialAccount = method === "cash" || method === "bank_transfer" || method === "pos" || method === "card" || method === "check" || method === "mixed";
+
   const canSubmit =
     invoice &&
     numericAmount > 0 &&
     !overpay &&
     !mixedCreditOver &&
-    accountId &&
     paymentDate &&
+    (!needsFinancialAccount || accountId) &&
     (!refRequired || reference.trim().length > 0) &&
     !(method === "supplier_credit" && creditDisabled) &&
     !submitting;
@@ -200,7 +203,7 @@ export function PaymentDialog({
     await onSubmit({
       invoiceId: invoice.id,
       method,
-      accountId,
+      accountId: needsFinancialAccount ? accountId : "",
       amount: numericAmount,
       creditAmount: method === "mixed" ? (creditAmount ?? 0) : (method === "supplier_credit" ? numericAmount : undefined),
       cashAmount: method === "mixed" ? (cashAmount ?? 0) : undefined,
@@ -311,17 +314,23 @@ export function PaymentDialog({
             </Select>
           </div>
 
-          {/* Account */}
+          {/* Account — only for methods that move cash/bank funds */}
           <div className="space-y-1">
             <Label className="text-xs">الحساب المالي</Label>
-            <Select value={accountId} onValueChange={setAccountId}>
-              <SelectTrigger className="h-9"><SelectValue placeholder="اختر الحساب" /></SelectTrigger>
-              <SelectContent>
-                {accounts.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>{a.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {needsFinancialAccount ? (
+              <Select value={accountId} onValueChange={setAccountId}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="اختر الحساب" /></SelectTrigger>
+                <SelectContent>
+                  {accounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>{a.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="h-9 rounded-md border bg-muted/40 px-3 flex items-center text-xs text-muted-foreground">
+                غير مطلوب — دفع عبر ائتمان مورد
+              </div>
+            )}
           </div>
 
           {method === "mixed" ? (
