@@ -103,8 +103,8 @@ export function ProcurementWorkflow({
   };
 
   const markReceived = async () => {
-    if (!p.vin_verified || !p.chassis_verified) {
-      toast.error("يجب التحقق من VIN ورقم الهيكل");
+    if (!p.vin_verified) {
+      toast.error("يجب التحقق من رقم الهيكل (VIN)");
       return;
     }
     await persist({
@@ -273,9 +273,8 @@ export function ProcurementWorkflow({
                 </Field>
               </Grid>
 
-              <div className="grid grid-cols-3 gap-2 mt-3">
-                <CheckRow label="التحقق من VIN" checked={!!p.vin_verified} onChange={(v)=>set("vin_verified", v)} />
-                <CheckRow label="التحقق من رقم الهيكل" checked={!!p.chassis_verified} onChange={(v)=>set("chassis_verified", v)} />
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                <CheckRow label="التحقق من رقم الهيكل (VIN)" checked={!!p.vin_verified} onChange={(v)=>set("vin_verified", v)} />
                 <CheckRow label="التحقق من رقم المحرك" checked={!!p.engine_verified} onChange={(v)=>set("engine_verified", v)} />
               </div>
 

@@ -164,10 +164,6 @@ export function GRNReceiptDialog({ open, onOpenChange, grn, onRecorded }: Props)
                           <Checkbox checked={!!r.vin_pending} onCheckedChange={(v) => upd(i, { vin_pending: !!v })} />
                           VIN معلق
                         </label>
-                        <label className="flex items-center gap-1">
-                          <Checkbox checked={!!r.chassis_verified} onCheckedChange={(v) => upd(i, { chassis_verified: !!v })} />
-                          شاسيه مطابق
-                        </label>
                       </div>
                     ) : (
                       <div className="flex flex-col gap-1">

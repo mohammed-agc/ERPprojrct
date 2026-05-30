@@ -35,7 +35,6 @@ type Row = {
   year: number;
   unit_cost: number;
   vin: string;
-  chassis: string;
   engine: string;
   color: string;
   mileage: number;
@@ -93,7 +92,6 @@ export function VehicleIntakeDialog({ open, onOpenChange, inspection, po, onCrea
           year: u?.year || parsed.year,
           unit_cost: u?.cost ?? poLine.unit_cost,
           vin: u?.vin ?? "",
-          chassis: "",
           engine: u?.engine_no ?? "",
           color: u?.color ?? "",
           mileage: 0,
@@ -163,7 +161,6 @@ export function VehicleIntakeDialog({ open, onOpenChange, inspection, po, onCrea
 
       const inserts = validated.map(r => {
         const meta: VehicleMeta = {
-          chassis: r.chassis || undefined,
           engine: r.engine || undefined,
           trim: r.trim || undefined,
           transmission: r.transmission || undefined,
@@ -176,7 +173,6 @@ export function VehicleIntakeDialog({ open, onOpenChange, inspection, po, onCrea
             cost_purchase: r.unit_cost,
             approved_at: new Date().toISOString(),
             vin_verified: true,
-            chassis_verified: !!r.chassis,
             engine_verified: !!r.engine,
             received_mileage: r.mileage,
           },
@@ -273,8 +269,7 @@ export function VehicleIntakeDialog({ open, onOpenChange, inspection, po, onCrea
                 <tr>
                   <th className="w-8">#</th>
                   <th className="min-w-[180px]">الوصف</th>
-                  <th className="min-w-[170px]">VIN *</th>
-                  <th className="min-w-[140px]">رقم الهيكل</th>
+                  <th className="min-w-[170px]">رقم الهيكل (VIN) *</th>
                   <th className="min-w-[140px]">رقم المحرك</th>
                   <th className="w-24">اللون</th>
                   <th className="w-20">الممشى</th>
@@ -305,7 +300,6 @@ export function VehicleIntakeDialog({ open, onOpenChange, inspection, po, onCrea
                         </div>
                       )}
                     </td>
-                    <td><Input dir="ltr" className="h-7 font-mono text-xs" value={r.chassis} onChange={e => update(r.uid, { chassis: e.target.value })} /></td>
                     <td><Input dir="ltr" className="h-7 font-mono text-xs" value={r.engine} onChange={e => update(r.uid, { engine: e.target.value })} /></td>
                     <td><Input className="h-7 text-xs" value={r.color} onChange={e => update(r.uid, { color: e.target.value })} /></td>
                     <td><Input className="h-7 text-xs num" type="number" dir="ltr" value={r.mileage} onChange={e => update(r.uid, { mileage: Number(e.target.value) })} /></td>

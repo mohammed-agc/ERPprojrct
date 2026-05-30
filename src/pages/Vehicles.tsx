@@ -38,7 +38,6 @@ const emptyForm = {
   sale_price: 0,
   status: "available" as StatusKey,
   // extended (stored in notes JSON envelope)
-  chassis: "",
   engine: "",
   trim: "",
   transmission: "" as VehicleMeta["transmission"],
@@ -136,7 +135,6 @@ export default function Vehicles() {
       }
     }
     const meta: VehicleMeta = {
-      chassis: form.chassis,
       engine: form.engine,
       trim: form.trim,
       transmission: form.transmission,
@@ -206,9 +204,8 @@ export default function Vehicles() {
 
                 <div>
                   <div className="text-xs font-semibold text-muted-foreground mb-2">أرقام التعريف</div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div><Label>VIN</Label><Input value={form.vin} onChange={e=>setForm({...form, vin:e.target.value})} dir="ltr" /></div>
-                    <div><Label>رقم الهيكل</Label><Input value={form.chassis} onChange={e=>setForm({...form, chassis:e.target.value})} dir="ltr" /></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><Label>رقم الهيكل (VIN)</Label><Input value={form.vin} onChange={e=>setForm({...form, vin:e.target.value})} dir="ltr" /></div>
                     <div><Label>رقم المحرك</Label><Input value={form.engine} onChange={e=>setForm({...form, engine:e.target.value})} dir="ltr" /></div>
                   </div>
                 </div>

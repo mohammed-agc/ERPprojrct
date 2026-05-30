@@ -247,7 +247,7 @@ export default function GRNDetail() {
                       <td className="text-[10px] text-muted-foreground">
                         {it.vin_pending && <span className="mr-1">VIN معلق</span>}
                         {isVehicle && !it.vin_pending && lineUnits.length > 0 && <span className="mr-1 text-success">VIN ✓</span>}
-                        {it.chassis_verified && <span className="mr-1 text-success">شاسيه ✓</span>}
+                        
                         {it.sku_verified && <span className="mr-1 text-success">SKU ✓</span>}
                         {it.barcode_verified && <span className="mr-1 text-success">باركود ✓</span>}
                       </td>
