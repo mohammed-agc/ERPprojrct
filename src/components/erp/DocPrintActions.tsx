@@ -57,13 +57,34 @@ export function DocPrintActions({ doc, size = "sm" }: Props) {
         + `.print-area { position: absolute; inset: 0 }`) take over and render
         this copy as the full A4 document.
       */}
-      <div
-        aria-hidden
-        className="fixed top-0 pointer-events-none"
-        style={{ left: "-100000px", width: "210mm" }}
-      >
+      {/*
+        Screen: positioned far off-canvas so the user never sees it.
+        Print: positioning is reset to `static` so it does NOT become the
+        containing block for `.print-area { position: absolute; inset: 0 }`.
+        Without that reset, the print-area would anchor to the off-screen
+        wrapper at left:-100000px and the printed pages would be blank.
+      */}
+      <div aria-hidden className="doc-print-host" style={{ width: "210mm" }}>
         {doc}
       </div>
+      <style>{`
+        @media screen {
+          .doc-print-host {
+            position: fixed;
+            top: 0;
+            left: -100000px;
+            pointer-events: none;
+          }
+        }
+        @media print {
+          .doc-print-host {
+            position: static !important;
+            left: auto !important;
+            top: auto !important;
+            width: auto !important;
+          }
+        }
+      `}</style>
 
       <Dialog open={open} onOpenChange={setOpen}>
         {/*
