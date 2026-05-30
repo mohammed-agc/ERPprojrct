@@ -11,6 +11,7 @@ import {
 import { purchasingService, fmtSAR, fmtDate } from "@/services/erp/purchasing";
 import { ContactMeta } from "@/lib/contactMeta";
 import { cn } from "@/lib/utils";
+import { IncentivePrograms } from "@/components/erp/IncentivePrograms";
 
 export function SupplierIntelligence({
   meta, onChange,
@@ -185,6 +186,11 @@ export function SupplierIntelligence({
           </CardContent>
         </Card>
       )}
+
+      {/* Incentive Programs (Commercial Agreements → Incentive Programs) */}
+      <IncentivePrograms supplierId={linked.id} />
+
+
 
       {/* Financial exposure */}
       <Card>

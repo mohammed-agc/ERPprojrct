@@ -282,6 +282,38 @@ export interface SupplierLedgerEntry {
   credit_delta: number;
 }
 
+/* ============================ Incentive Programs ============================ */
+export type IncentiveProgramStatus = "active" | "closed" | "achieved";
+
+export interface IncentiveProgram {
+  id: string;
+  supplier_id: string;
+  name: string;
+  start_date: string;            // ISO date (yyyy-mm-dd)
+  end_date: string;              // ISO date
+  target_vehicles: number;
+  incentive_per_vehicle: number; // SAR
+  brand?: string;                // optional filter (case-insensitive contains)
+  model?: string;                // optional filter (case-insensitive contains)
+  status: IncentiveProgramStatus;
+  notes?: string;
+  created_at: string;
+}
+
+export type IncentiveClaimMode = "claim" | "credit"; // cash payout vs offset against supplier credit/payable
+
+export interface IncentiveClaim {
+  id: string;
+  code: string;                  // INC-2026-0001
+  program_id: string;
+  supplier_id: string;
+  amount: number;
+  mode: IncentiveClaimMode;
+  reference?: string;
+  notes?: string;
+  created_at: string;
+}
+
 interface DB {
   suppliers: Supplier[];
   prs: PurchaseRequest[];
@@ -292,6 +324,8 @@ interface DB {
   invoices: PurchaseInvoice[];
   payments: PurchasePayment[];
   supplier_ledger: SupplierLedgerEntry[];
+  incentive_programs: IncentiveProgram[];
+  incentive_claims: IncentiveClaim[];
 }
 
 
@@ -474,6 +508,8 @@ function seed(): DB {
     invoices: [pinv1, pinv2],
     payments: [ppay1, ppay2],
     supplier_ledger: [],
+    incentive_programs: [],
+    incentive_claims: [],
   };
 }
 
@@ -500,6 +536,8 @@ function normalizeDB(input: Partial<DB>): DB {
     invoices: Array.isArray(input.invoices) ? input.invoices : [],
     payments: Array.isArray(input.payments) ? input.payments : [],
     supplier_ledger: Array.isArray(input.supplier_ledger) ? input.supplier_ledger : [],
+    incentive_programs: Array.isArray(input.incentive_programs) ? input.incentive_programs : [],
+    incentive_claims: Array.isArray(input.incentive_claims) ? input.incentive_claims : [],
   };
 }
 
@@ -870,6 +908,167 @@ export const purchasingService = {
       },
     };
   },
+
+  /* ============ Incentive Programs ============ */
+  listIncentivePrograms(supplierId?: string): IncentiveProgram[] {
+    const all = load().incentive_programs.slice().sort((a, b) => b.created_at.localeCompare(a.created_at));
+    return supplierId ? all.filter(p => p.supplier_id === supplierId) : all;
+  },
+  getIncentiveProgram(id: string) {
+    return load().incentive_programs.find(p => p.id === id);
+  },
+  upsertIncentiveProgram(input: Omit<IncentiveProgram, "id" | "created_at" | "status"> & {
+    id?: string; status?: IncentiveProgramStatus;
+  }): IncentiveProgram {
+    const db = load();
+    if (input.id) {
+      const idx = db.incentive_programs.findIndex(p => p.id === input.id);
+      if (idx >= 0) {
+        const merged: IncentiveProgram = {
+          ...db.incentive_programs[idx], ...input,
+          status: input.status ?? db.incentive_programs[idx].status,
+        };
+        db.incentive_programs[idx] = merged;
+        save(db);
+        return merged;
+      }
+    }
+    const created: IncentiveProgram = {
+      id: uid("incp"),
+      supplier_id: input.supplier_id,
+      name: input.name,
+      start_date: input.start_date,
+      end_date: input.end_date,
+      target_vehicles: input.target_vehicles,
+      incentive_per_vehicle: input.incentive_per_vehicle,
+      brand: input.brand, model: input.model,
+      status: input.status ?? "active",
+      notes: input.notes,
+      created_at: isoNow(),
+    };
+    db.incentive_programs.unshift(created);
+    save(db);
+    return created;
+  },
+  setIncentiveProgramStatus(id: string, status: IncentiveProgramStatus) {
+    const db = load();
+    const p = db.incentive_programs.find(x => x.id === id);
+    if (p) { p.status = status; save(db); }
+    return p;
+  },
+  deleteIncentiveProgram(id: string) {
+    const db = load();
+    db.incentive_programs = db.incentive_programs.filter(p => p.id !== id);
+    save(db);
+  },
+
+  /**
+   * Count purchased vehicles for a supplier from APPROVED purchase invoices
+   * (status != cancelled, != draft) within the program window, optionally
+   * filtered by brand/model (case-insensitive contains on PO line description).
+   */
+  programPerformance(program: IncentiveProgram) {
+    const db = load();
+    const from = program.start_date;
+    const to = program.end_date;
+    const brand = (program.brand ?? "").trim().toLowerCase();
+    const model = (program.model ?? "").trim().toLowerCase();
+    const supplierInvoices = db.invoices.filter(i =>
+      i.supplier_id === program.supplier_id &&
+      i.status !== "cancelled" && i.status !== "draft" &&
+      i.issued_at.slice(0, 10) >= from && i.issued_at.slice(0, 10) <= to,
+    );
+    let purchased = 0;
+    for (const inv of supplierInvoices) {
+      const po = db.pos.find(p => p.id === inv.po_id);
+      if (!po) continue;
+      for (const li of po.items) {
+        if (li.kind !== "vehicle") continue;
+        const desc = (li.description || "").toLowerCase();
+        if (brand && !desc.includes(brand)) continue;
+        if (model && !desc.includes(model)) continue;
+        purchased += li.qty;
+      }
+    }
+    const target = Math.max(0, program.target_vehicles);
+    const remaining = Math.max(0, target - purchased);
+    const achievement = target > 0 ? (purchased / target) * 100 : 0;
+    const earned = purchased * program.incentive_per_vehicle;
+    const claims = db.incentive_claims.filter(c => c.program_id === program.id);
+    const claimed = claims.reduce((s, c) => s + c.amount, 0);
+    const remaining_incentive = Math.max(0, earned - claimed);
+    const eligible = target > 0 && purchased >= target;
+    return {
+      purchased, target, remaining, achievement,
+      earned, claimed, remaining_incentive,
+      eligible, claims,
+    };
+  },
+
+  listIncentiveClaims(supplierId?: string): IncentiveClaim[] {
+    const all = load().incentive_claims.slice().sort((a, b) => b.created_at.localeCompare(a.created_at));
+    return supplierId ? all.filter(c => c.supplier_id === supplierId) : all;
+  },
+
+  /**
+   * Create an Incentive Claim. `mode = "claim"` records a payout-type
+   * earned rebate; `mode = "credit"` offsets supplier credit utilization
+   * (releases credit line). Both post a ledger row tagged `adjustment` so
+   * incentives stay SEPARATE from supplier credit utilization tracking.
+   */
+  createIncentiveClaim(input: {
+    program_id: string; amount: number; mode: IncentiveClaimMode;
+    reference?: string; notes?: string;
+  }): IncentiveClaim | { error: string } {
+    const db = load();
+    const program = db.incentive_programs.find(p => p.id === input.program_id);
+    if (!program) return { error: "البرنامج غير موجود" };
+    if (input.amount <= 0) return { error: "المبلغ يجب أن يكون موجبًا" };
+    // Cap to remaining earned
+    const perf = this.programPerformance(program);
+    if (input.amount > perf.remaining_incentive + 0.001) {
+      return { error: `المبلغ يتجاوز الحافز المتبقي (${perf.remaining_incentive.toFixed(2)})` };
+    }
+    const year = new Date().getFullYear();
+    const seq = db.incentive_claims.filter(c => c.code.startsWith(`INC-${year}`)).length + 1;
+    const claim: IncentiveClaim = {
+      id: uid("incc"),
+      code: `INC-${year}-${String(seq).padStart(4, "0")}`,
+      program_id: program.id,
+      supplier_id: program.supplier_id,
+      amount: input.amount,
+      mode: input.mode,
+      reference: input.reference,
+      notes: input.notes,
+      created_at: isoNow(),
+    };
+    db.incentive_claims.unshift(claim);
+    // Release supplier credit when claim is offset against utilization
+    if (input.mode === "credit") {
+      const sup = db.suppliers.find(s => s.id === program.supplier_id);
+      if (sup) sup.utilized = Math.max(0, sup.utilized - input.amount);
+    }
+    // Ledger entry — tracked separately from supplier credit utilization
+    db.supplier_ledger.unshift({
+      id: uid("sl"),
+      supplier_id: program.supplier_id,
+      at: claim.created_at,
+      kind: "adjustment",
+      reference: claim.code,
+      description: input.mode === "credit"
+        ? `حافز مورد — خصم من الحد الائتماني (${program.name})`
+        : `مطالبة حافز مورد (${program.name})`,
+      debit: input.mode === "credit" ? 0 : input.amount, // payout reduces payable
+      credit: 0,
+      credit_delta: input.mode === "credit" ? -input.amount : 0,
+    });
+    // Auto-mark program achieved when target met
+    if (perf.eligible && program.status === "active") program.status = "achieved";
+    save(db);
+    return claim;
+  },
+
+
 
 
   /* purchase requests */
