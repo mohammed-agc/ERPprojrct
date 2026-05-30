@@ -35,7 +35,6 @@ type Row = {
   year: number;
   unit_cost: number;
   vin: string;
-  chassis: string;
   engine: string;
   color: string;
   mileage: number;
