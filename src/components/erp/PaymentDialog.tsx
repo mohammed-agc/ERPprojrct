@@ -184,13 +184,16 @@ export function PaymentDialog({
     || creditStatus !== "active"
     || creditRemaining <= 0;
 
+  // Financial account is only required for methods that move cash/bank funds
+  const needsFinancialAccount = method === "cash" || method === "bank_transfer" || method === "pos" || method === "card" || method === "check" || method === "mixed";
+
   const canSubmit =
     invoice &&
     numericAmount > 0 &&
     !overpay &&
     !mixedCreditOver &&
-    accountId &&
     paymentDate &&
+    (!needsFinancialAccount || accountId) &&
     (!refRequired || reference.trim().length > 0) &&
     !(method === "supplier_credit" && creditDisabled) &&
     !submitting;
@@ -200,7 +203,7 @@ export function PaymentDialog({
     await onSubmit({
       invoiceId: invoice.id,
       method,
-      accountId,
+      accountId: needsFinancialAccount ? accountId : "",
       amount: numericAmount,
       creditAmount: method === "mixed" ? (creditAmount ?? 0) : (method === "supplier_credit" ? numericAmount : undefined),
       cashAmount: method === "mixed" ? (cashAmount ?? 0) : undefined,
