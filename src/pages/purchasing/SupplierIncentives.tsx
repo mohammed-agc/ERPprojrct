@@ -18,6 +18,7 @@ const STATUS_TONE: Record<IncentiveProgramStatus, string> = {
 };
 
 export default function SupplierIncentives() {
+  const perms = useIncentivePermissions();
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | IncentiveProgramStatus>("all");
 
