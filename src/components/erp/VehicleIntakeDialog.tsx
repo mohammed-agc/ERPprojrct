@@ -92,7 +92,6 @@ export function VehicleIntakeDialog({ open, onOpenChange, inspection, po, onCrea
           year: u?.year || parsed.year,
           unit_cost: u?.cost ?? poLine.unit_cost,
           vin: u?.vin ?? "",
-          chassis: "",
           engine: u?.engine_no ?? "",
           color: u?.color ?? "",
           mileage: 0,
