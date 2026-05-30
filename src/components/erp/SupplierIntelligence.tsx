@@ -187,6 +187,11 @@ export function SupplierIntelligence({
         </Card>
       )}
 
+      {/* Incentive Programs (Commercial Agreements → Incentive Programs) */}
+      <IncentivePrograms supplierId={linked.id} />
+
+
+
       {/* Financial exposure */}
       <Card>
         <CardHeader className="p-3 pb-1">
