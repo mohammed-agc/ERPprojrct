@@ -173,7 +173,9 @@ describe("IncentivePrograms card — controls visibility by role", () => {
     expect(screen.getByRole("button", { name: /برنامج جديد/ })).toBeInTheDocument();
     // pending claim row is rendered without an approve button (no approve right)
     expect(screen.getByText("IC-0001")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /اعتماد/ })).not.toBeInTheDocument();
+    // "تقديم مطالبة للاعتماد" exists for manage users, but the bare
+    // "اعتماد" approve button does NOT render without approve rights.
+    expect(screen.queryByRole("button", { name: /^\s*اعتماد\s*$/ })).not.toBeInTheDocument();
     expect(screen.getByText(/بانتظار المدير/)).toBeInTheDocument();
   });
 
@@ -181,7 +183,7 @@ describe("IncentivePrograms card — controls visibility by role", () => {
     mockAuthState.roles = ["manager"];
     mockAuthState.isManager = true;
     render(<IncentivePrograms supplierId="sup1" />);
-    expect(screen.getByRole("button", { name: /اعتماد/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /رفض/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^\s*اعتماد\s*$/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^\s*رفض\s*$/ })).toBeInTheDocument();
   });
 });
