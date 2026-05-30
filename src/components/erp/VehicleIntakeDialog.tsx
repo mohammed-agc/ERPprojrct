@@ -161,7 +161,6 @@ export function VehicleIntakeDialog({ open, onOpenChange, inspection, po, onCrea
 
       const inserts = validated.map(r => {
         const meta: VehicleMeta = {
-          chassis: r.chassis || undefined,
           engine: r.engine || undefined,
           trim: r.trim || undefined,
           transmission: r.transmission || undefined,
@@ -174,7 +173,6 @@ export function VehicleIntakeDialog({ open, onOpenChange, inspection, po, onCrea
             cost_purchase: r.unit_cost,
             approved_at: new Date().toISOString(),
             vin_verified: true,
-            chassis_verified: !!r.chassis,
             engine_verified: !!r.engine,
             received_mileage: r.mileage,
           },
