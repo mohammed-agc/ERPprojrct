@@ -133,6 +133,17 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
   );
 }
 
+/** Accounting-style aligned row: label · dotted leader · right-aligned number. */
+function CreditAcctRow({ label, value, bold }: { label: string; value: number; bold?: boolean }) {
+  return (
+    <div className={`flex items-baseline gap-2 ${bold ? "font-bold" : ""}`}>
+      <span className={`shrink-0 ${bold ? "text-amber-900 dark:text-amber-200" : "text-muted-foreground"}`}>{label}</span>
+      <span className="flex-1 border-b border-dotted border-amber-400/60 translate-y-[-2px]" aria-hidden />
+      <span className="font-mono tabular-nums text-right min-w-[110px]">{fmtSAR(value)}</span>
+    </div>
+  );
+}
+
 function ErpRefBadges({ variant, refs }: { variant: "purchase" | "sales"; refs?: InvoiceErpRefs }) {
   if (!refs) return null;
   const items: { label: string; value?: string }[] = variant === "purchase"
@@ -286,11 +297,12 @@ export function PrintableInvoiceDoc(p: PrintableInvoiceDocProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
         {showCredit && p.credit && (
           <div className="border border-amber-300 bg-amber-50 dark:bg-amber-500/10 rounded p-3 text-[10.5px]">
-            <div className="text-[10px] font-bold text-amber-900 dark:text-amber-300 mb-1.5">معلومات الحد الائتماني</div>
-            <div className="space-y-1">
-              <div className="flex justify-between"><span className="text-muted-foreground">الحد الائتماني</span><span className="font-mono font-semibold">{fmtSAR(p.credit.credit_limit)}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">المستخدم</span><span className="font-mono">{fmtSAR(p.credit.credit_used)}</span></div>
-              <div className="flex justify-between border-t border-amber-300 pt-1"><span className="font-bold">المتبقي</span><span className="font-mono font-bold">{fmtSAR(p.credit.credit_remaining)}</span></div>
+            <div className="text-[10px] font-bold text-amber-900 dark:text-amber-300 mb-1.5">معلومات الحد الائتماني للمورد</div>
+            <div className="space-y-0.5 font-mono">
+              <CreditAcctRow label="الحد الائتماني" value={p.credit.credit_limit} />
+              <CreditAcctRow label="المستخدم"      value={p.credit.credit_used} />
+              <div className="border-t border-amber-400/70 my-1" />
+              <CreditAcctRow label="المتبقي"        value={p.credit.credit_remaining} bold />
             </div>
           </div>
         )}

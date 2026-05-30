@@ -256,6 +256,32 @@ export interface PurchasePayment {
   notes?: string;
 }
 
+/**
+ * Supplier ledger entry — single source of truth for supplier account
+ * statement, credit utilization, and remaining balance calculations.
+ * `credit` increases supplier liability (invoice issued).
+ * `debit`  decreases supplier liability (payment / settlement).
+ * `credit_delta` is the change applied to supplier.utilized (positive
+ * when the credit line is consumed, negative when it is released).
+ */
+export type SupplierLedgerKind =
+  | "invoice" | "payment_cash" | "payment_credit"
+  | "credit_utilization" | "adjustment";
+
+export interface SupplierLedgerEntry {
+  id: string;
+  supplier_id: string;
+  at: string;
+  kind: SupplierLedgerKind;
+  reference?: string;
+  invoice_id?: string;
+  payment_id?: string;
+  description: string;
+  debit: number;
+  credit: number;
+  credit_delta: number;
+}
+
 interface DB {
   suppliers: Supplier[];
   prs: PurchaseRequest[];
@@ -265,6 +291,7 @@ interface DB {
   inspections: InspectionRecord[];
   invoices: PurchaseInvoice[];
   payments: PurchasePayment[];
+  supplier_ledger: SupplierLedgerEntry[];
 }
 
 
@@ -446,6 +473,7 @@ function seed(): DB {
     inspections: [insp1, insp2],
     invoices: [pinv1, pinv2],
     payments: [ppay1, ppay2],
+    supplier_ledger: [],
   };
 }
 
@@ -471,6 +499,7 @@ function normalizeDB(input: Partial<DB>): DB {
     inspections: Array.isArray(input.inspections) ? input.inspections : [],
     invoices: Array.isArray(input.invoices) ? input.invoices : [],
     payments: Array.isArray(input.payments) ? input.payments : [],
+    supplier_ledger: Array.isArray(input.supplier_ledger) ? input.supplier_ledger : [],
   };
 }
 
@@ -712,6 +741,26 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   cheque: "شيك", credit_utilization: "استخدام حد ائتماني",
 };
 
+/**
+ * Canonical invoice payment status — single source of truth used by:
+ * Payment Dialog, Purchase Invoice Detail, Purchase Invoice Registry,
+ * and the Printable Invoice. Rules:
+ *   outstanding = 0          → paid
+ *   outstanding > 0 & paid>0 → partially_paid
+ *   paid = 0                 → issued (UNPAID)
+ * `cancelled` and `draft` are preserved.
+ */
+export function computeInvoiceStatus(
+  inv: { total: number; paid: number; status?: InvoiceStatus },
+): InvoiceStatus {
+  if (inv.status === "cancelled") return "cancelled";
+  if (inv.status === "draft") return "draft";
+  const outstanding = Math.max(0, (inv.total ?? 0) - (inv.paid ?? 0));
+  if (outstanding <= 0.001) return "paid";
+  if ((inv.paid ?? 0) > 0) return "partially_paid";
+  return "issued";
+}
+
 /** ERP purchasing workflow stages (governance steps). */
 export const PURCHASING_WORKFLOW = [
   { key: "pr", label: "طلب شراء" },
@@ -785,6 +834,43 @@ export const purchasingService = {
   expectedIncentive(s: Supplier) {
     return { vehicles: s.achieved, total: s.achieved * s.incentive_per_vehicle, target: s.monthly_target };
   },
+
+  /* ============ Supplier Ledger / Account Statement ============ */
+  listSupplierLedger(supplierId: string): SupplierLedgerEntry[] {
+    return load().supplier_ledger
+      .filter(e => e.supplier_id === supplierId)
+      .sort((a, b) => a.at.localeCompare(b.at));
+  },
+  /**
+   * Build a supplier account statement with running balance and a
+   * point-in-time credit utilization. The running balance reflects payable
+   * (credit - debit); `credit_used` is the supplier credit consumed.
+   */
+  supplierStatement(supplierId: string) {
+    const sup = load().suppliers.find(s => s.id === supplierId);
+    const lines = this.listSupplierLedger(supplierId);
+    let balance = 0;
+    let credit_used = 0;
+    const rows = lines.map(l => {
+      balance += (l.credit ?? 0) - (l.debit ?? 0);
+      credit_used += l.credit_delta ?? 0;
+      return { ...l, running_balance: balance, running_credit_used: credit_used };
+    });
+    const credit_limit = sup?.credit_limit ?? 0;
+    return {
+      supplier: sup,
+      rows,
+      totals: {
+        debit: lines.reduce((s, l) => s + (l.debit ?? 0), 0),
+        credit: lines.reduce((s, l) => s + (l.credit ?? 0), 0),
+        balance,
+        credit_limit,
+        credit_used,
+        credit_remaining: Math.max(0, credit_limit - credit_used),
+      },
+    };
+  },
+
 
   /* purchase requests */
   listPRs(): PurchaseRequest[] {
@@ -975,6 +1061,14 @@ export const purchasingService = {
     db.invoices.unshift(inv);
     // Advance PO into ordered state once invoice issued
     if (po.status === "approved") po.status = "ordered", po.ordered_at = isoNow();
+    // Supplier ledger: invoice increases the supplier liability (credit side).
+    // Issuance does NOT consume the credit line — that happens at settlement.
+    db.supplier_ledger.unshift({
+      id: uid("sl"), supplier_id: inv.supplier_id, at: inv.issued_at,
+      kind: "invoice", reference: inv.code, invoice_id: inv.id,
+      description: `إصدار فاتورة شراء ${inv.code}`,
+      debit: 0, credit: inv.total, credit_delta: 0,
+    });
     save(db);
     return inv;
   },
@@ -996,6 +1090,7 @@ export const purchasingService = {
     if (inv.status === "paid" || inv.status === "cancelled") return undefined;
     const remaining = inv.total - inv.paid;
     const amount = Math.min(input.amount, remaining);
+    if (amount <= 0) return undefined;
     const year = new Date().getFullYear();
     const seq = db.payments.filter(p => p.code.startsWith(`PPAY-${year}`)).length + 33;
     const pay: PurchasePayment = {
@@ -1007,11 +1102,34 @@ export const purchasingService = {
     };
     db.payments.unshift(pay);
     inv.paid += amount;
-    inv.status = inv.paid >= inv.total ? "paid" : "partially_paid";
-    // Credit utilization affects supplier balance
+    inv.status = computeInvoiceStatus(inv);
+    const sup = db.suppliers.find(s => s.id === inv.supplier_id);
     if (input.method === "credit_utilization") {
-      const sup = db.suppliers.find(s => s.id === inv.supplier_id);
-      if (sup) sup.utilized = Math.max(0, sup.utilized - amount);
+      // Settling via supplier credit CONSUMES the credit line.
+      if (sup) sup.utilized = Math.max(0, sup.utilized + amount);
+      // Ledger: payment leg (debit invoice) + credit utilization mirror
+      db.supplier_ledger.unshift({
+        id: uid("sl"), supplier_id: inv.supplier_id, at: pay.paid_at,
+        kind: "payment_credit", reference: pay.code,
+        invoice_id: inv.id, payment_id: pay.id,
+        description: `تسوية فاتورة ${inv.code} عبر الحد الائتماني`,
+        debit: amount, credit: 0, credit_delta: 0,
+      });
+      db.supplier_ledger.unshift({
+        id: uid("sl"), supplier_id: inv.supplier_id, at: pay.paid_at,
+        kind: "credit_utilization", reference: pay.code,
+        invoice_id: inv.id, payment_id: pay.id,
+        description: `استخدام حد ائتماني — ${inv.code}`,
+        debit: 0, credit: 0, credit_delta: amount,
+      });
+    } else {
+      db.supplier_ledger.unshift({
+        id: uid("sl"), supplier_id: inv.supplier_id, at: pay.paid_at,
+        kind: "payment_cash", reference: pay.code,
+        invoice_id: inv.id, payment_id: pay.id,
+        description: `سداد فاتورة ${inv.code} — ${PAYMENT_METHOD_LABEL[input.method] ?? input.method}`,
+        debit: amount, credit: 0, credit_delta: 0,
+      });
     }
     save(db);
     return pay;
