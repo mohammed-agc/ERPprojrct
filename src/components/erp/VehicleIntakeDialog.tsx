@@ -269,8 +269,7 @@ export function VehicleIntakeDialog({ open, onOpenChange, inspection, po, onCrea
                 <tr>
                   <th className="w-8">#</th>
                   <th className="min-w-[180px]">الوصف</th>
-                  <th className="min-w-[170px]">VIN *</th>
-                  <th className="min-w-[140px]">رقم الهيكل</th>
+                  <th className="min-w-[170px]">رقم الهيكل (VIN) *</th>
                   <th className="min-w-[140px]">رقم المحرك</th>
                   <th className="w-24">اللون</th>
                   <th className="w-20">الممشى</th>
