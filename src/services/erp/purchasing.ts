@@ -1003,13 +1003,16 @@ export const purchasingService = {
     const achievement = target > 0 ? (purchased / target) * 100 : 0;
     const earned = purchased * program.incentive_per_vehicle;
     const claims = db.incentive_claims.filter(c => c.program_id === program.id);
-    const claimed = claims.reduce((s, c) => s + c.amount, 0);
-    const remaining_incentive = Math.max(0, earned - claimed);
+    const approvedClaims = claims.filter(c => c.status === "approved");
+    const pendingClaims = claims.filter(c => c.status === "pending_approval");
+    const claimed = approvedClaims.reduce((s, c) => s + c.amount, 0);
+    const pending = pendingClaims.reduce((s, c) => s + c.amount, 0);
+    const remaining_incentive = Math.max(0, earned - claimed - pending);
     const eligible = target > 0 && purchased >= target;
     return {
       purchased, target, remaining, achievement,
-      earned, claimed, remaining_incentive,
-      eligible, claims,
+      earned, claimed, pending, remaining_incentive,
+      eligible, claims, pendingClaims, approvedClaims,
     };
   },
 
@@ -1019,20 +1022,23 @@ export const purchasingService = {
   },
 
   /**
-   * Create an Incentive Claim. `mode = "claim"` records a payout-type
-   * earned rebate; `mode = "credit"` offsets supplier credit utilization
-   * (releases credit line). Both post a ledger row tagged `adjustment` so
-   * incentives stay SEPARATE from supplier credit utilization tracking.
+   * Create an Incentive Claim in `pending_approval` status. No ledger entry
+   * is posted and no supplier credit is released until a manager approves
+   * via `approveIncentiveClaim`. This enforces the two-step governance:
+   *
+   *   officer submits  →  status = pending_approval (no financial impact)
+   *   manager approves →  status = approved (posts ledger + releases credit)
+   *   manager rejects  →  status = rejected (no impact, audit trail kept)
    */
   createIncentiveClaim(input: {
     program_id: string; amount: number; mode: IncentiveClaimMode;
-    reference?: string; notes?: string;
+    reference?: string; notes?: string; requested_by?: string;
   }): IncentiveClaim | { error: string } {
     const db = load();
     const program = db.incentive_programs.find(p => p.id === input.program_id);
     if (!program) return { error: "البرنامج غير موجود" };
     if (input.amount <= 0) return { error: "المبلغ يجب أن يكون موجبًا" };
-    // Cap to remaining earned
+    // Cap to remaining earned (already nets approved + pending)
     const perf = this.programPerformance(program);
     if (input.amount > perf.remaining_incentive + 0.001) {
       return { error: `المبلغ يتجاوز الحافز المتبقي (${perf.remaining_incentive.toFixed(2)})` };
@@ -1048,30 +1054,69 @@ export const purchasingService = {
       mode: input.mode,
       reference: input.reference,
       notes: input.notes,
+      status: "pending_approval",
+      requested_by: input.requested_by,
       created_at: isoNow(),
     };
     db.incentive_claims.unshift(claim);
+    save(db);
+    return claim;
+  },
+
+  /**
+   * Manager-only approval. Posts the supplier ledger adjustment and,
+   * when `mode === "credit"`, releases supplier credit utilization.
+   * Idempotent: re-approving an already-approved claim is a no-op.
+   */
+  approveIncentiveClaim(id: string, approver = "مدير المشتريات"): IncentiveClaim | { error: string } {
+    const db = load();
+    const claim = db.incentive_claims.find(c => c.id === id);
+    if (!claim) return { error: "المطالبة غير موجودة" };
+    if (claim.status === "approved") return claim;
+    if (claim.status === "rejected") return { error: "لا يمكن اعتماد مطالبة مرفوضة" };
+    const program = db.incentive_programs.find(p => p.id === claim.program_id);
+    if (!program) return { error: "البرنامج غير موجود" };
+
+    claim.status = "approved";
+    claim.approved_by = approver;
+    claim.approved_at = isoNow();
+
     // Release supplier credit when claim is offset against utilization
-    if (input.mode === "credit") {
-      const sup = db.suppliers.find(s => s.id === program.supplier_id);
-      if (sup) sup.utilized = Math.max(0, sup.utilized - input.amount);
+    if (claim.mode === "credit") {
+      const sup = db.suppliers.find(s => s.id === claim.supplier_id);
+      if (sup) sup.utilized = Math.max(0, sup.utilized - claim.amount);
     }
     // Ledger entry — tracked separately from supplier credit utilization
     db.supplier_ledger.unshift({
       id: uid("sl"),
-      supplier_id: program.supplier_id,
-      at: claim.created_at,
+      supplier_id: claim.supplier_id,
+      at: claim.approved_at,
       kind: "adjustment",
       reference: claim.code,
-      description: input.mode === "credit"
-        ? `حافز مورد — خصم من الحد الائتماني (${program.name})`
-        : `مطالبة حافز مورد (${program.name})`,
-      debit: input.mode === "credit" ? 0 : input.amount, // payout reduces payable
+      description: claim.mode === "credit"
+        ? `حافز مورد — خصم من الحد الائتماني (${program.name}) — اعتمد: ${approver}`
+        : `مطالبة حافز مورد (${program.name}) — اعتمد: ${approver}`,
+      debit: claim.mode === "credit" ? 0 : claim.amount,
       credit: 0,
-      credit_delta: input.mode === "credit" ? -input.amount : 0,
+      credit_delta: claim.mode === "credit" ? -claim.amount : 0,
     });
     // Auto-mark program achieved when target met
+    const perf = this.programPerformance(program);
     if (perf.eligible && program.status === "active") program.status = "achieved";
+    save(db);
+    return claim;
+  },
+
+  rejectIncentiveClaim(id: string, approver = "مدير المشتريات", reason?: string): IncentiveClaim | { error: string } {
+    const db = load();
+    const claim = db.incentive_claims.find(c => c.id === id);
+    if (!claim) return { error: "المطالبة غير موجودة" };
+    if (claim.status === "approved") return { error: "لا يمكن رفض مطالبة معتمدة" };
+    if (claim.status === "rejected") return claim;
+    claim.status = "rejected";
+    claim.rejected_by = approver;
+    claim.rejected_at = isoNow();
+    claim.rejection_reason = reason;
     save(db);
     return claim;
   },
