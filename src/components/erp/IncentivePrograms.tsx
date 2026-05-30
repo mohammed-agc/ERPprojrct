@@ -66,7 +66,10 @@ export function IncentivePrograms({ supplierId }: { supplierId: string }) {
           <Trophy className="h-3.5 w-3.5 text-warning" /> برامج الحوافز
         </CardTitle>
         {perms.canManage && (
-          <Button size="sm" className="h-7 px-2 text-[11px]" onClick={() => setCreateOpen(true)}>
+          <Button size="sm" className="h-7 px-2 text-[11px]" onClick={async () => {
+            try { await ensureIncentiveAccess("manage"); } catch (e) { toast.error((e as Error).message); return; }
+            setCreateOpen(true);
+          }}>
             <Plus className="h-3 w-3 ml-1" /> برنامج جديد
           </Button>
         )}
