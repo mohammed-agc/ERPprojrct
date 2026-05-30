@@ -12,7 +12,7 @@ import {
 import { allocationService } from "@/services/erp/allocations";
 import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
 import { DocPrintActions } from "@/components/erp/DocPrintActions";
-import { PrintablePurchaseDoc } from "@/components/erp/PrintablePurchaseDoc";
+import { PrintableInvoiceDoc, type InvoiceLine } from "@/components/erp/PrintableInvoiceDoc";
 import { makeAudit, type AuditEntry } from "@/services/erp/erpRoles";
 import { PaymentDialog, type PaymentSubmitPayload, type PaymentInvoiceContext, type SupplierCreditContext } from "@/components/erp/PaymentDialog";
 
@@ -48,29 +48,96 @@ export default function PurchaseInvoiceDetail() {
   const remaining = inv.total - inv.paid;
   const responsibleRole = inv.status === "paid" ? "purchasing_officer" : "accounting";
 
+  // Build one row per VIN from confirmed allocations; fall back to PO lines for parts/services.
+  const allocLines: InvoiceLine[] = allocs.flatMap(a => a.lines.map(l => {
+    const base = Number(l.cost ?? 0);
+    const vatPct = l.vat_pct ?? 15;
+    return {
+      vin: l.vin,
+      description: `${l.manufacturer || l.brand || ""} ${l.model ?? ""} ${l.trim ?? ""}`.trim() || "مركبة",
+      color: l.color,
+      model_year: l.year,
+      base_price: base,
+      discount: 0,
+      vat_pct: vatPct,
+    } as InvoiceLine;
+  }));
+  const fallbackLines: InvoiceLine[] = (po?.items ?? []).map(it => ({
+    vin: undefined,
+    description: it.description,
+    color: it.color_name,
+    model_year: it.year,
+    base_price: it.qty * it.unit_cost,
+    discount: 0,
+    vat_pct: it.vat_pct ?? 15,
+  }));
+  const invoiceLines = allocLines.length > 0 ? allocLines : fallbackLines;
+
+  // Locate ERP refs
+  const pr = po?.pr_id ? purchasingService.listPRs().find(r => r.id === po.pr_id) : undefined;
+  const alc = allocs[0];
+  const alcConf = alc?.confirmation_id;
+
+  const paymentKey = (() => {
+    // map invoice's payment_term to credit-flag context for footer panel
+    if (inv.payment_term === "credit_line") return "credit_utilization";
+    const lastPay = payments[payments.length - 1];
+    return lastPay?.method ?? "bank_transfer";
+  })();
+  const paymentLabel = (() => {
+    if (inv.payment_term === "credit_line") return "حد ائتماني للمورد";
+    const lastPay = payments[payments.length - 1];
+    return lastPay ? PAYMENT_METHOD_LABEL[lastPay.method] : "—";
+  })();
+
+  const statusKind: "draft" | "approved" | "paid" | "cancelled" =
+    inv.status === "paid" ? "paid"
+    : inv.status === "cancelled" ? "cancelled"
+    : inv.status === "draft" ? "draft" : "approved";
+
   const printable = (
-    <PrintablePurchaseDoc
-      title={inv.code}
-      docType="purchase_invoice"
-      documentNo={inv.code}
-      documentDate={fmtDate(inv.issued_at)}
-      watermark={inv.status === "paid" ? "مدفوعة" : inv.status === "cancelled" ? "ملغاة" : "أصلية"}
-      partyTitle="المورد"
-      partyName={supplier?.name ?? "—"}
-      partyMeta={[
-        { label: "رقم المورد", value: supplier?.code ?? "—" },
-        { label: "أمر الشراء", value: po?.code ?? "—" },
-        { label: "تاريخ الاستحقاق", value: fmtDate(inv.due_date) },
-      ]}
-      meta={[
-        { label: "الحالة", value: PINV_LABEL[inv.status] },
-        { label: "المدفوع", value: fmtSAR(inv.paid) },
-        { label: "المتبقي", value: fmtSAR(remaining) },
-      ]}
-      items={po?.items ?? []}
-      subtotal={inv.subtotal}
+    <PrintableInvoiceDoc
+      variant="purchase"
+      statusLabel={PINV_LABEL[inv.status]}
+      statusKind={statusKind}
+      invoice_no={inv.code}
+      invoice_date={fmtDate(inv.issued_at)}
+      supply_date={fmtDate(inv.issued_at)}
+      branch={po?.branch_destination}
+      payment_method={paymentLabel}
+      payment_method_key={paymentKey}
+      seller={{
+        name: "ساراط للسيارات",
+        cr_number: "1010000000",
+        vat_number: "300000000000003",
+        address: "المملكة العربية السعودية — الرياض",
+        contact: "+966 11 000 0000",
+      }}
+      buyer={{
+        name: supplier?.name ?? "—",
+        cr_number: supplier?.code,
+        contact: supplier?.contact,
+        address: supplier?.country,
+      }}
+      erpRefs={{
+        pr: pr?.code,
+        po: po?.code,
+        alc: alc?.code,
+        alc_conf: alcConf,
+        pi: inv.code,
+      }}
+      items={invoiceLines}
+      totalVehicleValue={inv.subtotal}
+      totalDiscounts={0}
+      netBeforeVat={inv.subtotal}
       vatAmount={inv.vat_amount}
-      total={inv.total}
+      additionalCharges={0}
+      finalTotal={inv.total}
+      credit={supplier ? {
+        credit_limit: supplier.credit_limit,
+        credit_used: supplier.utilized,
+        credit_remaining: Math.max(0, supplier.credit_limit - supplier.utilized),
+      } : undefined}
       notes={inv.notes}
     />
   );
