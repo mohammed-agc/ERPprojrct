@@ -1,12 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trophy, Target, TrendingUp, Info, Search, Sparkles, ExternalLink, ShieldAlert } from "lucide-react";
+import { Trophy, Target, TrendingUp, Info, Search, Sparkles, ExternalLink, ShieldAlert, Loader2 } from "lucide-react";
 import { purchasingService, fmtSAR, fmtDate, type IncentiveProgramStatus } from "@/services/erp/purchasing";
 import { useIncentivePermissions } from "@/lib/incentivePermissions";
+import { checkIncentiveAccess } from "@/lib/incentiveAuthzApi";
 
 const STATUS_LABEL: Record<IncentiveProgramStatus, string> = {
   active: "نشط", closed: "مغلق", achieved: "محقق",
