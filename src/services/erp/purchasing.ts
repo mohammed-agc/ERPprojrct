@@ -1380,6 +1380,22 @@ export const purchasingService = {
     }
   },
 
+  /** Update per-line passed/failed counts on an inspection record (Workbench). */
+  updateInspectionItems(inspectionId: string, items: { line_id: string; passed: number; failed: number; remarks?: string }[]) {
+    const db = load();
+    const i = db.inspections.find(x => x.id === inspectionId); if (!i) return;
+    // Merge: replace counts for matching line_ids, keep any other items
+    const map = new Map(items.map(it => [it.line_id, it]));
+    i.items = i.items.map(it => map.get(it.line_id) ?? it);
+    // Append new lines not present yet
+    items.forEach(it => { if (!i.items.find(x => x.line_id === it.line_id)) i.items.push(it); });
+    save(db);
+  },
+
+  /** Find the inspection currently linked to a GRN, if any. */
+  getInspectionByGRN(grnId: string) {
+    return load().inspections.find(i => i.grn_id === grnId);
+
   /** Record vehicle inventory ids created from an approved inspection (VIN governance). */
   recordVehicleIntake(inspectionId: string, vehicleIds: string[]) {
     const db = load();
