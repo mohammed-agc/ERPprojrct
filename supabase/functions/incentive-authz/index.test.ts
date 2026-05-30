@@ -23,7 +23,9 @@ const DEPT_PURCHASING = "de9d6156-e60f-4b41-9859-8b0737f7a7eb"; // purchasing
 const DEPT_ACCOUNTING = "c0cd7686-4bf8-4707-9ba5-8010dcea5bd6"; // accounting
 const DEPT_SALES      = "71273079-4122-4d36-a9a5-584ab4ac3033"; // sales (unauthorized)
 
-const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
+const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
 
 const PASSWORD = "TestPass!123456";
 
