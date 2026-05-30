@@ -52,7 +52,9 @@ async function seedUser(deptId: string | null, fullName: string): Promise<{ id: 
 }
 
 async function signIn(email: string): Promise<string> {
-  const c = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false } });
+  const c = createClient(SUPABASE_URL, ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
   const { data, error } = await c.auth.signInWithPassword({ email, password: PASSWORD });
   if (error || !data.session) throw new Error(`signIn failed: ${error?.message}`);
   return data.session.access_token;
