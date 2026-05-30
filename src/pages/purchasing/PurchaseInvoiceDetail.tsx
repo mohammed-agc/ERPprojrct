@@ -188,7 +188,7 @@ export default function PurchaseInvoiceDetail() {
         onClose={() => setPayOpen(false)}
         invoiceId={inv.id}
         invoiceCode={inv.code}
-        supplierName={supplier?.name}
+        supplier={supplier}
         total={inv.total}
         paid={inv.paid}
         onPaid={() => { setPayOpen(false); refresh(); }}
@@ -197,24 +197,47 @@ export default function PurchaseInvoiceDetail() {
   );
 }
 
-function PaymentDialogHost({ open, onClose, invoiceId, invoiceCode, supplierName, total, paid, onPaid }: {
+function PaymentDialogHost({ open, onClose, invoiceId, invoiceCode, supplier, total, paid, onPaid }: {
   open: boolean; onClose: () => void; invoiceId: string; invoiceCode: string;
-  supplierName?: string; total: number; paid: number; onPaid: () => void;
+  supplier?: ReturnType<typeof purchasingService.getSupplier>;
+  total: number; paid: number; onPaid: () => void;
 }) {
   const [submitting, setSubmitting] = useState(false);
   const ctx: PaymentInvoiceContext = {
-    id: invoiceId, invoice_no: invoiceCode, customer_name: supplierName, total, paid_amount: paid,
+    id: invoiceId, invoice_no: invoiceCode, customer_name: supplier?.name, total, paid_amount: paid,
   };
+  const creditCtx: SupplierCreditContext | null = supplier ? {
+    supplier_name: supplier.name,
+    credit_limit: supplier.credit_limit,
+    credit_utilized: supplier.utilized,
+    credit_remaining: Math.max(0, supplier.credit_limit - supplier.utilized),
+    credit_expiry: supplier.agreement_expiry,
+    credit_status: new Date(supplier.agreement_expiry) < new Date()
+      ? "expired"
+      : supplier.utilized > supplier.credit_limit ? "suspended" : "active",
+  } : null;
   const handle = async (p: PaymentSubmitPayload) => {
     setSubmitting(true);
     try {
-      const r = purchasingService.recordPurchasePayment({
-        invoice_id: p.invoiceId, amount: p.amount,
-        method: METHOD_MAP[p.method] ?? "bank_transfer",
-        reference: p.reference || undefined,
-      });
-      if (!r) { toast.error("تعذر تسجيل الدفعة"); return; }
-      toast.success(`تم تسجيل الدفعة ${r.code}`);
+      if (p.method === "mixed") {
+        const res = purchasingService.recordMixedPurchasePayment({
+          invoice_id: p.invoiceId,
+          credit_amount: p.creditAmount ?? 0,
+          cash_amount: p.cashAmount ?? 0,
+          cash_method: METHOD_MAP[p.cashMethod ?? "bank_transfer"] ?? "bank_transfer",
+          reference: p.reference || undefined,
+        });
+        if (res.error) { toast.error(res.error); return; }
+        toast.success("تم تسجيل التسوية المختلطة");
+      } else {
+        const r = purchasingService.recordPurchasePayment({
+          invoice_id: p.invoiceId, amount: p.amount,
+          method: METHOD_MAP[p.method] ?? "bank_transfer",
+          reference: p.reference || undefined,
+        });
+        if (!r) { toast.error("تعذر تسجيل الدفعة"); return; }
+        toast.success(`تم تسجيل الدفعة ${r.code}`);
+      }
       onPaid();
     } finally { setSubmitting(false); }
   };
@@ -223,6 +246,7 @@ function PaymentDialogHost({ open, onClose, invoiceId, invoiceCode, supplierName
       open={open}
       onOpenChange={(o) => !o && onClose()}
       invoice={ctx}
+      supplierCredit={creditCtx}
       submitting={submitting}
       onSubmit={handle}
     />
