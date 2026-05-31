@@ -248,8 +248,12 @@ export interface PurchaseInvoice {
   code: string;            // PINV-2026-0001
   po_id: string;
   supplier_id: string;
-  issued_at: string;
+  issued_at: string;       // = invoice_date (ISO)
   due_date: string;
+  /** Days between invoice_date and due_date, snapshotted at issue time. */
+  credit_days?: number;
+  /** Settlement policy applied to compute due_date (snapshot for audit). */
+  settlement_policy?: SettlementPolicy;
   payment_term: PaymentTerm;
   subtotal: number;
   vat_amount: number;
