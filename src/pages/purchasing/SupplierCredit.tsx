@@ -137,6 +137,12 @@ export default function SupplierCredit() {
         open={!!stmtId}
         onOpenChange={(v) => !v && setStmtId(null)}
       />
+      <SupplierPolicyDialog
+        supplier={policySupplier}
+        open={!!policyId}
+        onOpenChange={(v) => !v && setPolicyId(null)}
+        onSaved={() => { setPolicyId(null); setTick(t => t + 1); }}
+      />
     </div>
   );
 }
