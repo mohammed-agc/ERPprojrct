@@ -1194,6 +1194,13 @@ export const purchasingService = {
     if (input.amount <= 0) return { error: "المبلغ يجب أن يكون موجبًا" };
     // Cap to remaining earned (already nets approved + pending)
     const perf = this.programPerformance(program);
+    // Governance: target-based programs BLOCK claim creation until the target
+    // is achieved. Accumulative programs accept any earned-up-to amount.
+    if ((program.program_type ?? "accumulative") === "target_based" && !perf.target_met) {
+      return {
+        error: `لا يمكن إنشاء مطالبة قبل تحقيق الهدف — تم شراء ${perf.purchased} من أصل ${perf.target} مركبة`,
+      };
+    }
     if (input.amount > perf.remaining_incentive + 0.001) {
       return { error: `المبلغ يتجاوز الحافز المتبقي (${perf.remaining_incentive.toFixed(2)})` };
     }
