@@ -1461,12 +1461,28 @@ export const purchasingService = {
     const vatPct = input.vat_pct ?? 15;
     const subtotal = po.total;
     const vat = Math.round(subtotal * (vatPct / 100));
+    // Settlement policy drives due date when not explicitly provided. Falls
+    // back to legacy payment_term mapping if the supplier has no policy.
+    const supplier = db.suppliers.find(s => s.id === po.supplier_id);
+    const issuedAt = isoNow();
+    const fallbackDays = po.payment_term === "cash" ? 0
+      : po.payment_term === "net_60" ? 60
+      : po.payment_term === "net_90" ? 90 : 30;
+    const computedDue = supplier?.settlement_policy
+      ? computeDueDate(issuedAt, supplier)
+      : addDays(fallbackDays);
+    const dueDate = input.due_date ?? computedDue;
+    const creditDays = Math.max(0, Math.round(
+      (new Date(dueDate).getTime() - new Date(issuedAt).getTime()) / 86_400_000,
+    ));
     const inv: PurchaseInvoice = {
       id: uid("pinv"),
       code: `PINV-${year}-${String(seq).padStart(4, "0")}`,
       po_id: po.id, supplier_id: po.supplier_id,
-      issued_at: isoNow(),
-      due_date: input.due_date ?? addDays(po.payment_term === "cash" ? 0 : po.payment_term === "net_60" ? 60 : po.payment_term === "net_90" ? 90 : 30),
+      issued_at: issuedAt,
+      due_date: dueDate,
+      credit_days: creditDays,
+      settlement_policy: supplier?.settlement_policy,
       payment_term: po.payment_term,
       subtotal, vat_amount: vat, total: subtotal + vat,
       paid: 0, status: "issued", notes: input.notes,
