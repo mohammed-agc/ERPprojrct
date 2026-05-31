@@ -10,17 +10,15 @@ import { toast } from "sonner";
 import { PaymentDialog, PaymentSubmitPayload, PaymentInvoiceContext } from "@/components/erp/PaymentDialog";
 import { DocPrintActions } from "@/components/erp/DocPrintActions";
 import { PrintableInvoiceDoc, type InvoiceLine } from "@/components/erp/PrintableInvoiceDoc";
+import { salesVehicleStatus } from "@/services/erp/salesVehicleStatus";
 
 const statusMap: Record<string, { label: string; variant: any }> = {
   draft: { label: "مسودة", variant: "secondary" },
   posted: { label: "مرحّلة", variant: "default" },
+  partially_paid: { label: "مدفوعة جزئياً", variant: "secondary" },
   paid: { label: "مدفوعة", variant: "outline" },
   cancelled: { label: "ملغاة", variant: "destructive" },
 };
-
-// Frontend-only mirror of payment progress until backend payments table exists.
-// Keyed by invoice id → total paid.
-const paymentLedger: Record<string, number> = {};
 
 function paymentBadge(status: "unpaid" | "partial" | "paid") {
   if (status === "paid")    return <Badge className="bg-success text-success-foreground hover:bg-success/90">مدفوعة</Badge>;
@@ -41,7 +39,7 @@ export default function Invoices() {
       .select("*, customers(name)")
       .order("invoice_date", { ascending: false });
     const list = invs ?? [];
-    // Vehicle enrichment: collect distinct sales_order_ids → lines → vehicles
+    // Vehicle enrichment via sales_order_lines
     const soIds = Array.from(new Set(list.map(i => i.sales_order_id).filter(Boolean)));
     let vehiclesByInvoice: Record<string, any[]> = {};
     if (soIds.length > 0) {
@@ -62,14 +60,13 @@ export default function Invoices() {
   };
   useEffect(() => { load(); }, []);
 
-
   const openPayment = (r: any) => {
     setActiveInvoice({
       id: r.id,
       invoice_no: r.invoice_no,
       customer_name: r.customers?.name,
       total: Number(r.total),
-      paid_amount: r.status === "paid" ? Number(r.total) : (paymentLedger[r.id] ?? 0),
+      paid_amount: Number(r.paid_amount ?? 0),
     });
     setDialogOpen(true);
   };
@@ -77,17 +74,34 @@ export default function Invoices() {
   const handleSubmitPayment = async (p: PaymentSubmitPayload) => {
     setSubmitting(true);
     try {
-      // Track locally until backend payments service is wired.
-      paymentLedger[p.invoiceId] = (paymentLedger[p.invoiceId] ?? 0) + p.amount;
+      const row = rows.find(r => r.id === p.invoiceId);
+      if (!row) throw new Error("الفاتورة غير موجودة");
 
-      if (p.isFullPayment) {
-        const { error } = await supabase.from("invoices").update({ status: "paid" }).eq("id", p.invoiceId);
-        if (error) throw error;
-        toast.success("تم تسجيل الدفعة الكاملة");
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      const paymentNo = "PMT-" + Date.now().toString().slice(-10);
+
+      // Insert into persistent payments table — DB trigger recalculates invoice paid_amount + status
+      const { error } = await supabase.from("payments").insert({
+        payment_no: paymentNo,
+        customer_id: row.customer_id,
+        invoice_id: p.invoiceId,
+        amount: p.amount,
+        payment_date: p.paymentDate,
+        method: p.method,
+        reference: p.reference || null,
+        notes: p.notes || null,
+        created_by: userId,
+      });
+      if (error) throw error;
+
+      // If fully paid → mark linked vehicles as 'sold'
+      const previouslyPaid = Number(row.paid_amount ?? 0);
+      const totalAfter = previouslyPaid + p.amount;
+      if (totalAfter >= Number(row.total)) {
+        await salesVehicleStatus.markSoldForInvoice(p.invoiceId);
+        toast.success("تم تسجيل الدفعة الكاملة — تم تحديث حالة المركبة إلى مباعة");
       } else {
-        toast.success(`تم تسجيل دفعة جزئية بقيمة ${p.amount.toLocaleString("ar-SA")}`, {
-          description: "سيتم ترحيل القيد المحاسبي من قِبل النظام الخلفي.",
-        });
+        toast.success(`تم تسجيل دفعة جزئية بقيمة ${p.amount.toLocaleString("ar-SA")}`);
       }
       setDialogOpen(false);
       load();
@@ -100,7 +114,7 @@ export default function Invoices() {
 
   return (
     <div>
-      <PageHeader title="الفواتير الضريبية" subtitle="فواتير متوافقة مع هيئة الزكاة (ZATCA Phase 1) — تسجيل الدفعات يتم من قسم المحاسبة" />
+      <PageHeader title="الفواتير الضريبية" subtitle="فواتير متوافقة مع هيئة الزكاة (ZATCA Phase 1) — الدفعات تُسجَّل في سجل ائتمان العميل" />
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <table className="erp-table">
           <thead>
@@ -112,6 +126,7 @@ export default function Invoices() {
               <th className="text-left">قبل الضريبة</th>
               <th className="text-left">VAT 15%</th>
               <th className="text-left">الإجمالي</th>
+              <th className="text-left">المدفوع</th>
               <th>QR</th>
               <th>الحالة</th>
               <th>الدفع</th>
@@ -120,15 +135,15 @@ export default function Invoices() {
           </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td colSpan={11} className="text-center text-muted-foreground py-8">لا توجد فواتير</td></tr>
+              <tr><td colSpan={12} className="text-center text-muted-foreground py-8">لا توجد فواتير</td></tr>
             )}
             {rows.map(r => {
-              const woState = r.status === "paid" ? "paid" : "invoiced";
-              const payPerm = canPerform("receive_payment", woState as any, role);
               const total = Number(r.total);
-              const paidSoFar = r.status === "paid" ? total : (paymentLedger[r.id] ?? 0);
+              const paidSoFar = Number(r.paid_amount ?? 0);
               const payStatus: "unpaid" | "partial" | "paid" =
                 paidSoFar <= 0 ? "unpaid" : paidSoFar >= total ? "paid" : "partial";
+              const woState = payStatus === "paid" ? "paid" : "invoiced";
+              const payPerm = canPerform("receive_payment", woState as any, role);
               const vehs: any[] = r._vehicles ?? [];
               return (
                 <tr key={r.id}>
@@ -158,8 +173,9 @@ export default function Invoices() {
                   <td className="num text-left">{Number(r.subtotal).toLocaleString("ar-SA", {minimumFractionDigits:2})}</td>
                   <td className="num text-left">{Number(r.vat_amount).toLocaleString("ar-SA", {minimumFractionDigits:2})}</td>
                   <td className="num text-left font-bold">{total.toLocaleString("ar-SA", {minimumFractionDigits:2})}</td>
+                  <td className="num text-left">{paidSoFar.toLocaleString("ar-SA", {minimumFractionDigits:2})}</td>
                   <td>{r.qr_code ? <span className="text-xs text-success">✓ متوفر</span> : <span className="text-xs text-muted-foreground">—</span>}</td>
-                  <td><Badge variant={statusMap[r.status]?.variant}>{statusMap[r.status]?.label}</Badge></td>
+                  <td><Badge variant={statusMap[r.status]?.variant}>{statusMap[r.status]?.label ?? r.status}</Badge></td>
                   <td>{paymentBadge(payStatus)}</td>
                   <td className="text-left">
                     <div className="flex items-center justify-end gap-1.5">
@@ -168,7 +184,7 @@ export default function Invoices() {
                         doc={
                           <PrintableInvoiceDoc
                             variant="sales"
-                            statusKind={r.status === "paid" ? "paid" : r.status === "cancelled" ? "cancelled" : r.status === "draft" ? "draft" : "approved"}
+                            statusKind={payStatus === "paid" ? "paid" : r.status === "cancelled" ? "cancelled" : r.status === "draft" ? "draft" : "approved"}
                             statusLabel={statusMap[r.status]?.label ?? r.status}
                             invoice_no={r.invoice_no}
                             invoice_date={r.invoice_date}

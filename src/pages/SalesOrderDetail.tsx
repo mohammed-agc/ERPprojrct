@@ -20,6 +20,7 @@ import { SalesOrderState, STATE_LABELS } from "@/lib/erpPermissions";
 import { useErpSession } from "@/contexts/ErpSessionContext";
 import { useSalesActions } from "@/hooks/erp/useSalesActions";
 import { Banknote, Truck, XCircle, Printer } from "lucide-react";
+import { salesVehicleStatus } from "@/services/erp/salesVehicleStatus";
 
 interface Line {
   id?: string;
@@ -202,9 +203,17 @@ export default function SalesOrderDetail() {
 
   const confirm = async () => {
     await save();
+    // Sanity check: every linked vehicle must still be sellable
+    const conflicts = await salesVehicleStatus.assertAvailable(id!);
+    if (conflicts.length) {
+      toast.error(`بعض المركبات لم تعد متاحة: ${conflicts.join(", ")}`);
+      return;
+    }
     const { error } = await supabase.from("sales_orders").update({ status: "confirmed" }).eq("id", id);
     if (error) { toast.error(error.message); return; }
-    toast.success("تم تأكيد الأمر");
+    // Reserve linked vehicles in inventory
+    await salesVehicleStatus.reserveForOrder(id!);
+    toast.success("تم تأكيد الأمر — تم حجز المركبات");
     load();
   };
 
@@ -255,6 +264,10 @@ export default function SalesOrderDetail() {
   const setStatus = async (next: SalesOrderState, msg: string) => {
     const { error } = await supabase.from("sales_orders").update({ status: next as any }).eq("id", id);
     if (error) { toast.error(error.message); return; }
+    // Persist vehicle status alongside the order transition
+    if (next === "paid")      await salesVehicleStatus.markSoldForOrder(id!);
+    if (next === "delivered") await salesVehicleStatus.markDeliveredForOrder(id!);
+    if (next === "cancelled") await salesVehicleStatus.releaseForOrder(id!);
     toast.success(msg);
     load();
   };
