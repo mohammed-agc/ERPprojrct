@@ -1143,15 +1143,27 @@ export const purchasingService = {
     const target = Math.max(0, program.target_vehicles);
     const remaining = Math.max(0, target - purchased);
     const achievement = target > 0 ? (purchased / target) * 100 : 0;
-    const earned = purchased * program.incentive_per_vehicle;
+    const program_type: IncentiveProgramType = program.program_type ?? "accumulative";
+    // For target_based programs, NO incentive is earned until target is met.
+    // For accumulative programs, every purchased vehicle earns its rate.
+    const target_met = target > 0 && purchased >= target;
+    const earned = program_type === "target_based"
+      ? (target_met ? purchased * program.incentive_per_vehicle : 0)
+      : purchased * program.incentive_per_vehicle;
     const claims = db.incentive_claims.filter(c => c.program_id === program.id);
     const approvedClaims = claims.filter(c => c.status === "approved");
     const pendingClaims = claims.filter(c => c.status === "pending_approval");
     const claimed = approvedClaims.reduce((s, c) => s + c.amount, 0);
     const pending = pendingClaims.reduce((s, c) => s + c.amount, 0);
     const remaining_incentive = Math.max(0, earned - claimed - pending);
-    const eligible = target > 0 && purchased >= target;
+    // Eligibility for claim creation:
+    //   target_based → strictly requires target_met
+    //   accumulative → eligible once anything has been earned
+    const eligible = program_type === "target_based"
+      ? target_met
+      : earned > 0;
     return {
+      program_type, target_met,
       purchased, target, remaining, achievement,
       earned, claimed, pending, remaining_incentive,
       eligible, claims, pendingClaims, approvedClaims,
