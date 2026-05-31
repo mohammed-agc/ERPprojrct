@@ -153,6 +153,17 @@ export interface PurchaseOrder {
 }
 
 
+/**
+ * Supplier settlement policy — drives invoice due-date computation and
+ * aging-status calculations across the credit governance views.
+ *   cash      → due immediately
+ *   eom       → end of invoice month
+ *   net_30/45/60/90 → fixed days after invoice
+ *   custom    → uses supplier.custom_settlement_days
+ */
+export type SettlementPolicy =
+  | "cash" | "eom" | "net_30" | "net_45" | "net_60" | "net_90" | "custom";
+
 export interface Supplier {
   id: string;
   code: string;            // SUP-001
@@ -166,6 +177,10 @@ export interface Supplier {
   renewal_period_months: number;
   agreement_start: string;
   agreement_expiry: string;
+  /* settlement policy (governance v1.4) */
+  settlement_policy?: SettlementPolicy;
+  custom_settlement_days?: number;
+  grace_days?: number;
   /* incentives */
   monthly_target: number;      // vehicles
   achieved: number;            // vehicles this period
