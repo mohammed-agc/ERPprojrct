@@ -12,7 +12,7 @@ import { Trophy, Plus, Pencil, Trash2, CheckCircle2, Sparkles, Clock, X, ShieldC
 import { toast } from "sonner";
 import {
   purchasingService, fmtSAR, fmtDate,
-  type IncentiveProgram, type IncentiveProgramStatus, type IncentiveClaimMode, type IncentiveClaim,
+  type IncentiveProgram, type IncentiveProgramStatus, type IncentiveProgramType, type IncentiveClaimMode, type IncentiveClaim,
 } from "@/services/erp/purchasing";
 import { cn } from "@/lib/utils";
 import { useIncentivePermissions } from "@/lib/incentivePermissions";
