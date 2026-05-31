@@ -41,7 +41,7 @@ export function SupplierStatementDialog({
   );
   // index invoice metadata for ledger row enrichment
   const invMap = useMemo(() => {
-    if (!supplierId) return new Map<string, { issued_at: string; due_date: string; credit_days?: number }>();
+    if (!supplierId) return new Map<string, { issued_at: string; due_date: string; credit_days?: number; paid: number; total: number }>();
     const m = new Map<string, { issued_at: string; due_date: string; credit_days?: number; paid: number; total: number }>();
     for (const inv of purchasingService.listPurchaseInvoices().filter(i => i.supplier_id === supplierId)) {
       m.set(inv.code, { issued_at: inv.issued_at, due_date: inv.due_date, credit_days: inv.credit_days, paid: inv.paid, total: inv.total });
