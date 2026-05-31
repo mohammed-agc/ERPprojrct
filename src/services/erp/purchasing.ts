@@ -304,6 +304,15 @@ export interface SupplierLedgerEntry {
 /* ============================ Incentive Programs ============================ */
 export type IncentiveProgramStatus = "active" | "closed" | "achieved";
 
+/**
+ * Program type governs eligibility:
+ *   accumulative → earned incentive grows linearly with each purchased vehicle;
+ *                  claim creation is allowed for any positive earned amount.
+ *   target_based → no incentive earned unless target is met; claim creation is
+ *                  BLOCKED until purchased >= target.
+ */
+export type IncentiveProgramType = "accumulative" | "target_based";
+
 export interface IncentiveProgram {
   id: string;
   supplier_id: string;
@@ -312,6 +321,8 @@ export interface IncentiveProgram {
   end_date: string;              // ISO date
   target_vehicles: number;
   incentive_per_vehicle: number; // SAR
+  /** Defaults to "accumulative" when missing (back-compat with seed data). */
+  program_type?: IncentiveProgramType;
   brand?: string;                // optional filter (case-insensitive contains)
   model?: string;                // optional filter (case-insensitive contains)
   status: IncentiveProgramStatus;
