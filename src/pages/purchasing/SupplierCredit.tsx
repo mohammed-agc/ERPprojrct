@@ -60,9 +60,23 @@ export default function SupplierCredit() {
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <div className="font-semibold text-sm">{s.name}</div>
-                  <div className="text-[11px] text-muted-foreground">{s.code} · {s.country} · {s.agreement_type === "framework" ? "إطارية" : s.agreement_type === "spot" ? "فورية" : "أمانة"}</div>
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1 flex-wrap">
+                    <span>{s.code} · {s.country} · {s.agreement_type === "framework" ? "إطارية" : s.agreement_type === "spot" ? "فورية" : "أمانة"}</span>
+                    {s.settlement_policy && (
+                      <Badge variant="outline" className="text-[10px] h-4 px-1">
+                        سداد: {SETTLEMENT_LABEL[s.settlement_policy]}
+                        {s.settlement_policy === "custom" && s.custom_settlement_days ? ` ${s.custom_settlement_days}ي` : ""}
+                        {s.grace_days ? ` · سماح ${s.grace_days}ي` : ""}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {c.overdue_balance > 0 && (
+                    <Badge className="bg-destructive/10 text-destructive border border-destructive/40 gap-1">
+                      <Clock className="h-3 w-3" /> متأخر {c.max_days_overdue}ي
+                    </Badge>
+                  )}
                   {c.over && (
                     <Badge className="bg-destructive/10 text-destructive border border-destructive/40 gap-1">
                       <AlertTriangle className="h-3 w-3" /> تجاوز الحد
@@ -74,10 +88,15 @@ export default function SupplierCredit() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 mb-3">
+              <div className="grid grid-cols-3 gap-2 mb-2">
                 <Cell label="الحد" value={fmtSAR(s.credit_limit)} />
                 <Cell label="المستخدم" value={fmtSAR(s.utilized)} tone="warning" />
                 <Cell label="المتبقي" value={fmtSAR(c.remaining)} tone={c.remaining < 0 ? "destructive" : "success"} />
+              </div>
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <Cell label="رصيد مستحق" value={fmtSAR(c.due_balance)} />
+                <Cell label="رصيد متأخر" value={fmtSAR(c.overdue_balance)} tone={c.overdue_balance > 0 ? "destructive" : "default"} />
+                <Cell label="أقرب استحقاق" value={c.next_due_date ? fmtDate(c.next_due_date) : "—"} />
               </div>
 
               <div className="mb-3">
