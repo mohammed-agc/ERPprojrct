@@ -382,6 +382,7 @@ function seed(): DB {
     country: "اليابان", agreement_type: "framework",
     credit_limit: 4_000_000, utilized: 2_800_000,
     renewal_period_months: 12, agreement_start: "2026-01-01", agreement_expiry: "2026-12-31",
+    settlement_policy: "net_60", grace_days: 5,
     monthly_target: 40, achieved: 28, incentive_per_vehicle: 4_500,
     campaign: "Q2 2026 Hilux Push",
   };
@@ -390,6 +391,7 @@ function seed(): DB {
     country: "كوريا الجنوبية", agreement_type: "framework",
     credit_limit: 3_000_000, utilized: 1_450_000,
     renewal_period_months: 12, agreement_start: "2026-01-01", agreement_expiry: "2026-10-31",
+    settlement_policy: "net_30", grace_days: 3,
     monthly_target: 30, achieved: 19, incentive_per_vehicle: 3_200,
     campaign: "Tucson Spring Drive",
   };
@@ -398,6 +400,7 @@ function seed(): DB {
     country: "اليابان", agreement_type: "spot",
     credit_limit: 2_000_000, utilized: 2_080_000,
     renewal_period_months: 6, agreement_start: "2026-01-01", agreement_expiry: "2026-06-30",
+    settlement_policy: "eom", grace_days: 0,
     monthly_target: 20, achieved: 22, incentive_per_vehicle: 2_800,
   };
   const sup4: Supplier = {
