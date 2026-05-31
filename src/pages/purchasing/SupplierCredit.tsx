@@ -23,7 +23,11 @@ export default function SupplierCredit() {
   const totals = useMemo(() => {
     const limit = suppliers.reduce((s, x) => s + x.credit_limit, 0);
     const used = suppliers.reduce((s, x) => s + x.utilized, 0);
-    return { limit, used, remaining: limit - used, over: suppliers.filter(s => s.utilized > s.credit_limit).length };
+    const aging = suppliers.map(s => purchasingService.supplierAging(s.id));
+    const due = aging.reduce((s, a) => s + a.due_balance, 0);
+    const overdue = aging.reduce((s, a) => s + a.overdue_balance, 0);
+    return { limit, used, remaining: limit - used, due, overdue,
+      over: suppliers.filter(s => s.utilized > s.credit_limit).length };
   }, [suppliers]);
 
   return (
