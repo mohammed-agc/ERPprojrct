@@ -944,6 +944,18 @@ export const purchasingService = {
   listSuppliers(): Supplier[] { return load().suppliers; },
   getSupplier(id: string): Supplier | undefined { return load().suppliers.find(s => s.id === id); },
 
+  /** Update supplier credit / settlement policy fields. Returns the updated record. */
+  updateSupplier(id: string, patch: Partial<Pick<Supplier,
+    "credit_limit" | "settlement_policy" | "custom_settlement_days" | "grace_days"
+  >>): Supplier | undefined {
+    const db = load();
+    const s = db.suppliers.find(x => x.id === id);
+    if (!s) return undefined;
+    Object.assign(s, patch);
+    save(db);
+    return s;
+  },
+
   /**
    * Provision a Supplier record from a Contact (vendor role) if one doesn't
    * already exist for that contact. Returns the supplier id to use in POs.
