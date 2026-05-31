@@ -984,7 +984,40 @@ export const purchasingService = {
     const daysToExpiry = Math.ceil(
       (new Date(s.agreement_expiry).getTime() - Date.now()) / 86_400_000,
     );
-    return { remaining, usage, over, daysToExpiry };
+    const aging = this.supplierAging(s.id);
+    return { remaining, usage, over, daysToExpiry, ...aging };
+  },
+  /**
+   * Aggregate aging snapshot for a supplier:
+   *   due_balance      → outstanding on invoices not yet overdue
+   *   overdue_balance  → outstanding on invoices past (due_date + grace_days)
+   *   next_due_date    → earliest due_date among unsettled invoices
+   *   max_days_overdue → worst aging bucket today
+   */
+  supplierAging(supplierId: string) {
+    const db = load();
+    const sup = db.suppliers.find(s => s.id === supplierId);
+    const grace = sup?.grace_days ?? 0;
+    const invs = db.invoices.filter(i =>
+      i.supplier_id === supplierId &&
+      i.status !== "cancelled" && i.status !== "draft" &&
+      i.total - i.paid > 0.001,
+    );
+    let due_balance = 0, overdue_balance = 0;
+    let next_due_date: string | undefined;
+    let max_days_overdue = 0;
+    for (const inv of invs) {
+      const outstanding = Math.max(0, inv.total - inv.paid);
+      const a = computeAging(inv.due_date, { grace_days: grace });
+      if (a.status === "overdue") {
+        overdue_balance += outstanding;
+        if (a.days_overdue > max_days_overdue) max_days_overdue = a.days_overdue;
+      } else {
+        due_balance += outstanding;
+      }
+      if (!next_due_date || inv.due_date < next_due_date) next_due_date = inv.due_date;
+    }
+    return { due_balance, overdue_balance, next_due_date, max_days_overdue };
   },
   expectedIncentive(s: Supplier) {
     return { vehicles: s.achieved, total: s.achieved * s.incentive_per_vehicle, target: s.monthly_target };
