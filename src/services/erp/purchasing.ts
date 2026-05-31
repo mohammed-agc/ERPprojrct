@@ -1094,6 +1094,7 @@ export const purchasingService = {
       end_date: input.end_date,
       target_vehicles: input.target_vehicles,
       incentive_per_vehicle: input.incentive_per_vehicle,
+      program_type: input.program_type ?? "accumulative",
       brand: input.brand, model: input.model,
       status: input.status ?? "active",
       notes: input.notes,
