@@ -319,6 +319,7 @@ function ProgramFormDialog({
   const [form, setForm] = useState({
     name: "", start_date: today, end_date: plus(30),
     target_vehicles: 10, incentive_per_vehicle: 1000,
+    program_type: "accumulative" as IncentiveProgramType,
     brand: "", model: "", status: "active" as IncentiveProgramStatus, notes: "",
   });
 
@@ -329,11 +330,12 @@ function ProgramFormDialog({
       setForm({
         name: program.name, start_date: program.start_date, end_date: program.end_date,
         target_vehicles: program.target_vehicles, incentive_per_vehicle: program.incentive_per_vehicle,
+        program_type: program.program_type ?? "accumulative",
         brand: program.brand ?? "", model: program.model ?? "",
         status: program.status, notes: program.notes ?? "",
       });
     } else {
-      setForm(f => ({ ...f, name: "", brand: "", model: "", notes: "" }));
+      setForm(f => ({ ...f, name: "", brand: "", model: "", notes: "", program_type: "accumulative" }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seedFrom, open]);
@@ -351,6 +353,7 @@ function ProgramFormDialog({
       start_date: form.start_date, end_date: form.end_date,
       target_vehicles: Number(form.target_vehicles),
       incentive_per_vehicle: Number(form.incentive_per_vehicle),
+      program_type: form.program_type,
       brand: form.brand.trim() || undefined,
       model: form.model.trim() || undefined,
       status: form.status,
