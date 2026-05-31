@@ -111,6 +111,12 @@ export function SupplierStatementDialog({
           </DialogTitle>
         </DialogHeader>
 
+        {printable && (
+          <div className="flex justify-end mb-2">
+            <DocPrintActions doc={printable} />
+          </div>
+        )}
+
         {!stmt || !stmt.supplier ? (
           <div className="text-center text-sm text-muted-foreground py-8">لا توجد بيانات</div>
         ) : (
