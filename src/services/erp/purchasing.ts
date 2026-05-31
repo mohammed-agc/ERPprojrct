@@ -855,6 +855,85 @@ export const fmtSAR = (n: number) =>
 export const fmtDate = (s?: string) =>
   s ? new Date(s).toLocaleDateString("ar-SA", { dateStyle: "medium" }) : "—";
 
+/* ============================ Settlement / Aging ============================ */
+
+export const SETTLEMENT_LABEL: Record<SettlementPolicy, string> = {
+  cash: "نقدي",
+  eom: "نهاية الشهر",
+  net_30: "30 يوم",
+  net_45: "45 يوم",
+  net_60: "60 يوم",
+  net_90: "90 يوم",
+  custom: "مخصّص",
+};
+
+export type AgingStatus = "not_due" | "due_soon" | "overdue";
+
+export const AGING_LABEL: Record<AgingStatus, string> = {
+  not_due: "غير مستحقة",
+  due_soon: "قريبة الاستحقاق",
+  overdue: "متأخرة",
+};
+export const AGING_TONE: Record<AgingStatus, string> = {
+  not_due: "bg-muted text-muted-foreground border border-border",
+  due_soon: "bg-warning/10 text-warning border border-warning/40",
+  overdue: "bg-destructive/10 text-destructive border border-destructive/40",
+};
+
+/** Settlement days for a supplier given its policy. */
+export function settlementDaysFor(s: Pick<Supplier,
+  "settlement_policy" | "custom_settlement_days">): number {
+  switch (s.settlement_policy) {
+    case "cash": return 0;
+    case "net_30": return 30;
+    case "net_45": return 45;
+    case "net_60": return 60;
+    case "net_90": return 90;
+    case "custom": return Math.max(0, s.custom_settlement_days ?? 0);
+    case "eom":
+    default: return 30;
+  }
+}
+
+/** Compute due date from invoice date + supplier settlement policy. */
+export function computeDueDate(
+  invoiceDateISO: string,
+  s: Pick<Supplier, "settlement_policy" | "custom_settlement_days">,
+): string {
+  const d = new Date(invoiceDateISO);
+  if (s.settlement_policy === "eom") {
+    // end of invoice month
+    const eom = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    return eom.toISOString().slice(0, 10);
+  }
+  const days = settlementDaysFor(s);
+  const out = new Date(d); out.setDate(out.getDate() + days);
+  return out.toISOString().slice(0, 10);
+}
+
+/**
+ * Aging classification for an unpaid/partially paid invoice. Grace days extend
+ * the due date before the invoice is flagged as overdue. "Due soon" fires
+ * within `dueSoonWindow` (default 7) days before the (grace-adjusted) due date.
+ */
+export function computeAging(
+  due_date: string,
+  opts: { grace_days?: number; dueSoonWindow?: number } = {},
+): { status: AgingStatus; days_overdue: number; days_to_due: number } {
+  const today0 = new Date(); today0.setHours(0, 0, 0, 0);
+  const due0 = new Date(due_date); due0.setHours(0, 0, 0, 0);
+  const grace = Math.max(0, opts.grace_days ?? 0);
+  const effectiveDue = new Date(due0); effectiveDue.setDate(effectiveDue.getDate() + grace);
+  const diffDays = Math.round((effectiveDue.getTime() - today0.getTime()) / 86_400_000);
+  if (diffDays < 0) {
+    return { status: "overdue", days_overdue: -diffDays, days_to_due: diffDays };
+  }
+  const window = opts.dueSoonWindow ?? 7;
+  if (diffDays <= window) return { status: "due_soon", days_overdue: 0, days_to_due: diffDays };
+  return { status: "not_due", days_overdue: 0, days_to_due: diffDays };
+}
+
+
 /* ============================ Service ============================ */
 
 export const purchasingService = {
