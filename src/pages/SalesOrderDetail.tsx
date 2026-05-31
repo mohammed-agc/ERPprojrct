@@ -20,6 +20,7 @@ import { SalesOrderState, STATE_LABELS } from "@/lib/erpPermissions";
 import { useErpSession } from "@/contexts/ErpSessionContext";
 import { useSalesActions } from "@/hooks/erp/useSalesActions";
 import { Banknote, Truck, XCircle, Printer } from "lucide-react";
+import { salesVehicleStatus } from "@/services/erp/salesVehicleStatus";
 
 interface Line {
   id?: string;
