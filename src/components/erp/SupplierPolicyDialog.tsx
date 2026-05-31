@@ -69,25 +69,26 @@ export function SupplierPolicyDialog({
               <span className="text-muted-foreground">القيم الحالية</span>
               <span className="font-mono text-[10px] text-muted-foreground">{supplier.code}</span>
             </div>
-            <div>الحد الائتماني الحالي: <b className="num">{fmtSAR(supplier.credit_limit)}</b></div>
-            <div>المستخدم: <b className="num">{fmtSAR(supplier.utilized)}</b></div>
+            <div className="flex flex-wrap gap-x-4 gap-y-0.5">
+              <span>الحد الائتماني الحالي: <b className="num whitespace-nowrap">{fmtSAR(supplier.credit_limit)} ر.س</b></span>
+              <span>المستخدم: <b className="num whitespace-nowrap">{fmtSAR(supplier.utilized)} ر.س</b></span>
+            </div>
             <div>
               سياسة السداد الحالية: <b>{SETTLEMENT_LABEL[supplier.settlement_policy ?? "net_30"]}</b>
               {supplier.settlement_policy === "custom" && supplier.custom_settlement_days
                 ? ` (${supplier.custom_settlement_days} يوم)` : ""}
               {" · "}سماح: <b>{supplier.grace_days ?? 0} يوم</b>
             </div>
-            <div>
-              رصيد مستحق: <b className="num">{fmtSAR(aging.due_balance)}</b> ·
-              متأخر: <b className="num">{fmtSAR(aging.overdue_balance)}</b>
-              {aging.next_due_date ? <> · أقرب استحقاق: <b>{fmtDate(aging.next_due_date)}</b></> : null}
+            <div className="flex flex-wrap gap-x-4 gap-y-0.5">
+              <span>رصيد مستحق: <b className="num whitespace-nowrap">{fmtSAR(aging.due_balance)} ر.س</b></span>
+              <span>متأخر: <b className="num whitespace-nowrap">{fmtSAR(aging.overdue_balance)} ر.س</b></span>
+              {aging.next_due_date ? <span>أقرب استحقاق: <b className="whitespace-nowrap">{fmtDate(aging.next_due_date)}</b></span> : null}
             </div>
           </div>
 
           <div className="col-span-2">
             <Label className="text-xs">الحد الائتماني (ر.س)</Label>
-            <Input type="number" min={0} value={limit}
-              onChange={e => setLimit(Number(e.target.value))} className="h-9 text-sm num" />
+            <AmountInput value={limit} onChange={(v) => setLimit(v ?? 0)} min={0} className="h-9" />
           </div>
 
           <div className="col-span-2">
