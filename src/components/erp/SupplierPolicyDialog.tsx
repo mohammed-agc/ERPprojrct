@@ -11,6 +11,7 @@ import {
   purchasingService, fmtSAR, fmtDate, SETTLEMENT_LABEL,
   type Supplier, type SettlementPolicy,
 } from "@/services/erp/purchasing";
+import { AmountInput } from "@/components/erp/AmountInput";
 
 export function SupplierPolicyDialog({
   supplier, open, onOpenChange, onSaved,
