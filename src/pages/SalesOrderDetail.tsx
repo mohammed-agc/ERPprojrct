@@ -264,6 +264,10 @@ export default function SalesOrderDetail() {
   const setStatus = async (next: SalesOrderState, msg: string) => {
     const { error } = await supabase.from("sales_orders").update({ status: next as any }).eq("id", id);
     if (error) { toast.error(error.message); return; }
+    // Persist vehicle status alongside the order transition
+    if (next === "paid")      await salesVehicleStatus.markSoldForOrder(id!);
+    if (next === "delivered") await salesVehicleStatus.markDeliveredForOrder(id!);
+    if (next === "cancelled") await salesVehicleStatus.releaseForOrder(id!);
     toast.success(msg);
     load();
   };
