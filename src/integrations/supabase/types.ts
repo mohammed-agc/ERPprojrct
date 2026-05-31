@@ -101,11 +101,16 @@ export type Database = {
           code: string
           created_at: string
           created_by: string | null
+          credit_limit: number
           email: string | null
+          grace_days: number
           id: string
+          is_active: boolean
           name: string
           notes: string | null
+          payment_terms_days: number
           phone: string | null
+          settlement_policy: string
           updated_at: string
           vat_number: string | null
         }
@@ -115,11 +120,16 @@ export type Database = {
           code: string
           created_at?: string
           created_by?: string | null
+          credit_limit?: number
           email?: string | null
+          grace_days?: number
           id?: string
+          is_active?: boolean
           name: string
           notes?: string | null
+          payment_terms_days?: number
           phone?: string | null
+          settlement_policy?: string
           updated_at?: string
           vat_number?: string | null
         }
@@ -129,11 +139,16 @@ export type Database = {
           code?: string
           created_at?: string
           created_by?: string | null
+          credit_limit?: number
           email?: string | null
+          grace_days?: number
           id?: string
+          is_active?: boolean
           name?: string
           notes?: string | null
+          payment_terms_days?: number
           phone?: string | null
+          settlement_policy?: string
           updated_at?: string
           vat_number?: string | null
         }
@@ -206,13 +221,17 @@ export type Database = {
       }
       invoices: {
         Row: {
+          branch: string | null
           created_at: string
           created_by: string | null
           customer_id: string
+          due_date: string | null
           id: string
           invoice_date: string
           invoice_no: string
           notes: string | null
+          paid_amount: number
+          payment_method: string | null
           posted_at: string | null
           posted_by: string | null
           qr_code: string | null
@@ -224,13 +243,17 @@ export type Database = {
           vat_amount: number
         }
         Insert: {
+          branch?: string | null
           created_at?: string
           created_by?: string | null
           customer_id: string
+          due_date?: string | null
           id?: string
           invoice_date?: string
           invoice_no: string
           notes?: string | null
+          paid_amount?: number
+          payment_method?: string | null
           posted_at?: string | null
           posted_by?: string | null
           qr_code?: string | null
@@ -242,13 +265,17 @@ export type Database = {
           vat_amount?: number
         }
         Update: {
+          branch?: string | null
           created_at?: string
           created_by?: string | null
           customer_id?: string
+          due_date?: string | null
           id?: string
           invoice_date?: string
           invoice_no?: string
           notes?: string | null
+          paid_amount?: number
+          payment_method?: string | null
           posted_at?: string | null
           posted_by?: string | null
           qr_code?: string | null
@@ -356,6 +383,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          id: string
+          invoice_id: string | null
+          method: string
+          notes: string | null
+          payment_date: string
+          payment_no: string
+          reference: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          id?: string
+          invoice_id?: string | null
+          method?: string
+          notes?: string | null
+          payment_date?: string
+          payment_no: string
+          reference?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          id?: string
+          invoice_id?: string | null
+          method?: string
+          notes?: string | null
+          payment_date?: string
+          payment_no?: string
+          reference?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -665,9 +737,21 @@ export type Database = {
         | "purchasing"
         | "sales"
         | "crm"
-      invoice_status: "draft" | "posted" | "paid" | "cancelled"
-      order_status: "draft" | "confirmed" | "invoiced" | "cancelled"
-      vehicle_status: "available" | "reserved" | "sold"
+      invoice_status:
+        | "draft"
+        | "posted"
+        | "paid"
+        | "cancelled"
+        | "partially_paid"
+      order_status:
+        | "draft"
+        | "confirmed"
+        | "invoiced"
+        | "cancelled"
+        | "partially_paid"
+        | "paid"
+        | "delivered"
+      vehicle_status: "available" | "reserved" | "sold" | "delivered"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -823,9 +907,23 @@ export const Constants = {
         "sales",
         "crm",
       ],
-      invoice_status: ["draft", "posted", "paid", "cancelled"],
-      order_status: ["draft", "confirmed", "invoiced", "cancelled"],
-      vehicle_status: ["available", "reserved", "sold"],
+      invoice_status: [
+        "draft",
+        "posted",
+        "paid",
+        "cancelled",
+        "partially_paid",
+      ],
+      order_status: [
+        "draft",
+        "confirmed",
+        "invoiced",
+        "cancelled",
+        "partially_paid",
+        "paid",
+        "delivered",
+      ],
+      vehicle_status: ["available", "reserved", "sold", "delivered"],
     },
   },
 } as const
