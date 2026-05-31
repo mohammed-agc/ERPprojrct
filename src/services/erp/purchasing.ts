@@ -153,6 +153,17 @@ export interface PurchaseOrder {
 }
 
 
+/**
+ * Supplier settlement policy — drives invoice due-date computation and
+ * aging-status calculations across the credit governance views.
+ *   cash      → due immediately
+ *   eom       → end of invoice month
+ *   net_30/45/60/90 → fixed days after invoice
+ *   custom    → uses supplier.custom_settlement_days
+ */
+export type SettlementPolicy =
+  | "cash" | "eom" | "net_30" | "net_45" | "net_60" | "net_90" | "custom";
+
 export interface Supplier {
   id: string;
   code: string;            // SUP-001
@@ -166,6 +177,10 @@ export interface Supplier {
   renewal_period_months: number;
   agreement_start: string;
   agreement_expiry: string;
+  /* settlement policy (governance v1.4) */
+  settlement_policy?: SettlementPolicy;
+  custom_settlement_days?: number;
+  grace_days?: number;
   /* incentives */
   monthly_target: number;      // vehicles
   achieved: number;            // vehicles this period
@@ -233,8 +248,12 @@ export interface PurchaseInvoice {
   code: string;            // PINV-2026-0001
   po_id: string;
   supplier_id: string;
-  issued_at: string;
+  issued_at: string;       // = invoice_date (ISO)
   due_date: string;
+  /** Days between invoice_date and due_date, snapshotted at issue time. */
+  credit_days?: number;
+  /** Settlement policy applied to compute due_date (snapshot for audit). */
+  settlement_policy?: SettlementPolicy;
   payment_term: PaymentTerm;
   subtotal: number;
   vat_amount: number;
@@ -285,6 +304,15 @@ export interface SupplierLedgerEntry {
 /* ============================ Incentive Programs ============================ */
 export type IncentiveProgramStatus = "active" | "closed" | "achieved";
 
+/**
+ * Program type governs eligibility:
+ *   accumulative → earned incentive grows linearly with each purchased vehicle;
+ *                  claim creation is allowed for any positive earned amount.
+ *   target_based → no incentive earned unless target is met; claim creation is
+ *                  BLOCKED until purchased >= target.
+ */
+export type IncentiveProgramType = "accumulative" | "target_based";
+
 export interface IncentiveProgram {
   id: string;
   supplier_id: string;
@@ -293,6 +321,8 @@ export interface IncentiveProgram {
   end_date: string;              // ISO date
   target_vehicles: number;
   incentive_per_vehicle: number; // SAR
+  /** Defaults to "accumulative" when missing (back-compat with seed data). */
+  program_type?: IncentiveProgramType;
   brand?: string;                // optional filter (case-insensitive contains)
   model?: string;                // optional filter (case-insensitive contains)
   status: IncentiveProgramStatus;
@@ -352,6 +382,7 @@ function seed(): DB {
     country: "اليابان", agreement_type: "framework",
     credit_limit: 4_000_000, utilized: 2_800_000,
     renewal_period_months: 12, agreement_start: "2026-01-01", agreement_expiry: "2026-12-31",
+    settlement_policy: "net_60", grace_days: 5,
     monthly_target: 40, achieved: 28, incentive_per_vehicle: 4_500,
     campaign: "Q2 2026 Hilux Push",
   };
@@ -360,6 +391,7 @@ function seed(): DB {
     country: "كوريا الجنوبية", agreement_type: "framework",
     credit_limit: 3_000_000, utilized: 1_450_000,
     renewal_period_months: 12, agreement_start: "2026-01-01", agreement_expiry: "2026-10-31",
+    settlement_policy: "net_30", grace_days: 3,
     monthly_target: 30, achieved: 19, incentive_per_vehicle: 3_200,
     campaign: "Tucson Spring Drive",
   };
@@ -368,6 +400,7 @@ function seed(): DB {
     country: "اليابان", agreement_type: "spot",
     credit_limit: 2_000_000, utilized: 2_080_000,
     renewal_period_months: 6, agreement_start: "2026-01-01", agreement_expiry: "2026-06-30",
+    settlement_policy: "eom", grace_days: 0,
     monthly_target: 20, achieved: 22, incentive_per_vehicle: 2_800,
   };
   const sup4: Supplier = {
@@ -825,6 +858,85 @@ export const fmtSAR = (n: number) =>
 export const fmtDate = (s?: string) =>
   s ? new Date(s).toLocaleDateString("ar-SA", { dateStyle: "medium" }) : "—";
 
+/* ============================ Settlement / Aging ============================ */
+
+export const SETTLEMENT_LABEL: Record<SettlementPolicy, string> = {
+  cash: "نقدي",
+  eom: "نهاية الشهر",
+  net_30: "30 يوم",
+  net_45: "45 يوم",
+  net_60: "60 يوم",
+  net_90: "90 يوم",
+  custom: "مخصّص",
+};
+
+export type AgingStatus = "not_due" | "due_soon" | "overdue";
+
+export const AGING_LABEL: Record<AgingStatus, string> = {
+  not_due: "غير مستحقة",
+  due_soon: "قريبة الاستحقاق",
+  overdue: "متأخرة",
+};
+export const AGING_TONE: Record<AgingStatus, string> = {
+  not_due: "bg-muted text-muted-foreground border border-border",
+  due_soon: "bg-warning/10 text-warning border border-warning/40",
+  overdue: "bg-destructive/10 text-destructive border border-destructive/40",
+};
+
+/** Settlement days for a supplier given its policy. */
+export function settlementDaysFor(s: Pick<Supplier,
+  "settlement_policy" | "custom_settlement_days">): number {
+  switch (s.settlement_policy) {
+    case "cash": return 0;
+    case "net_30": return 30;
+    case "net_45": return 45;
+    case "net_60": return 60;
+    case "net_90": return 90;
+    case "custom": return Math.max(0, s.custom_settlement_days ?? 0);
+    case "eom":
+    default: return 30;
+  }
+}
+
+/** Compute due date from invoice date + supplier settlement policy. */
+export function computeDueDate(
+  invoiceDateISO: string,
+  s: Pick<Supplier, "settlement_policy" | "custom_settlement_days">,
+): string {
+  const d = new Date(invoiceDateISO);
+  if (s.settlement_policy === "eom") {
+    // end of invoice month
+    const eom = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    return eom.toISOString().slice(0, 10);
+  }
+  const days = settlementDaysFor(s);
+  const out = new Date(d); out.setDate(out.getDate() + days);
+  return out.toISOString().slice(0, 10);
+}
+
+/**
+ * Aging classification for an unpaid/partially paid invoice. Grace days extend
+ * the due date before the invoice is flagged as overdue. "Due soon" fires
+ * within `dueSoonWindow` (default 7) days before the (grace-adjusted) due date.
+ */
+export function computeAging(
+  due_date: string,
+  opts: { grace_days?: number; dueSoonWindow?: number } = {},
+): { status: AgingStatus; days_overdue: number; days_to_due: number } {
+  const today0 = new Date(); today0.setHours(0, 0, 0, 0);
+  const due0 = new Date(due_date); due0.setHours(0, 0, 0, 0);
+  const grace = Math.max(0, opts.grace_days ?? 0);
+  const effectiveDue = new Date(due0); effectiveDue.setDate(effectiveDue.getDate() + grace);
+  const diffDays = Math.round((effectiveDue.getTime() - today0.getTime()) / 86_400_000);
+  if (diffDays < 0) {
+    return { status: "overdue", days_overdue: -diffDays, days_to_due: diffDays };
+  }
+  const window = opts.dueSoonWindow ?? 7;
+  if (diffDays <= window) return { status: "due_soon", days_overdue: 0, days_to_due: diffDays };
+  return { status: "not_due", days_overdue: 0, days_to_due: diffDays };
+}
+
+
 /* ============================ Service ============================ */
 
 export const purchasingService = {
@@ -875,7 +987,40 @@ export const purchasingService = {
     const daysToExpiry = Math.ceil(
       (new Date(s.agreement_expiry).getTime() - Date.now()) / 86_400_000,
     );
-    return { remaining, usage, over, daysToExpiry };
+    const aging = this.supplierAging(s.id);
+    return { remaining, usage, over, daysToExpiry, ...aging };
+  },
+  /**
+   * Aggregate aging snapshot for a supplier:
+   *   due_balance      → outstanding on invoices not yet overdue
+   *   overdue_balance  → outstanding on invoices past (due_date + grace_days)
+   *   next_due_date    → earliest due_date among unsettled invoices
+   *   max_days_overdue → worst aging bucket today
+   */
+  supplierAging(supplierId: string) {
+    const db = load();
+    const sup = db.suppliers.find(s => s.id === supplierId);
+    const grace = sup?.grace_days ?? 0;
+    const invs = db.invoices.filter(i =>
+      i.supplier_id === supplierId &&
+      i.status !== "cancelled" && i.status !== "draft" &&
+      i.total - i.paid > 0.001,
+    );
+    let due_balance = 0, overdue_balance = 0;
+    let next_due_date: string | undefined;
+    let max_days_overdue = 0;
+    for (const inv of invs) {
+      const outstanding = Math.max(0, inv.total - inv.paid);
+      const a = computeAging(inv.due_date, { grace_days: grace });
+      if (a.status === "overdue") {
+        overdue_balance += outstanding;
+        if (a.days_overdue > max_days_overdue) max_days_overdue = a.days_overdue;
+      } else {
+        due_balance += outstanding;
+      }
+      if (!next_due_date || inv.due_date < next_due_date) next_due_date = inv.due_date;
+    }
+    return { due_balance, overdue_balance, next_due_date, max_days_overdue };
   },
   expectedIncentive(s: Supplier) {
     return { vehicles: s.achieved, total: s.achieved * s.incentive_per_vehicle, target: s.monthly_target };
@@ -1001,15 +1146,27 @@ export const purchasingService = {
     const target = Math.max(0, program.target_vehicles);
     const remaining = Math.max(0, target - purchased);
     const achievement = target > 0 ? (purchased / target) * 100 : 0;
-    const earned = purchased * program.incentive_per_vehicle;
+    const program_type: IncentiveProgramType = program.program_type ?? "accumulative";
+    // For target_based programs, NO incentive is earned until target is met.
+    // For accumulative programs, every purchased vehicle earns its rate.
+    const target_met = target > 0 && purchased >= target;
+    const earned = program_type === "target_based"
+      ? (target_met ? purchased * program.incentive_per_vehicle : 0)
+      : purchased * program.incentive_per_vehicle;
     const claims = db.incentive_claims.filter(c => c.program_id === program.id);
     const approvedClaims = claims.filter(c => c.status === "approved");
     const pendingClaims = claims.filter(c => c.status === "pending_approval");
     const claimed = approvedClaims.reduce((s, c) => s + c.amount, 0);
     const pending = pendingClaims.reduce((s, c) => s + c.amount, 0);
     const remaining_incentive = Math.max(0, earned - claimed - pending);
-    const eligible = target > 0 && purchased >= target;
+    // Eligibility for claim creation:
+    //   target_based → strictly requires target_met
+    //   accumulative → eligible once anything has been earned
+    const eligible = program_type === "target_based"
+      ? target_met
+      : earned > 0;
     return {
+      program_type, target_met,
       purchased, target, remaining, achievement,
       earned, claimed, pending, remaining_incentive,
       eligible, claims, pendingClaims, approvedClaims,
@@ -1040,6 +1197,13 @@ export const purchasingService = {
     if (input.amount <= 0) return { error: "المبلغ يجب أن يكون موجبًا" };
     // Cap to remaining earned (already nets approved + pending)
     const perf = this.programPerformance(program);
+    // Governance: target-based programs BLOCK claim creation until the target
+    // is achieved. Accumulative programs accept any earned-up-to amount.
+    if ((program.program_type ?? "accumulative") === "target_based" && !perf.target_met) {
+      return {
+        error: `لا يمكن إنشاء مطالبة قبل تحقيق الهدف — تم شراء ${perf.purchased} من أصل ${perf.target} مركبة`,
+      };
+    }
     if (input.amount > perf.remaining_incentive + 0.001) {
       return { error: `المبلغ يتجاوز الحافز المتبقي (${perf.remaining_incentive.toFixed(2)})` };
     }
@@ -1300,12 +1464,28 @@ export const purchasingService = {
     const vatPct = input.vat_pct ?? 15;
     const subtotal = po.total;
     const vat = Math.round(subtotal * (vatPct / 100));
+    // Settlement policy drives due date when not explicitly provided. Falls
+    // back to legacy payment_term mapping if the supplier has no policy.
+    const supplier = db.suppliers.find(s => s.id === po.supplier_id);
+    const issuedAt = isoNow();
+    const fallbackDays = po.payment_term === "cash" ? 0
+      : po.payment_term === "net_60" ? 60
+      : po.payment_term === "net_90" ? 90 : 30;
+    const computedDue = supplier?.settlement_policy
+      ? computeDueDate(issuedAt, supplier)
+      : addDays(fallbackDays);
+    const dueDate = input.due_date ?? computedDue;
+    const creditDays = Math.max(0, Math.round(
+      (new Date(dueDate).getTime() - new Date(issuedAt).getTime()) / 86_400_000,
+    ));
     const inv: PurchaseInvoice = {
       id: uid("pinv"),
       code: `PINV-${year}-${String(seq).padStart(4, "0")}`,
       po_id: po.id, supplier_id: po.supplier_id,
-      issued_at: isoNow(),
-      due_date: input.due_date ?? addDays(po.payment_term === "cash" ? 0 : po.payment_term === "net_60" ? 60 : po.payment_term === "net_90" ? 90 : 30),
+      issued_at: issuedAt,
+      due_date: dueDate,
+      credit_days: creditDays,
+      settlement_policy: supplier?.settlement_policy,
       payment_term: po.payment_term,
       subtotal, vat_amount: vat, total: subtotal + vat,
       paid: 0, status: "issued", notes: input.notes,

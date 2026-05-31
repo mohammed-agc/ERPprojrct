@@ -3,8 +3,8 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, AlertTriangle, CalendarClock, ShieldCheck, FileText } from "lucide-react";
-import { purchasingService, fmtSAR, fmtDate } from "@/services/erp/purchasing";
+import { Search, AlertTriangle, CalendarClock, ShieldCheck, FileText, Clock } from "lucide-react";
+import { purchasingService, fmtSAR, fmtDate, SETTLEMENT_LABEL } from "@/services/erp/purchasing";
 import { SupplierStatementDialog } from "@/components/erp/SupplierStatementDialog";
 
 export default function SupplierCredit() {
@@ -23,17 +23,23 @@ export default function SupplierCredit() {
   const totals = useMemo(() => {
     const limit = suppliers.reduce((s, x) => s + x.credit_limit, 0);
     const used = suppliers.reduce((s, x) => s + x.utilized, 0);
-    return { limit, used, remaining: limit - used, over: suppliers.filter(s => s.utilized > s.credit_limit).length };
+    const aging = suppliers.map(s => purchasingService.supplierAging(s.id));
+    const due = aging.reduce((s, a) => s + a.due_balance, 0);
+    const overdue = aging.reduce((s, a) => s + a.overdue_balance, 0);
+    return { limit, used, remaining: limit - used, due, overdue,
+      over: suppliers.filter(s => s.utilized > s.credit_limit).length };
   }, [suppliers]);
 
   return (
     <div>
       <PageHeader title="إدارة ائتمان الموردين" subtitle="حدود الائتمان، الاستخدام، وتجديد الاتفاقيات" />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-4">
         <Kpi icon={ShieldCheck} label="إجمالي الحدود" value={fmtSAR(totals.limit)} tone="primary" />
         <Kpi icon={ShieldCheck} label="المستخدم" value={fmtSAR(totals.used)} tone="warning" />
         <Kpi icon={ShieldCheck} label="المتبقي" value={fmtSAR(totals.remaining)} tone="success" />
+        <Kpi icon={Clock} label="رصيد مستحق" value={fmtSAR(totals.due)} />
+        <Kpi icon={AlertTriangle} label="رصيد متأخر" value={fmtSAR(totals.overdue)} tone={totals.overdue > 0 ? "destructive" : "default"} />
         <Kpi icon={AlertTriangle} label="موردون متجاوزون" value={totals.over} tone={totals.over > 0 ? "destructive" : "default"} />
       </div>
 
@@ -54,9 +60,23 @@ export default function SupplierCredit() {
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <div className="font-semibold text-sm">{s.name}</div>
-                  <div className="text-[11px] text-muted-foreground">{s.code} · {s.country} · {s.agreement_type === "framework" ? "إطارية" : s.agreement_type === "spot" ? "فورية" : "أمانة"}</div>
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1 flex-wrap">
+                    <span>{s.code} · {s.country} · {s.agreement_type === "framework" ? "إطارية" : s.agreement_type === "spot" ? "فورية" : "أمانة"}</span>
+                    {s.settlement_policy && (
+                      <Badge variant="outline" className="text-[10px] h-4 px-1">
+                        سداد: {SETTLEMENT_LABEL[s.settlement_policy]}
+                        {s.settlement_policy === "custom" && s.custom_settlement_days ? ` ${s.custom_settlement_days}ي` : ""}
+                        {s.grace_days ? ` · سماح ${s.grace_days}ي` : ""}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {c.overdue_balance > 0 && (
+                    <Badge className="bg-destructive/10 text-destructive border border-destructive/40 gap-1">
+                      <Clock className="h-3 w-3" /> متأخر {c.max_days_overdue}ي
+                    </Badge>
+                  )}
                   {c.over && (
                     <Badge className="bg-destructive/10 text-destructive border border-destructive/40 gap-1">
                       <AlertTriangle className="h-3 w-3" /> تجاوز الحد
@@ -68,10 +88,15 @@ export default function SupplierCredit() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 mb-3">
+              <div className="grid grid-cols-3 gap-2 mb-2">
                 <Cell label="الحد" value={fmtSAR(s.credit_limit)} />
                 <Cell label="المستخدم" value={fmtSAR(s.utilized)} tone="warning" />
                 <Cell label="المتبقي" value={fmtSAR(c.remaining)} tone={c.remaining < 0 ? "destructive" : "success"} />
+              </div>
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <Cell label="رصيد مستحق" value={fmtSAR(c.due_balance)} />
+                <Cell label="رصيد متأخر" value={fmtSAR(c.overdue_balance)} tone={c.overdue_balance > 0 ? "destructive" : "default"} />
+                <Cell label="أقرب استحقاق" value={c.next_due_date ? fmtDate(c.next_due_date) : "—"} />
               </div>
 
               <div className="mb-3">
