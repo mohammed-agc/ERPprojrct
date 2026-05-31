@@ -177,18 +177,43 @@ export function IncentivePrograms({ supplierId }: { supplierId: string }) {
                 </div>
               )}
 
-              {/* Submit-claim actions — only when eligible and remaining > 0 */}
-              {perms.canManage && perf.eligible && perf.remaining_incentive > 0 && p.status !== "closed" && (
-                <div className="flex items-center gap-2 pt-1">
-                  <Button size="sm" className="h-7 text-[11px]" onClick={() => setClaimProgram(p)}>
-                    <CheckCircle2 className="h-3 w-3 ml-1" /> تقديم مطالبة للاعتماد
-                  </Button>
-                  <Button size="sm" variant="outline" className="h-7 text-[11px]"
-                    onClick={() => setClaimProgram({ ...p, notes: "credit" })}>
-                    خصم من الحد الائتماني
-                  </Button>
-                </div>
-              )}
+              {/* Submit-claim actions */}
+              {perms.canManage && p.status !== "closed" && (() => {
+                const isTargetBased = (p.program_type ?? "accumulative") === "target_based";
+                const targetBlocked = isTargetBased && !perf.target_met;
+                const noRemaining = perf.remaining_incentive <= 0;
+                if (targetBlocked) {
+                  return (
+                    <div className="pt-1 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" className="h-7 text-[11px]" disabled>
+                          <CheckCircle2 className="h-3 w-3 ml-1" /> تقديم مطالبة للاعتماد
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-7 text-[11px]" disabled>
+                          خصم من الحد الائتماني
+                        </Button>
+                      </div>
+                      <div className="text-[10.5px] bg-destructive/5 border border-destructive/30 text-destructive rounded px-2 py-1">
+                        لا يمكن إنشاء مطالبة حافز قبل تحقيق الهدف المطلوب
+                      </div>
+                    </div>
+                  );
+                }
+                if (perf.eligible && !noRemaining) {
+                  return (
+                    <div className="flex items-center gap-2 pt-1">
+                      <Button size="sm" className="h-7 text-[11px]" onClick={() => setClaimProgram(p)}>
+                        <CheckCircle2 className="h-3 w-3 ml-1" /> تقديم مطالبة للاعتماد
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 text-[11px]"
+                        onClick={() => setClaimProgram({ ...p, notes: "credit" })}>
+                        خصم من الحد الائتماني
+                      </Button>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </div>
           );
         })}
