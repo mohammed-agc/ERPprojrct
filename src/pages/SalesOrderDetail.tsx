@@ -203,9 +203,17 @@ export default function SalesOrderDetail() {
 
   const confirm = async () => {
     await save();
+    // Sanity check: every linked vehicle must still be sellable
+    const conflicts = await salesVehicleStatus.assertAvailable(id!);
+    if (conflicts.length) {
+      toast.error(`بعض المركبات لم تعد متاحة: ${conflicts.join(", ")}`);
+      return;
+    }
     const { error } = await supabase.from("sales_orders").update({ status: "confirmed" }).eq("id", id);
     if (error) { toast.error(error.message); return; }
-    toast.success("تم تأكيد الأمر");
+    // Reserve linked vehicles in inventory
+    await salesVehicleStatus.reserveForOrder(id!);
+    toast.success("تم تأكيد الأمر — تم حجز المركبات");
     load();
   };
 
