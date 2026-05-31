@@ -95,9 +95,12 @@ export function IncentivePrograms({ supplierId }: { supplierId: string }) {
             <div key={p.id} className="border border-border rounded-md p-2.5 space-y-2 bg-card/60">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <div className="text-sm font-semibold flex items-center gap-1.5">
+                  <div className="text-sm font-semibold flex items-center gap-1.5 flex-wrap">
                     {p.name}
                     <Badge className={STATUS_TONE[p.status]}>{STATUS_LABEL[p.status]}</Badge>
+                    <Badge className={TYPE_TONE[(p.program_type ?? "accumulative")]}>
+                      {TYPE_LABEL[(p.program_type ?? "accumulative")]}
+                    </Badge>
                     {perf.eligible && (
                       <Badge className="bg-amber-500/15 text-amber-700 border border-amber-400/50 gap-1">
                         <Sparkles className="h-3 w-3" /> مؤهل للمطالبة
