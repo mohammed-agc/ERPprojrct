@@ -34,10 +34,12 @@ export default function SupplierCredit() {
     <div>
       <PageHeader title="إدارة ائتمان الموردين" subtitle="حدود الائتمان، الاستخدام، وتجديد الاتفاقيات" />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-4">
         <Kpi icon={ShieldCheck} label="إجمالي الحدود" value={fmtSAR(totals.limit)} tone="primary" />
         <Kpi icon={ShieldCheck} label="المستخدم" value={fmtSAR(totals.used)} tone="warning" />
         <Kpi icon={ShieldCheck} label="المتبقي" value={fmtSAR(totals.remaining)} tone="success" />
+        <Kpi icon={Clock} label="رصيد مستحق" value={fmtSAR(totals.due)} />
+        <Kpi icon={AlertTriangle} label="رصيد متأخر" value={fmtSAR(totals.overdue)} tone={totals.overdue > 0 ? "destructive" : "default"} />
         <Kpi icon={AlertTriangle} label="موردون متجاوزون" value={totals.over} tone={totals.over > 0 ? "destructive" : "default"} />
       </div>
 
