@@ -89,6 +89,9 @@ export default function SupplierCredit() {
                   <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => setStmtId(s.id)}>
                     <FileText className="h-3 w-3 ml-1" /> كشف حساب
                   </Button>
+                  <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => setPolicyId(s.id)}>
+                    <Settings className="h-3 w-3 ml-1" /> تعديل السياسة
+                  </Button>
                 </div>
               </div>
 
