@@ -8,6 +8,11 @@ import {
   AGING_LABEL, AGING_TONE, computeAging, SETTLEMENT_LABEL,
 } from "@/services/erp/purchasing";
 import type { SupplierLedgerKind } from "@/services/erp/purchasing";
+import { DocPrintActions } from "@/components/erp/DocPrintActions";
+import {
+  PrintableSupplierStatementDoc,
+  type SupplierStatementRow,
+} from "@/components/erp/PrintableSupplierStatementDoc";
 
 const KIND_LABEL: Record<SupplierLedgerKind, string> = {
   invoice: "فاتورة شراء",
@@ -50,6 +55,45 @@ export function SupplierStatementDialog({
   }, [supplierId, open]);
   const grace = stmt?.supplier?.grace_days ?? 0;
 
+  const printable = useMemo(() => {
+    if (!stmt?.supplier) return null;
+    const printRows: SupplierStatementRow[] = stmt.rows.map(r => {
+      const meta = r.reference ? invMap.get(r.reference) : undefined;
+      const isInvoice = r.kind === "invoice" && meta;
+      return {
+        id: r.id, at: r.at, kind: r.kind, reference: r.reference,
+        description: r.description, debit: r.debit, credit: r.credit,
+        running_balance: r.running_balance,
+        due_date: isInvoice ? meta!.due_date : undefined,
+        outstanding: isInvoice ? Math.max(0, meta!.total - meta!.paid) : 0,
+      };
+    });
+    return (
+      <PrintableSupplierStatementDoc
+        company={{
+          name: "ساراط للسيارات",
+          cr_number: "1010000000",
+          vat_number: "300000000000003",
+          address: "المملكة العربية السعودية — الرياض",
+          contact: "+966 11 000 0000",
+        }}
+        supplier={stmt.supplier}
+        rows={printRows}
+        totals={{
+          opening_balance: 0,
+          debit: stmt.totals.debit,
+          credit: stmt.totals.credit,
+          closing_balance: stmt.totals.balance,
+          credit_limit: stmt.totals.credit_limit,
+          credit_used: stmt.totals.credit_used,
+          credit_remaining: stmt.totals.credit_remaining,
+          due_balance: aging?.due_balance ?? 0,
+          overdue_balance: aging?.overdue_balance ?? 0,
+        }}
+      />
+    );
+  }, [stmt, aging, invMap]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
@@ -66,6 +110,12 @@ export function SupplierStatementDialog({
             )}
           </DialogTitle>
         </DialogHeader>
+
+        {printable && (
+          <div className="flex justify-end mb-2">
+            <DocPrintActions doc={printable} />
+          </div>
+        )}
 
         {!stmt || !stmt.supplier ? (
           <div className="text-center text-sm text-muted-foreground py-8">لا توجد بيانات</div>
