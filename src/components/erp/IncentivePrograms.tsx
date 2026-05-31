@@ -375,6 +375,20 @@ function ProgramFormDialog({
             <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
               placeholder="مثال: Q2 2026 Hilux Push" className="h-9 text-sm" />
           </div>
+          <div className="col-span-2">
+            <Label className="text-xs">نوع البرنامج</Label>
+            <Select value={form.program_type}
+              onValueChange={(v) => setForm({ ...form, program_type: v as IncentiveProgramType })}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="accumulative">حافز تراكمي — يُكتسب لكل مركبة فور الشراء</SelectItem>
+                <SelectItem value="target_based">حافز مرتبط بالهدف — لا يُكتسب إلا بعد تحقيق الهدف كاملاً</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              في الحوافز المرتبطة بالهدف، لا يمكن إنشاء مطالبة حافز قبل تحقيق الهدف المطلوب.
+            </p>
+          </div>
           <div>
             <Label className="text-xs">تاريخ البداية</Label>
             <Input type="date" value={form.start_date}
