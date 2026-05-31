@@ -3,14 +3,18 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, AlertTriangle, CalendarClock, ShieldCheck, FileText, Clock } from "lucide-react";
+import { Search, AlertTriangle, CalendarClock, ShieldCheck, FileText, Clock, Settings } from "lucide-react";
 import { purchasingService, fmtSAR, fmtDate, SETTLEMENT_LABEL } from "@/services/erp/purchasing";
 import { SupplierStatementDialog } from "@/components/erp/SupplierStatementDialog";
+import { SupplierPolicyDialog } from "@/components/erp/SupplierPolicyDialog";
 
 export default function SupplierCredit() {
   const [q, setQ] = useState("");
   const [stmtId, setStmtId] = useState<string | null>(null);
-  const suppliers = useMemo(() => purchasingService.listSuppliers(), [stmtId]);
+  const [policyId, setPolicyId] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
+  const suppliers = useMemo(() => purchasingService.listSuppliers(), [stmtId, tick]);
+  const policySupplier = policyId ? suppliers.find(s => s.id === policyId) ?? null : null;
 
   const filtered = useMemo(() => {
     const qv = q.trim().toLowerCase();
