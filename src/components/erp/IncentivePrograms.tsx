@@ -27,6 +27,14 @@ const STATUS_TONE: Record<IncentiveProgramStatus, string> = {
   closed: "bg-muted text-muted-foreground border border-border",
   achieved: "bg-success/10 text-success border border-success/40",
 };
+const TYPE_LABEL: Record<IncentiveProgramType, string> = {
+  accumulative: "حافز تراكمي",
+  target_based: "حافز مرتبط بالهدف",
+};
+const TYPE_TONE: Record<IncentiveProgramType, string> = {
+  accumulative: "bg-sky-500/10 text-sky-700 border border-sky-400/40",
+  target_based: "bg-violet-500/10 text-violet-700 border border-violet-400/40",
+};
 
 export function IncentivePrograms({ supplierId }: { supplierId: string }) {
   const perms = useIncentivePermissions();
