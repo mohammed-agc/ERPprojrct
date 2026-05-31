@@ -27,6 +27,14 @@ const STATUS_TONE: Record<IncentiveProgramStatus, string> = {
   closed: "bg-muted text-muted-foreground border border-border",
   achieved: "bg-success/10 text-success border border-success/40",
 };
+const TYPE_LABEL: Record<IncentiveProgramType, string> = {
+  accumulative: "حافز تراكمي",
+  target_based: "حافز مرتبط بالهدف",
+};
+const TYPE_TONE: Record<IncentiveProgramType, string> = {
+  accumulative: "bg-sky-500/10 text-sky-700 border border-sky-400/40",
+  target_based: "bg-violet-500/10 text-violet-700 border border-violet-400/40",
+};
 
 export function IncentivePrograms({ supplierId }: { supplierId: string }) {
   const perms = useIncentivePermissions();
@@ -87,9 +95,12 @@ export function IncentivePrograms({ supplierId }: { supplierId: string }) {
             <div key={p.id} className="border border-border rounded-md p-2.5 space-y-2 bg-card/60">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <div className="text-sm font-semibold flex items-center gap-1.5">
+                  <div className="text-sm font-semibold flex items-center gap-1.5 flex-wrap">
                     {p.name}
                     <Badge className={STATUS_TONE[p.status]}>{STATUS_LABEL[p.status]}</Badge>
+                    <Badge className={TYPE_TONE[(p.program_type ?? "accumulative")]}>
+                      {TYPE_LABEL[(p.program_type ?? "accumulative")]}
+                    </Badge>
                     {perf.eligible && (
                       <Badge className="bg-amber-500/15 text-amber-700 border border-amber-400/50 gap-1">
                         <Sparkles className="h-3 w-3" /> مؤهل للمطالبة
@@ -166,18 +177,43 @@ export function IncentivePrograms({ supplierId }: { supplierId: string }) {
                 </div>
               )}
 
-              {/* Submit-claim actions — only when eligible and remaining > 0 */}
-              {perms.canManage && perf.eligible && perf.remaining_incentive > 0 && p.status !== "closed" && (
-                <div className="flex items-center gap-2 pt-1">
-                  <Button size="sm" className="h-7 text-[11px]" onClick={() => setClaimProgram(p)}>
-                    <CheckCircle2 className="h-3 w-3 ml-1" /> تقديم مطالبة للاعتماد
-                  </Button>
-                  <Button size="sm" variant="outline" className="h-7 text-[11px]"
-                    onClick={() => setClaimProgram({ ...p, notes: "credit" })}>
-                    خصم من الحد الائتماني
-                  </Button>
-                </div>
-              )}
+              {/* Submit-claim actions */}
+              {perms.canManage && p.status !== "closed" && (() => {
+                const isTargetBased = (p.program_type ?? "accumulative") === "target_based";
+                const targetBlocked = isTargetBased && !perf.target_met;
+                const noRemaining = perf.remaining_incentive <= 0;
+                if (targetBlocked) {
+                  return (
+                    <div className="pt-1 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" className="h-7 text-[11px]" disabled>
+                          <CheckCircle2 className="h-3 w-3 ml-1" /> تقديم مطالبة للاعتماد
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-7 text-[11px]" disabled>
+                          خصم من الحد الائتماني
+                        </Button>
+                      </div>
+                      <div className="text-[10.5px] bg-destructive/5 border border-destructive/30 text-destructive rounded px-2 py-1">
+                        لا يمكن إنشاء مطالبة حافز قبل تحقيق الهدف المطلوب
+                      </div>
+                    </div>
+                  );
+                }
+                if (perf.eligible && !noRemaining) {
+                  return (
+                    <div className="flex items-center gap-2 pt-1">
+                      <Button size="sm" className="h-7 text-[11px]" onClick={() => setClaimProgram(p)}>
+                        <CheckCircle2 className="h-3 w-3 ml-1" /> تقديم مطالبة للاعتماد
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 text-[11px]"
+                        onClick={() => setClaimProgram({ ...p, notes: "credit" })}>
+                        خصم من الحد الائتماني
+                      </Button>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </div>
           );
         })}
@@ -283,6 +319,7 @@ function ProgramFormDialog({
   const [form, setForm] = useState({
     name: "", start_date: today, end_date: plus(30),
     target_vehicles: 10, incentive_per_vehicle: 1000,
+    program_type: "accumulative" as IncentiveProgramType,
     brand: "", model: "", status: "active" as IncentiveProgramStatus, notes: "",
   });
 
@@ -293,11 +330,12 @@ function ProgramFormDialog({
       setForm({
         name: program.name, start_date: program.start_date, end_date: program.end_date,
         target_vehicles: program.target_vehicles, incentive_per_vehicle: program.incentive_per_vehicle,
+        program_type: program.program_type ?? "accumulative",
         brand: program.brand ?? "", model: program.model ?? "",
         status: program.status, notes: program.notes ?? "",
       });
     } else {
-      setForm(f => ({ ...f, name: "", brand: "", model: "", notes: "" }));
+      setForm(f => ({ ...f, name: "", brand: "", model: "", notes: "", program_type: "accumulative" }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seedFrom, open]);
@@ -315,6 +353,7 @@ function ProgramFormDialog({
       start_date: form.start_date, end_date: form.end_date,
       target_vehicles: Number(form.target_vehicles),
       incentive_per_vehicle: Number(form.incentive_per_vehicle),
+      program_type: form.program_type,
       brand: form.brand.trim() || undefined,
       model: form.model.trim() || undefined,
       status: form.status,
@@ -335,6 +374,20 @@ function ProgramFormDialog({
             <Label className="text-xs">اسم البرنامج</Label>
             <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
               placeholder="مثال: Q2 2026 Hilux Push" className="h-9 text-sm" />
+          </div>
+          <div className="col-span-2">
+            <Label className="text-xs">نوع البرنامج</Label>
+            <Select value={form.program_type}
+              onValueChange={(v) => setForm({ ...form, program_type: v as IncentiveProgramType })}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="accumulative">حافز تراكمي — يُكتسب لكل مركبة فور الشراء</SelectItem>
+                <SelectItem value="target_based">حافز مرتبط بالهدف — لا يُكتسب إلا بعد تحقيق الهدف كاملاً</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              في الحوافز المرتبطة بالهدف، لا يمكن إنشاء مطالبة حافز قبل تحقيق الهدف المطلوب.
+            </p>
           </div>
           <div>
             <Label className="text-xs">تاريخ البداية</Label>

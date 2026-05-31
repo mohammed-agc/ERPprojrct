@@ -3,14 +3,18 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, AlertTriangle, CalendarClock, ShieldCheck, FileText, Clock } from "lucide-react";
+import { Search, AlertTriangle, CalendarClock, ShieldCheck, FileText, Clock, Settings } from "lucide-react";
 import { purchasingService, fmtSAR, fmtDate, SETTLEMENT_LABEL } from "@/services/erp/purchasing";
 import { SupplierStatementDialog } from "@/components/erp/SupplierStatementDialog";
+import { SupplierPolicyDialog } from "@/components/erp/SupplierPolicyDialog";
 
 export default function SupplierCredit() {
   const [q, setQ] = useState("");
   const [stmtId, setStmtId] = useState<string | null>(null);
-  const suppliers = useMemo(() => purchasingService.listSuppliers(), [stmtId]);
+  const [policyId, setPolicyId] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
+  const suppliers = useMemo(() => purchasingService.listSuppliers(), [stmtId, tick]);
+  const policySupplier = policyId ? suppliers.find(s => s.id === policyId) ?? null : null;
 
   const filtered = useMemo(() => {
     const qv = q.trim().toLowerCase();
@@ -85,6 +89,9 @@ export default function SupplierCredit() {
                   <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => setStmtId(s.id)}>
                     <FileText className="h-3 w-3 ml-1" /> كشف حساب
                   </Button>
+                  <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => setPolicyId(s.id)}>
+                    <Settings className="h-3 w-3 ml-1" /> تعديل السياسة
+                  </Button>
                 </div>
               </div>
 
@@ -129,6 +136,12 @@ export default function SupplierCredit() {
         supplierId={stmtId}
         open={!!stmtId}
         onOpenChange={(v) => !v && setStmtId(null)}
+      />
+      <SupplierPolicyDialog
+        supplier={policySupplier}
+        open={!!policyId}
+        onOpenChange={(v) => !v && setPolicyId(null)}
+        onSaved={() => { setPolicyId(null); setTick(t => t + 1); }}
       />
     </div>
   );
