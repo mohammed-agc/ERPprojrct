@@ -18,6 +18,10 @@ interface CnLine {
   unit_price: number;
   vat_pct: number;
   _selected?: boolean;
+  /** Maximum quantity allowed for this line (= original invoice line qty). undefined = free row. */
+  _maxQty?: number;
+  /** Maximum unit price allowed for this line (= original invoice line unit_price). */
+  _maxUnit?: number;
 }
 
 interface Props {
@@ -46,9 +50,15 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
   useEffect(() => {
     if (!open) return;
     if (invoiceLines.length > 0) {
-      setLines(invoiceLines.map(l => ({ ...l, _selected: true })));
+      setLines(
+        invoiceLines.map(l => ({
+          ...l,
+          _selected: true,
+          _maxQty: l.quantity,
+          _maxUnit: l.unit_price,
+        }))
+      );
     } else {
-      // No source lines → seed one row sized to outstanding (ex-VAT @ 15%)
       const base = Number((outstanding / 1.15).toFixed(2));
       setLines([{ description: `عكس قيمة الفاتورة ${invoice.invoice_no}`, quantity: 1, unit_price: base, vat_pct: 15, _selected: true }]);
     }
@@ -63,7 +73,24 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
     return { subtotal, vat, total: subtotal + vat, count: active.length };
   }, [lines]);
 
+  // Per-line validation: qty/unit must not exceed original invoice line values
+  const lineErrors = useMemo(() => {
+    return lines.map(l => {
+      if (l._selected === false) return null;
+      if (l._maxQty !== undefined && l.quantity > l._maxQty + 1e-6) {
+        return `الكمية تتجاوز الأصلية (${l._maxQty})`;
+      }
+      if (l._maxUnit !== undefined && l.unit_price > l._maxUnit + 1e-6) {
+        return `السعر يتجاوز سعر الفاتورة (${l._maxUnit})`;
+      }
+      if (l.quantity < 0 || l.unit_price < 0) return "قيم سالبة غير مسموحة";
+      return null;
+    });
+  }, [lines]);
+
   const overOutstanding = totals.total > outstanding + 0.01;
+  const hasLineError = lineErrors.some(Boolean);
+  const blocked = overOutstanding || hasLineError || totals.count === 0;
 
   const update = (i: number, patch: Partial<CnLine>) =>
     setLines(prev => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
@@ -72,6 +99,11 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
     setLines(prev => [...prev, { description: "", quantity: 1, unit_price: 0, vat_pct: 15, _selected: true }]);
 
   const submit = async () => {
+    if (blocked) {
+      if (overOutstanding) toast.error(`المبلغ يتجاوز الرصيد القابل للعكس (${outstanding.toFixed(2)})`);
+      else if (hasLineError) toast.error("صحّح الأخطاء على البنود قبل الإصدار");
+      return;
+    }
     const active = lines.filter(l => l._selected !== false && l.quantity > 0 && l.unit_price > 0);
     if (active.length === 0) {
       toast.error("أضِف بنداً واحداً على الأقل بكمية وسعر صالحَين");
@@ -97,6 +129,7 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
       setSubmitting(false);
     }
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -147,16 +180,40 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
             <tbody>
               {lines.map((l, i) => {
                 const lineTotal = l.quantity * l.unit_price * (1 + l.vat_pct / 100);
+                const err = lineErrors[i];
+                const qtyBad = l._maxQty !== undefined && l.quantity > l._maxQty + 1e-6;
+                const priceBad = l._maxUnit !== undefined && l.unit_price > l._maxUnit + 1e-6;
                 return (
                   <tr key={i} className={l._selected === false ? "opacity-40" : ""}>
                     <td>
                       <input type="checkbox" checked={l._selected !== false}
                         onChange={e => update(i, { _selected: e.target.checked })} />
                     </td>
-                    <td><Input className="h-7" value={l.description} onChange={e => update(i, { description: e.target.value })} /></td>
-                    <td><Input className="h-7 text-left num" type="number" value={l.quantity} onChange={e => update(i, { quantity: Number(e.target.value) || 0 })} /></td>
-                    <td><Input className="h-7 text-left num" type="number" value={l.unit_price} onChange={e => update(i, { unit_price: Number(e.target.value) || 0 })} /></td>
-                    <td><Input className="h-7 text-left num" type="number" value={l.vat_pct} onChange={e => update(i, { vat_pct: Number(e.target.value) || 0 })} /></td>
+                    <td>
+                      <Input className="h-7" value={l.description} onChange={e => update(i, { description: e.target.value })} />
+                      {err && <div className="text-[10px] text-destructive mt-0.5">{err}</div>}
+                    </td>
+                    <td>
+                      <Input className={`h-7 text-left num ${qtyBad ? "border-destructive" : ""}`}
+                        type="number" min={0} max={l._maxQty}
+                        value={l.quantity}
+                        onChange={e => update(i, { quantity: Math.max(0, Number(e.target.value) || 0) })} />
+                      {l._maxQty !== undefined && (
+                        <div className="text-[10px] text-muted-foreground mt-0.5">حد: {l._maxQty}</div>
+                      )}
+                    </td>
+                    <td>
+                      <Input className={`h-7 text-left num ${priceBad ? "border-destructive" : ""}`}
+                        type="number" min={0} max={l._maxUnit}
+                        value={l.unit_price}
+                        onChange={e => update(i, { unit_price: Math.max(0, Number(e.target.value) || 0) })} />
+                      {l._maxUnit !== undefined && (
+                        <div className="text-[10px] text-muted-foreground mt-0.5">حد: {fmt(l._maxUnit)}</div>
+                      )}
+                    </td>
+                    <td><Input className="h-7 text-left num" type="number" min={0} max={100}
+                      value={l.vat_pct}
+                      onChange={e => update(i, { vat_pct: Math.max(0, Number(e.target.value) || 0) })} /></td>
                     <td className="num text-left font-semibold">{fmt(lineTotal)}</td>
                     <td>
                       <Button size="sm" variant="ghost" onClick={() => removeLine(i)}>
@@ -178,13 +235,16 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
           <div className="flex justify-between"><span className="text-muted-foreground">VAT</span><span className="num">{fmt(totals.vat)}</span></div>
           <div className="flex justify-between font-bold border-t border-border pt-1"><span>الإجمالي</span><span className={`num ${overOutstanding ? "text-destructive" : ""}`}>{fmt(totals.total)}</span></div>
           {overOutstanding && (
-            <div className="text-xs text-destructive">تحذير: المبلغ يتجاوز الرصيد القابل للعكس ({fmt(outstanding)}).</div>
+            <div className="text-xs text-destructive">المبلغ يتجاوز الرصيد القابل للعكس ({fmt(outstanding)}).</div>
+          )}
+          {hasLineError && (
+            <div className="text-xs text-destructive">يوجد بنود تتجاوز الكميات أو الأسعار الأصلية.</div>
           )}
         </div>
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>إلغاء</Button>
-          <Button onClick={submit} disabled={submitting || totals.count === 0}>
+          <Button onClick={submit} disabled={submitting || blocked}>
             {submitting ? "جارٍ الإصدار…" : "إصدار الإشعار الدائن"}
           </Button>
         </DialogFooter>
