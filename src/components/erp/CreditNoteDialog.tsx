@@ -3,14 +3,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2 } from "lucide-react";
+import { Trash2, CheckCircle2, AlertTriangle, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { creditNotesService } from "@/services/erp/creditNotes";
 
 const fmt = (n: number) =>
   Number(n).toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** GL impact rows for a sales credit note (mirror of sales invoice, reversed). */
+type GlRow = { account: string; debit: number; credit: number };
+const buildGlImpact = (subtotal: number, vat: number, total: number): GlRow[] => [
+  { account: "4100 — مرتجعات المبيعات", debit: Number(subtotal.toFixed(2)), credit: 0 },
+  { account: "2310 — ضريبة القيمة المضافة (مخرجات)", debit: Number(vat.toFixed(2)), credit: 0 },
+  { account: "1200 — الذمم المدينة (العملاء)", debit: 0, credit: Number(total.toFixed(2)) },
+];
+
 
 interface CnLine {
   description: string;
