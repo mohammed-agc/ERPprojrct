@@ -3,14 +3,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2 } from "lucide-react";
+import { Trash2, CheckCircle2, AlertTriangle, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { creditNotesService } from "@/services/erp/creditNotes";
 
 const fmt = (n: number) =>
   Number(n).toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** GL impact rows for a sales credit note (mirror of sales invoice, reversed). */
+type GlRow = { account: string; debit: number; credit: number };
+const buildGlImpact = (subtotal: number, vat: number, total: number): GlRow[] => [
+  { account: "4100 — مرتجعات المبيعات", debit: Number(subtotal.toFixed(2)), credit: 0 },
+  { account: "2310 — ضريبة القيمة المضافة (مخرجات)", debit: Number(vat.toFixed(2)), credit: 0 },
+  { account: "1200 — الذمم المدينة (العملاء)", debit: 0, credit: Number(total.toFixed(2)) },
+];
+
 
 interface CnLine {
   description: string;
@@ -45,6 +54,16 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<CnLine[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [step, setStep] = useState<"edit" | "preview" | "verified">("edit");
+  const [verify, setVerify] = useState<{
+    cnId: string;
+    expected: { subtotal: number; vat: number; total: number };
+    actual: { subtotal: number; vat: number; total: number; credit_note_no: string };
+    match: boolean;
+    invoiceCreditedAfter: number;
+    invoiceStatusAfter: string;
+  } | null>(null);
+
 
   // Reset / prefill whenever the dialog opens
   useEffect(() => {
@@ -64,6 +83,8 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
     }
     setReason("invoice_cancellation");
     setNotes(`إشعار دائن مقابل الفاتورة ${invoice.invoice_no}`);
+    setStep("edit");
+    setVerify(null);
   }, [open, invoice.id]);
 
   const totals = useMemo(() => {
@@ -98,12 +119,16 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
   const addLine = () =>
     setLines(prev => [...prev, { description: "", quantity: 1, unit_price: 0, vat_pct: 15, _selected: true }]);
 
-  const submit = async () => {
+  const goPreview = () => {
     if (blocked) {
       if (overOutstanding) toast.error(`المبلغ يتجاوز الرصيد القابل للعكس (${outstanding.toFixed(2)})`);
       else if (hasLineError) toast.error("صحّح الأخطاء على البنود قبل الإصدار");
       return;
     }
+    setStep("preview");
+  };
+
+  const submit = async () => {
     const active = lines.filter(l => l._selected !== false && l.quantity > 0 && l.unit_price > 0);
     if (active.length === 0) {
       toast.error("أضِف بنداً واحداً على الأقل بكمية وسعر صالحَين");
@@ -111,6 +136,11 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
     }
     setSubmitting(true);
     try {
+      const expected = {
+        subtotal: Number(totals.subtotal.toFixed(2)),
+        vat: Number(totals.vat.toFixed(2)),
+        total: Number(totals.total.toFixed(2)),
+      };
       const cnId = await creditNotesService.issueFromLines({
         invoiceId: invoice.id,
         customerId: invoice.customer_id,
@@ -120,9 +150,31 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
           description, quantity, unit_price, vat_pct,
         })),
       });
-      toast.success("تم إصدار الإشعار الدائن");
-      onCreated(cnId);
-      onOpenChange(false);
+
+      // Round-trip verification against DB
+      const [{ data: cnRow }, { data: invRow }] = await Promise.all([
+        supabase.from("credit_notes").select("subtotal, vat_amount, total, credit_note_no").eq("id", cnId).maybeSingle(),
+        supabase.from("invoices").select("credited_amount, status").eq("id", invoice.id).maybeSingle(),
+      ]);
+      const actual = {
+        subtotal: Number(cnRow?.subtotal ?? 0),
+        vat: Number(cnRow?.vat_amount ?? 0),
+        total: Number(cnRow?.total ?? 0),
+        credit_note_no: String(cnRow?.credit_note_no ?? "—"),
+      };
+      const near = (a: number, b: number) => Math.abs(a - b) < 0.02;
+      const match = near(actual.subtotal, expected.subtotal) && near(actual.vat, expected.vat) && near(actual.total, expected.total);
+      setVerify({
+        cnId,
+        expected,
+        actual,
+        match,
+        invoiceCreditedAfter: Number(invRow?.credited_amount ?? 0),
+        invoiceStatusAfter: String(invRow?.status ?? "—"),
+      });
+      setStep("verified");
+      if (match) toast.success("تم النشر وتطابق التحقق المحاسبي");
+      else toast.error("تم النشر لكن النتيجة لا تطابق المعاينة");
     } catch (e: any) {
       toast.error(e.message ?? "فشل إصدار الإشعار الدائن");
     } finally {
@@ -130,13 +182,26 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
     }
   };
 
+  const glRows = useMemo(() => buildGlImpact(totals.subtotal, totals.vat, totals.total), [totals]);
+  const glDebit = glRows.reduce((s, r) => s + r.debit, 0);
+  const glCredit = glRows.reduce((s, r) => s + r.credit, 0);
+  const glBalanced = Math.abs(glDebit - glCredit) < 0.01;
+
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent dir="rtl" className="max-w-3xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>إنشاء إشعار دائن — الفاتورة {invoice.invoice_no}</DialogTitle>
+          <DialogTitle>
+            {step === "edit" && `إنشاء إشعار دائن — الفاتورة ${invoice.invoice_no}`}
+            {step === "preview" && `معاينة الأثر المحاسبي — ${invoice.invoice_no}`}
+            {step === "verified" && `تم النشر — ${verify?.actual.credit_note_no ?? ""}`}
+          </DialogTitle>
         </DialogHeader>
+
+        {step === "edit" && (<>
+
 
         <div className="grid grid-cols-3 gap-2 mb-3 text-xs">
           <div className="bg-muted/40 rounded p-2"><div className="text-muted-foreground">إجمالي الفاتورة</div><div className="num font-semibold">{fmt(Number(invoice.total))}</div></div>
@@ -244,10 +309,115 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>إلغاء</Button>
-          <Button onClick={submit} disabled={submitting || blocked}>
-            {submitting ? "جارٍ الإصدار…" : "إصدار الإشعار الدائن"}
+          <Button onClick={goPreview} disabled={blocked}>
+            معاينة الأثر المحاسبي <ArrowRight className="h-3.5 w-3.5 mr-1" />
           </Button>
         </DialogFooter>
+        </>)}
+
+        {step === "preview" && (<>
+          <div className="grid grid-cols-3 gap-2 mb-3 text-xs">
+            <div className="bg-muted/40 rounded p-2"><div className="text-muted-foreground">قبل الضريبة</div><div className="num font-semibold">{fmt(totals.subtotal)}</div></div>
+            <div className="bg-muted/40 rounded p-2"><div className="text-muted-foreground">ضريبة القيمة المضافة</div><div className="num font-semibold">{fmt(totals.vat)}</div></div>
+            <div className="bg-muted/40 rounded p-2"><div className="text-muted-foreground">الإجمالي</div><div className="num font-semibold text-primary">{fmt(totals.total)}</div></div>
+          </div>
+
+          <div className="bg-card border border-border rounded-lg overflow-hidden mb-3">
+            <div className="px-3 py-2 border-b border-border text-sm font-semibold flex items-center justify-between">
+              <span>قيد اليومية المتوقع</span>
+              <span className={`text-xs ${glBalanced ? "text-success" : "text-destructive"}`}>
+                {glBalanced ? "متوازن" : "غير متوازن"}
+              </span>
+            </div>
+            <table className="erp-table">
+              <thead>
+                <tr><th>الحساب</th><th className="text-left">مدين</th><th className="text-left">دائن</th></tr>
+              </thead>
+              <tbody>
+                {glRows.map((r, i) => (
+                  <tr key={i}>
+                    <td>{r.account}</td>
+                    <td className="num text-left">{r.debit ? fmt(r.debit) : "—"}</td>
+                    <td className="num text-left">{r.credit ? fmt(r.credit) : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-muted/60 font-semibold">
+                  <td className="text-left">الإجمالي</td>
+                  <td className="num text-left">{fmt(glDebit)}</td>
+                  <td className="num text-left">{fmt(glCredit)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3 mb-2 leading-6">
+            <div>• سيُنشر إشعار دائن بإجمالي <b className="num">{fmt(totals.total)}</b> مقابل الفاتورة {invoice.invoice_no}.</div>
+            <div>• سيرتفع رصيد عمود <code>credited_amount</code> من <span className="num">{fmt(Number(invoice.credited_amount))}</span> إلى <b className="num">{fmt(Number(invoice.credited_amount) + totals.total)}</b>.</div>
+            <div>• إذا غطّى العكس كامل قيمة الفاتورة سيتحول حالتها إلى <b>ملغاة</b> تلقائياً عبر تريغر قاعدة البيانات.</div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setStep("edit")} disabled={submitting}>رجوع للتعديل</Button>
+            <Button onClick={submit} disabled={submitting || !glBalanced}>
+              {submitting ? "جارٍ النشر…" : "تأكيد الإصدار"}
+            </Button>
+          </DialogFooter>
+        </>)}
+
+        {step === "verified" && verify && (<>
+          <div className={`flex items-start gap-2 rounded-lg p-3 mb-3 border ${
+            verify.match ? "border-success/40 bg-success/5" : "border-destructive/40 bg-destructive/5"
+          }`}>
+            {verify.match
+              ? <CheckCircle2 className="h-5 w-5 text-success mt-0.5" />
+              : <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />}
+            <div className="text-sm">
+              <div className="font-semibold">
+                {verify.match ? "تطابق التحقق المحاسبي" : "تباين بين المعاينة والنشر"}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                إشعار دائن <span className="font-mono">{verify.actual.credit_note_no}</span> — تمت قراءة القيم من قاعدة البيانات.
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-lg overflow-hidden mb-3">
+            <table className="erp-table">
+              <thead>
+                <tr><th>القيمة</th><th className="text-left">المتوقع</th><th className="text-left">من قاعدة البيانات</th><th>الحالة</th></tr>
+              </thead>
+              <tbody>
+                {([
+                  ["قبل الضريبة", verify.expected.subtotal, verify.actual.subtotal],
+                  ["VAT", verify.expected.vat, verify.actual.vat],
+                  ["الإجمالي", verify.expected.total, verify.actual.total],
+                ] as const).map(([label, exp, act]) => {
+                  const ok = Math.abs(exp - act) < 0.02;
+                  return (
+                    <tr key={label}>
+                      <td>{label}</td>
+                      <td className="num text-left">{fmt(exp)}</td>
+                      <td className="num text-left">{fmt(act)}</td>
+                      <td className={ok ? "text-success" : "text-destructive"}>{ok ? "✓" : "✗"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3 mb-2">
+            <div>الفاتورة بعد النشر — رصيد العكس: <b className="num">{fmt(verify.invoiceCreditedAfter)}</b> · الحالة: <b>{verify.invoiceStatusAfter}</b></div>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => { onCreated(verify.cnId); onOpenChange(false); }}>
+              فتح الإشعار الدائن
+            </Button>
+          </DialogFooter>
+        </>)}
       </DialogContent>
     </Dialog>
   );
