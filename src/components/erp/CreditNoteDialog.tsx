@@ -54,6 +54,16 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<CnLine[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [step, setStep] = useState<"edit" | "preview" | "verified">("edit");
+  const [verify, setVerify] = useState<{
+    cnId: string;
+    expected: { subtotal: number; vat: number; total: number };
+    actual: { subtotal: number; vat: number; total: number; credit_note_no: string };
+    match: boolean;
+    invoiceCreditedAfter: number;
+    invoiceStatusAfter: string;
+  } | null>(null);
+
 
   // Reset / prefill whenever the dialog opens
   useEffect(() => {
