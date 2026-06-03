@@ -24,6 +24,8 @@ const Procurement = lazy(() => import("./pages/Procurement"));
 const SalesOrders = lazy(() => import("./pages/SalesOrders"));
 const SalesOrderDetail = lazy(() => import("./pages/SalesOrderDetail"));
 const Invoices = lazy(() => import("./pages/Invoices"));
+const CreditNotes = lazy(() => import("./pages/sales/CreditNotes"));
+const CreditNoteDetail = lazy(() => import("./pages/sales/CreditNoteDetail"));
 const Accounts = lazy(() => import("./pages/Accounts"));
 const AccountDetail = lazy(() => import("./pages/AccountDetail"));
 const Journals = lazy(() => import("./pages/Journals"));
