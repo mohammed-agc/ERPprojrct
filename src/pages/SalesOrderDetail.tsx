@@ -263,9 +263,28 @@ export default function SalesOrderDetail() {
   const canEditLines = can("edit_lines").allowed;
 
   const setStatus = async (next: SalesOrderState, msg: string) => {
+    // Posted-invoice cancellation requires a reversing credit note (GL integrity).
+    if (next === "cancelled") {
+      const { data: invs } = await supabase
+        .from("invoices")
+        .select("id, status")
+        .eq("sales_order_id", id);
+      const reversible = (invs ?? []).filter(i =>
+        ["posted", "partially_paid", "paid"].includes(i.status as string)
+      );
+      try {
+        for (const inv of reversible) {
+          const cnId = await creditNotesService.issueFullReversal(inv.id, "sales_order_cancellation");
+          if (cnId) toast.success("تم إصدار إشعار دائن لعكس قيمة الفاتورة");
+        }
+      } catch (e: any) {
+        toast.error(e.message ?? "فشل إصدار إشعار الدائن");
+        return;
+      }
+    }
+
     const { error } = await supabase.from("sales_orders").update({ status: next as any }).eq("id", id);
     if (error) { toast.error(error.message); return; }
-    // Persist vehicle status alongside the order transition
     if (next === "paid")      await salesVehicleStatus.markSoldForOrder(id!);
     if (next === "delivered") await salesVehicleStatus.markDeliveredForOrder(id!);
     if (next === "cancelled") await salesVehicleStatus.releaseForOrder(id!);
