@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { ActionButton } from "@/components/erp/ActionButton";
 import { useErpSession } from "@/contexts/ErpSessionContext";
 import { canPerform } from "@/lib/erpPermissions";
-import { Banknote } from "lucide-react";
+import { Banknote, FileMinus } from "lucide-react";
 import { toast } from "sonner";
 import { PaymentDialog, PaymentSubmitPayload, PaymentInvoiceContext } from "@/components/erp/PaymentDialog";
 import { DocPrintActions } from "@/components/erp/DocPrintActions";
