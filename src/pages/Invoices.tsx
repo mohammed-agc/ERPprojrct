@@ -234,6 +234,13 @@ export default function Invoices() {
                       >
                         <Banknote className="h-3.5 w-3.5 ml-1" /> تسجيل دفعة
                       </ActionButton>
+                      <Link
+                        to={`/sales/credit-notes?invoice_id=${r.id}`}
+                        className="inline-flex items-center text-xs text-muted-foreground hover:text-primary px-1.5"
+                        title="عرض الإشعارات الدائنة"
+                      >
+                        <FileMinus className="h-3.5 w-3.5 ml-1" /> إشعارات دائنة
+                      </Link>
                     </div>
                   </td>
                 </tr>
