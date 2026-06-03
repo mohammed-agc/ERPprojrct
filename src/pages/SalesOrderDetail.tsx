@@ -19,7 +19,7 @@ import { EmptyState } from "@/components/erp/EmptyState";
 import { SalesOrderState, STATE_LABELS } from "@/lib/erpPermissions";
 import { useErpSession } from "@/contexts/ErpSessionContext";
 import { useSalesActions } from "@/hooks/erp/useSalesActions";
-import { Banknote, Truck, XCircle, Printer } from "lucide-react";
+import { Banknote, Truck, XCircle, Printer, FileMinus } from "lucide-react";
 import { salesVehicleStatus } from "@/services/erp/salesVehicleStatus";
 import { creditNotesService } from "@/services/erp/creditNotes";
 
