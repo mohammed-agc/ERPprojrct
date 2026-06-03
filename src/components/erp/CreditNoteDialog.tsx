@@ -83,6 +83,8 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
     }
     setReason("invoice_cancellation");
     setNotes(`إشعار دائن مقابل الفاتورة ${invoice.invoice_no}`);
+    setStep("edit");
+    setVerify(null);
   }, [open, invoice.id]);
 
   const totals = useMemo(() => {
