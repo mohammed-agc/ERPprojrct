@@ -21,6 +21,7 @@ import { useErpSession } from "@/contexts/ErpSessionContext";
 import { useSalesActions } from "@/hooks/erp/useSalesActions";
 import { Banknote, Truck, XCircle, Printer } from "lucide-react";
 import { salesVehicleStatus } from "@/services/erp/salesVehicleStatus";
+import { creditNotesService } from "@/services/erp/creditNotes";
 
 interface Line {
   id?: string;
