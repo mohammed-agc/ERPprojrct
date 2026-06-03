@@ -309,10 +309,115 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>إلغاء</Button>
-          <Button onClick={submit} disabled={submitting || blocked}>
-            {submitting ? "جارٍ الإصدار…" : "إصدار الإشعار الدائن"}
+          <Button onClick={goPreview} disabled={blocked}>
+            معاينة الأثر المحاسبي <ArrowRight className="h-3.5 w-3.5 mr-1" />
           </Button>
         </DialogFooter>
+        </>)}
+
+        {step === "preview" && (<>
+          <div className="grid grid-cols-3 gap-2 mb-3 text-xs">
+            <div className="bg-muted/40 rounded p-2"><div className="text-muted-foreground">قبل الضريبة</div><div className="num font-semibold">{fmt(totals.subtotal)}</div></div>
+            <div className="bg-muted/40 rounded p-2"><div className="text-muted-foreground">ضريبة القيمة المضافة</div><div className="num font-semibold">{fmt(totals.vat)}</div></div>
+            <div className="bg-muted/40 rounded p-2"><div className="text-muted-foreground">الإجمالي</div><div className="num font-semibold text-primary">{fmt(totals.total)}</div></div>
+          </div>
+
+          <div className="bg-card border border-border rounded-lg overflow-hidden mb-3">
+            <div className="px-3 py-2 border-b border-border text-sm font-semibold flex items-center justify-between">
+              <span>قيد اليومية المتوقع</span>
+              <span className={`text-xs ${glBalanced ? "text-success" : "text-destructive"}`}>
+                {glBalanced ? "متوازن" : "غير متوازن"}
+              </span>
+            </div>
+            <table className="erp-table">
+              <thead>
+                <tr><th>الحساب</th><th className="text-left">مدين</th><th className="text-left">دائن</th></tr>
+              </thead>
+              <tbody>
+                {glRows.map((r, i) => (
+                  <tr key={i}>
+                    <td>{r.account}</td>
+                    <td className="num text-left">{r.debit ? fmt(r.debit) : "—"}</td>
+                    <td className="num text-left">{r.credit ? fmt(r.credit) : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-muted/60 font-semibold">
+                  <td className="text-left">الإجمالي</td>
+                  <td className="num text-left">{fmt(glDebit)}</td>
+                  <td className="num text-left">{fmt(glCredit)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3 mb-2 leading-6">
+            <div>• سيُنشر إشعار دائن بإجمالي <b className="num">{fmt(totals.total)}</b> مقابل الفاتورة {invoice.invoice_no}.</div>
+            <div>• سيرتفع رصيد عمود <code>credited_amount</code> من <span className="num">{fmt(Number(invoice.credited_amount))}</span> إلى <b className="num">{fmt(Number(invoice.credited_amount) + totals.total)}</b>.</div>
+            <div>• إذا غطّى العكس كامل قيمة الفاتورة سيتحول حالتها إلى <b>ملغاة</b> تلقائياً عبر تريغر قاعدة البيانات.</div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setStep("edit")} disabled={submitting}>رجوع للتعديل</Button>
+            <Button onClick={submit} disabled={submitting || !glBalanced}>
+              {submitting ? "جارٍ النشر…" : "تأكيد الإصدار"}
+            </Button>
+          </DialogFooter>
+        </>)}
+
+        {step === "verified" && verify && (<>
+          <div className={`flex items-start gap-2 rounded-lg p-3 mb-3 border ${
+            verify.match ? "border-success/40 bg-success/5" : "border-destructive/40 bg-destructive/5"
+          }`}>
+            {verify.match
+              ? <CheckCircle2 className="h-5 w-5 text-success mt-0.5" />
+              : <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />}
+            <div className="text-sm">
+              <div className="font-semibold">
+                {verify.match ? "تطابق التحقق المحاسبي" : "تباين بين المعاينة والنشر"}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                إشعار دائن <span className="font-mono">{verify.actual.credit_note_no}</span> — تمت قراءة القيم من قاعدة البيانات.
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-lg overflow-hidden mb-3">
+            <table className="erp-table">
+              <thead>
+                <tr><th>القيمة</th><th className="text-left">المتوقع</th><th className="text-left">من قاعدة البيانات</th><th>الحالة</th></tr>
+              </thead>
+              <tbody>
+                {([
+                  ["قبل الضريبة", verify.expected.subtotal, verify.actual.subtotal],
+                  ["VAT", verify.expected.vat, verify.actual.vat],
+                  ["الإجمالي", verify.expected.total, verify.actual.total],
+                ] as const).map(([label, exp, act]) => {
+                  const ok = Math.abs(exp - act) < 0.02;
+                  return (
+                    <tr key={label}>
+                      <td>{label}</td>
+                      <td className="num text-left">{fmt(exp)}</td>
+                      <td className="num text-left">{fmt(act)}</td>
+                      <td className={ok ? "text-success" : "text-destructive"}>{ok ? "✓" : "✗"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3 mb-2">
+            <div>الفاتورة بعد النشر — رصيد العكس: <b className="num">{fmt(verify.invoiceCreditedAfter)}</b> · الحالة: <b>{verify.invoiceStatusAfter}</b></div>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => { onCreated(verify.cnId); onOpenChange(false); }}>
+              فتح الإشعار الدائن
+            </Button>
+          </DialogFooter>
+        </>)}
       </DialogContent>
     </Dialog>
   );
