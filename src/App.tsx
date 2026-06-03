@@ -24,6 +24,7 @@ const Procurement = lazy(() => import("./pages/Procurement"));
 const SalesOrders = lazy(() => import("./pages/SalesOrders"));
 const SalesOrderDetail = lazy(() => import("./pages/SalesOrderDetail"));
 const Invoices = lazy(() => import("./pages/Invoices"));
+const InvoiceDetail = lazy(() => import("./pages/InvoiceDetail"));
 const CreditNotes = lazy(() => import("./pages/sales/CreditNotes"));
 const CreditNoteDetail = lazy(() => import("./pages/sales/CreditNoteDetail"));
 const Accounts = lazy(() => import("./pages/Accounts"));
@@ -202,6 +203,7 @@ const App = () => (
               <Route path="/sales-orders" element={<SalesOrders />} />
               <Route path="/sales-orders/:id" element={<SalesOrderDetail />} />
               <Route path="/invoices" element={<Invoices />} />
+              <Route path="/invoices/:id" element={<InvoiceDetail />} />
               <Route path="/sales/credit-notes" element={<CreditNotes />} />
               <Route path="/sales/credit-notes/:id" element={<CreditNoteDetail />} />
 

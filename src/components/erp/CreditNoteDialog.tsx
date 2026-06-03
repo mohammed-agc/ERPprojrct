@@ -1,0 +1,194 @@
+import { useEffect, useMemo, useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { creditNotesService } from "@/services/erp/creditNotes";
+
+const fmt = (n: number) =>
+  Number(n).toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+interface CnLine {
+  description: string;
+  quantity: number;
+  unit_price: number;
+  vat_pct: number;
+  _selected?: boolean;
+}
+
+interface Props {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  invoice: {
+    id: string;
+    invoice_no: string;
+    customer_id: string;
+    total: number;
+    credited_amount: number;
+    paid_amount: number;
+  };
+  invoiceLines: Array<{ description: string; quantity: number; unit_price: number; vat_pct: number }>;
+  onCreated: (cnId: string) => void;
+}
+
+export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, onCreated }: Props) {
+  const outstanding = Math.max(0, Number(invoice.total) - Number(invoice.credited_amount));
+  const [reason, setReason] = useState("invoice_cancellation");
+  const [notes, setNotes] = useState("");
+  const [lines, setLines] = useState<CnLine[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Reset / prefill whenever the dialog opens
+  useEffect(() => {
+    if (!open) return;
+    if (invoiceLines.length > 0) {
+      setLines(invoiceLines.map(l => ({ ...l, _selected: true })));
+    } else {
+      // No source lines → seed one row sized to outstanding (ex-VAT @ 15%)
+      const base = Number((outstanding / 1.15).toFixed(2));
+      setLines([{ description: `عكس قيمة الفاتورة ${invoice.invoice_no}`, quantity: 1, unit_price: base, vat_pct: 15, _selected: true }]);
+    }
+    setReason("invoice_cancellation");
+    setNotes(`إشعار دائن مقابل الفاتورة ${invoice.invoice_no}`);
+  }, [open, invoice.id]);
+
+  const totals = useMemo(() => {
+    const active = lines.filter(l => l._selected !== false);
+    const subtotal = active.reduce((s, l) => s + l.quantity * l.unit_price, 0);
+    const vat = active.reduce((s, l) => s + l.quantity * l.unit_price * (l.vat_pct / 100), 0);
+    return { subtotal, vat, total: subtotal + vat, count: active.length };
+  }, [lines]);
+
+  const overOutstanding = totals.total > outstanding + 0.01;
+
+  const update = (i: number, patch: Partial<CnLine>) =>
+    setLines(prev => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+  const removeLine = (i: number) => setLines(prev => prev.filter((_, idx) => idx !== i));
+  const addLine = () =>
+    setLines(prev => [...prev, { description: "", quantity: 1, unit_price: 0, vat_pct: 15, _selected: true }]);
+
+  const submit = async () => {
+    const active = lines.filter(l => l._selected !== false && l.quantity > 0 && l.unit_price > 0);
+    if (active.length === 0) {
+      toast.error("أضِف بنداً واحداً على الأقل بكمية وسعر صالحَين");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const cnId = await creditNotesService.issueFromLines({
+        invoiceId: invoice.id,
+        customerId: invoice.customer_id,
+        reason,
+        notes,
+        lines: active.map(({ description, quantity, unit_price, vat_pct }) => ({
+          description, quantity, unit_price, vat_pct,
+        })),
+      });
+      toast.success("تم إصدار الإشعار الدائن");
+      onCreated(cnId);
+      onOpenChange(false);
+    } catch (e: any) {
+      toast.error(e.message ?? "فشل إصدار الإشعار الدائن");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent dir="rtl" className="max-w-3xl max-h-[92vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>إنشاء إشعار دائن — الفاتورة {invoice.invoice_no}</DialogTitle>
+        </DialogHeader>
+
+        <div className="grid grid-cols-3 gap-2 mb-3 text-xs">
+          <div className="bg-muted/40 rounded p-2"><div className="text-muted-foreground">إجمالي الفاتورة</div><div className="num font-semibold">{fmt(Number(invoice.total))}</div></div>
+          <div className="bg-muted/40 rounded p-2"><div className="text-muted-foreground">إشعارات سابقة</div><div className="num font-semibold">{fmt(Number(invoice.credited_amount))}</div></div>
+          <div className="bg-muted/40 rounded p-2"><div className="text-muted-foreground">الرصيد القابل للعكس</div><div className="num font-semibold text-primary">{fmt(outstanding)}</div></div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <Label className="text-xs">السبب</Label>
+            <Select value={reason} onValueChange={setReason}>
+              <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="invoice_cancellation">إلغاء الفاتورة</SelectItem>
+                <SelectItem value="goods_return">إرجاع بضاعة</SelectItem>
+                <SelectItem value="price_adjustment">تسوية سعر</SelectItem>
+                <SelectItem value="discount_after_invoice">خصم بعد الإصدار</SelectItem>
+                <SelectItem value="other">أخرى</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs">ملاحظات</Label>
+            <Input className="h-8" value={notes} onChange={e => setNotes(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="bg-card border border-border rounded-lg overflow-hidden mb-3">
+          <table className="erp-table">
+            <thead>
+              <tr>
+                <th style={{ width: 32 }}></th>
+                <th>الوصف</th>
+                <th style={{ width: 80 }} className="text-left">الكمية</th>
+                <th style={{ width: 110 }} className="text-left">سعر الوحدة</th>
+                <th style={{ width: 70 }} className="text-left">VAT%</th>
+                <th style={{ width: 110 }} className="text-left">الإجمالي</th>
+                <th style={{ width: 36 }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {lines.map((l, i) => {
+                const lineTotal = l.quantity * l.unit_price * (1 + l.vat_pct / 100);
+                return (
+                  <tr key={i} className={l._selected === false ? "opacity-40" : ""}>
+                    <td>
+                      <input type="checkbox" checked={l._selected !== false}
+                        onChange={e => update(i, { _selected: e.target.checked })} />
+                    </td>
+                    <td><Input className="h-7" value={l.description} onChange={e => update(i, { description: e.target.value })} /></td>
+                    <td><Input className="h-7 text-left num" type="number" value={l.quantity} onChange={e => update(i, { quantity: Number(e.target.value) || 0 })} /></td>
+                    <td><Input className="h-7 text-left num" type="number" value={l.unit_price} onChange={e => update(i, { unit_price: Number(e.target.value) || 0 })} /></td>
+                    <td><Input className="h-7 text-left num" type="number" value={l.vat_pct} onChange={e => update(i, { vat_pct: Number(e.target.value) || 0 })} /></td>
+                    <td className="num text-left font-semibold">{fmt(lineTotal)}</td>
+                    <td>
+                      <Button size="sm" variant="ghost" onClick={() => removeLine(i)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <div className="p-2 border-t border-border">
+            <Button size="sm" variant="outline" onClick={addLine}>+ إضافة بند</Button>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1 max-w-sm ml-auto text-sm mb-2">
+          <div className="flex justify-between"><span className="text-muted-foreground">قبل الضريبة</span><span className="num">{fmt(totals.subtotal)}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">VAT</span><span className="num">{fmt(totals.vat)}</span></div>
+          <div className="flex justify-between font-bold border-t border-border pt-1"><span>الإجمالي</span><span className={`num ${overOutstanding ? "text-destructive" : ""}`}>{fmt(totals.total)}</span></div>
+          {overOutstanding && (
+            <div className="text-xs text-destructive">تحذير: المبلغ يتجاوز الرصيد القابل للعكس ({fmt(outstanding)}).</div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>إلغاء</Button>
+          <Button onClick={submit} disabled={submitting || totals.count === 0}>
+            {submitting ? "جارٍ الإصدار…" : "إصدار الإشعار الدائن"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

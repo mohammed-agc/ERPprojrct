@@ -148,7 +148,7 @@ export default function Invoices() {
               const vehs: any[] = r._vehicles ?? [];
               return (
                 <tr key={r.id}>
-                  <td className="font-mono">{r.invoice_no}</td>
+                  <td className="font-mono"><Link to={`/invoices/${r.id}`} className="text-primary hover:underline">{r.invoice_no}</Link></td>
                   <td className="num">{r.invoice_date}</td>
                   <td>{r.customers?.name ?? "—"}</td>
                   <td className="text-xs">
