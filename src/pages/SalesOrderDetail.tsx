@@ -19,7 +19,7 @@ import { EmptyState } from "@/components/erp/EmptyState";
 import { SalesOrderState, STATE_LABELS } from "@/lib/erpPermissions";
 import { useErpSession } from "@/contexts/ErpSessionContext";
 import { useSalesActions } from "@/hooks/erp/useSalesActions";
-import { Banknote, Truck, XCircle, Printer } from "lucide-react";
+import { Banknote, Truck, XCircle, Printer, FileMinus } from "lucide-react";
 import { salesVehicleStatus } from "@/services/erp/salesVehicleStatus";
 import { creditNotesService } from "@/services/erp/creditNotes";
 
@@ -322,6 +322,9 @@ export default function SalesOrderDetail() {
               <ActionButton size="sm" variant="ghost" permission={can("print")} hideIfDenied onClick={()=>window.print()}>
                 <Printer className="h-4 w-4 ml-1" /> طباعة
               </ActionButton>
+              <Button variant="ghost" size="sm" onClick={()=>nav(`/sales/credit-notes?order_id=${id}`)}>
+                <FileMinus className="h-4 w-4 ml-1" /> إشعارات دائنة
+              </Button>
             </div>
 
             <span className="erp-action-divider" />

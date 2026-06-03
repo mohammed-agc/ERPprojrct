@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { ActionButton } from "@/components/erp/ActionButton";
 import { useErpSession } from "@/contexts/ErpSessionContext";
 import { canPerform } from "@/lib/erpPermissions";
-import { Banknote } from "lucide-react";
+import { Banknote, FileMinus } from "lucide-react";
 import { toast } from "sonner";
 import { PaymentDialog, PaymentSubmitPayload, PaymentInvoiceContext } from "@/components/erp/PaymentDialog";
 import { DocPrintActions } from "@/components/erp/DocPrintActions";
@@ -233,6 +234,13 @@ export default function Invoices() {
                       >
                         <Banknote className="h-3.5 w-3.5 ml-1" /> تسجيل دفعة
                       </ActionButton>
+                      <Link
+                        to={`/sales/credit-notes?invoice_id=${r.id}`}
+                        className="inline-flex items-center text-xs text-muted-foreground hover:text-primary px-1.5"
+                        title="عرض الإشعارات الدائنة"
+                      >
+                        <FileMinus className="h-3.5 w-3.5 ml-1" /> إشعارات دائنة
+                      </Link>
                     </div>
                   </td>
                 </tr>

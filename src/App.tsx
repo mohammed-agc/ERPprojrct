@@ -24,6 +24,8 @@ const Procurement = lazy(() => import("./pages/Procurement"));
 const SalesOrders = lazy(() => import("./pages/SalesOrders"));
 const SalesOrderDetail = lazy(() => import("./pages/SalesOrderDetail"));
 const Invoices = lazy(() => import("./pages/Invoices"));
+const CreditNotes = lazy(() => import("./pages/sales/CreditNotes"));
+const CreditNoteDetail = lazy(() => import("./pages/sales/CreditNoteDetail"));
 const Accounts = lazy(() => import("./pages/Accounts"));
 const AccountDetail = lazy(() => import("./pages/AccountDetail"));
 const Journals = lazy(() => import("./pages/Journals"));
@@ -200,6 +202,8 @@ const App = () => (
               <Route path="/sales-orders" element={<SalesOrders />} />
               <Route path="/sales-orders/:id" element={<SalesOrderDetail />} />
               <Route path="/invoices" element={<Invoices />} />
+              <Route path="/sales/credit-notes" element={<CreditNotes />} />
+              <Route path="/sales/credit-notes/:id" element={<CreditNoteDetail />} />
 
               <Route path="/accounts" element={<Accounts />} />
               <Route path="/accounting/purchase-invoices" element={<PurchaseInvoicesRegistry />} />
