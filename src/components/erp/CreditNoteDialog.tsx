@@ -193,8 +193,15 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent dir="rtl" className="max-w-3xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>إنشاء إشعار دائن — الفاتورة {invoice.invoice_no}</DialogTitle>
+          <DialogTitle>
+            {step === "edit" && `إنشاء إشعار دائن — الفاتورة ${invoice.invoice_no}`}
+            {step === "preview" && `معاينة الأثر المحاسبي — ${invoice.invoice_no}`}
+            {step === "verified" && `تم النشر — ${verify?.actual.credit_note_no ?? ""}`}
+          </DialogTitle>
         </DialogHeader>
+
+        {step === "edit" && (<>
+
 
         <div className="grid grid-cols-3 gap-2 mb-3 text-xs">
           <div className="bg-muted/40 rounded p-2"><div className="text-muted-foreground">إجمالي الفاتورة</div><div className="num font-semibold">{fmt(Number(invoice.total))}</div></div>
