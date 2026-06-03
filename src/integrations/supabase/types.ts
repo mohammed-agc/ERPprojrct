@@ -94,6 +94,98 @@ export type Database = {
         }
         Relationships: []
       }
+      credit_note_lines: {
+        Row: {
+          credit_note_id: string
+          description: string
+          id: string
+          line_no: number
+          line_total: number
+          quantity: number
+          unit_price: number
+          vat_pct: number
+        }
+        Insert: {
+          credit_note_id: string
+          description: string
+          id?: string
+          line_no: number
+          line_total?: number
+          quantity?: number
+          unit_price?: number
+          vat_pct?: number
+        }
+        Update: {
+          credit_note_id?: string
+          description?: string
+          id?: string
+          line_no?: number
+          line_total?: number
+          quantity?: number
+          unit_price?: number
+          vat_pct?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_note_lines_credit_note_id_fkey"
+            columns: ["credit_note_id"]
+            isOneToOne: false
+            referencedRelation: "credit_notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_notes: {
+        Row: {
+          cn_date: string
+          created_at: string
+          created_by: string | null
+          credit_note_no: string
+          customer_id: string
+          id: string
+          invoice_id: string
+          notes: string | null
+          reason: string
+          status: string
+          subtotal: number
+          total: number
+          updated_at: string
+          vat_amount: number
+        }
+        Insert: {
+          cn_date?: string
+          created_at?: string
+          created_by?: string | null
+          credit_note_no: string
+          customer_id: string
+          id?: string
+          invoice_id: string
+          notes?: string | null
+          reason?: string
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          vat_amount?: number
+        }
+        Update: {
+          cn_date?: string
+          created_at?: string
+          created_by?: string | null
+          credit_note_no?: string
+          customer_id?: string
+          id?: string
+          invoice_id?: string
+          notes?: string | null
+          reason?: string
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          vat_amount?: number
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           address: string | null
@@ -224,6 +316,7 @@ export type Database = {
           branch: string | null
           created_at: string
           created_by: string | null
+          credited_amount: number
           customer_id: string
           due_date: string | null
           id: string
@@ -246,6 +339,7 @@ export type Database = {
           branch?: string | null
           created_at?: string
           created_by?: string | null
+          credited_amount?: number
           customer_id: string
           due_date?: string | null
           id?: string
@@ -268,6 +362,7 @@ export type Database = {
           branch?: string | null
           created_at?: string
           created_by?: string | null
+          credited_amount?: number
           customer_id?: string
           due_date?: string | null
           id?: string
