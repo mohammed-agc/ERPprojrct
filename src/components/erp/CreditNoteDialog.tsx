@@ -119,12 +119,16 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
   const addLine = () =>
     setLines(prev => [...prev, { description: "", quantity: 1, unit_price: 0, vat_pct: 15, _selected: true }]);
 
-  const submit = async () => {
+  const goPreview = () => {
     if (blocked) {
       if (overOutstanding) toast.error(`المبلغ يتجاوز الرصيد القابل للعكس (${outstanding.toFixed(2)})`);
       else if (hasLineError) toast.error("صحّح الأخطاء على البنود قبل الإصدار");
       return;
     }
+    setStep("preview");
+  };
+
+  const submit = async () => {
     const active = lines.filter(l => l._selected !== false && l.quantity > 0 && l.unit_price > 0);
     if (active.length === 0) {
       toast.error("أضِف بنداً واحداً على الأقل بكمية وسعر صالحَين");
@@ -132,6 +136,11 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
     }
     setSubmitting(true);
     try {
+      const expected = {
+        subtotal: Number(totals.subtotal.toFixed(2)),
+        vat: Number(totals.vat.toFixed(2)),
+        total: Number(totals.total.toFixed(2)),
+      };
       const cnId = await creditNotesService.issueFromLines({
         invoiceId: invoice.id,
         customerId: invoice.customer_id,
@@ -141,15 +150,43 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
           description, quantity, unit_price, vat_pct,
         })),
       });
-      toast.success("تم إصدار الإشعار الدائن");
-      onCreated(cnId);
-      onOpenChange(false);
+
+      // Round-trip verification against DB
+      const [{ data: cnRow }, { data: invRow }] = await Promise.all([
+        supabase.from("credit_notes").select("subtotal, vat_amount, total, credit_note_no").eq("id", cnId).maybeSingle(),
+        supabase.from("invoices").select("credited_amount, status").eq("id", invoice.id).maybeSingle(),
+      ]);
+      const actual = {
+        subtotal: Number(cnRow?.subtotal ?? 0),
+        vat: Number(cnRow?.vat_amount ?? 0),
+        total: Number(cnRow?.total ?? 0),
+        credit_note_no: String(cnRow?.credit_note_no ?? "—"),
+      };
+      const near = (a: number, b: number) => Math.abs(a - b) < 0.02;
+      const match = near(actual.subtotal, expected.subtotal) && near(actual.vat, expected.vat) && near(actual.total, expected.total);
+      setVerify({
+        cnId,
+        expected,
+        actual,
+        match,
+        invoiceCreditedAfter: Number(invRow?.credited_amount ?? 0),
+        invoiceStatusAfter: String(invRow?.status ?? "—"),
+      });
+      setStep("verified");
+      if (match) toast.success("تم النشر وتطابق التحقق المحاسبي");
+      else toast.error("تم النشر لكن النتيجة لا تطابق المعاينة");
     } catch (e: any) {
       toast.error(e.message ?? "فشل إصدار الإشعار الدائن");
     } finally {
       setSubmitting(false);
     }
   };
+
+  const glRows = useMemo(() => buildGlImpact(totals.subtotal, totals.vat, totals.total), [totals]);
+  const glDebit = glRows.reduce((s, r) => s + r.debit, 0);
+  const glCredit = glRows.reduce((s, r) => s + r.credit, 0);
+  const glBalanced = Math.abs(glDebit - glCredit) < 0.01;
+
 
 
   return (
