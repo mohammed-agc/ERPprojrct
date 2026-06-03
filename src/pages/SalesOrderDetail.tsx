@@ -322,6 +322,9 @@ export default function SalesOrderDetail() {
               <ActionButton size="sm" variant="ghost" permission={can("print")} hideIfDenied onClick={()=>window.print()}>
                 <Printer className="h-4 w-4 ml-1" /> طباعة
               </ActionButton>
+              <Button variant="ghost" size="sm" onClick={()=>nav(`/sales/credit-notes?order_id=${id}`)}>
+                <FileMinus className="h-4 w-4 ml-1" /> إشعارات دائنة
+              </Button>
             </div>
 
             <span className="erp-action-divider" />
