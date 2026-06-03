@@ -180,16 +180,40 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
             <tbody>
               {lines.map((l, i) => {
                 const lineTotal = l.quantity * l.unit_price * (1 + l.vat_pct / 100);
+                const err = lineErrors[i];
+                const qtyBad = l._maxQty !== undefined && l.quantity > l._maxQty + 1e-6;
+                const priceBad = l._maxUnit !== undefined && l.unit_price > l._maxUnit + 1e-6;
                 return (
                   <tr key={i} className={l._selected === false ? "opacity-40" : ""}>
                     <td>
                       <input type="checkbox" checked={l._selected !== false}
                         onChange={e => update(i, { _selected: e.target.checked })} />
                     </td>
-                    <td><Input className="h-7" value={l.description} onChange={e => update(i, { description: e.target.value })} /></td>
-                    <td><Input className="h-7 text-left num" type="number" value={l.quantity} onChange={e => update(i, { quantity: Number(e.target.value) || 0 })} /></td>
-                    <td><Input className="h-7 text-left num" type="number" value={l.unit_price} onChange={e => update(i, { unit_price: Number(e.target.value) || 0 })} /></td>
-                    <td><Input className="h-7 text-left num" type="number" value={l.vat_pct} onChange={e => update(i, { vat_pct: Number(e.target.value) || 0 })} /></td>
+                    <td>
+                      <Input className="h-7" value={l.description} onChange={e => update(i, { description: e.target.value })} />
+                      {err && <div className="text-[10px] text-destructive mt-0.5">{err}</div>}
+                    </td>
+                    <td>
+                      <Input className={`h-7 text-left num ${qtyBad ? "border-destructive" : ""}`}
+                        type="number" min={0} max={l._maxQty}
+                        value={l.quantity}
+                        onChange={e => update(i, { quantity: Math.max(0, Number(e.target.value) || 0) })} />
+                      {l._maxQty !== undefined && (
+                        <div className="text-[10px] text-muted-foreground mt-0.5">حد: {l._maxQty}</div>
+                      )}
+                    </td>
+                    <td>
+                      <Input className={`h-7 text-left num ${priceBad ? "border-destructive" : ""}`}
+                        type="number" min={0} max={l._maxUnit}
+                        value={l.unit_price}
+                        onChange={e => update(i, { unit_price: Math.max(0, Number(e.target.value) || 0) })} />
+                      {l._maxUnit !== undefined && (
+                        <div className="text-[10px] text-muted-foreground mt-0.5">حد: {fmt(l._maxUnit)}</div>
+                      )}
+                    </td>
+                    <td><Input className="h-7 text-left num" type="number" min={0} max={100}
+                      value={l.vat_pct}
+                      onChange={e => update(i, { vat_pct: Math.max(0, Number(e.target.value) || 0) })} /></td>
                     <td className="num text-left font-semibold">{fmt(lineTotal)}</td>
                     <td>
                       <Button size="sm" variant="ghost" onClick={() => removeLine(i)}>
@@ -211,13 +235,16 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
           <div className="flex justify-between"><span className="text-muted-foreground">VAT</span><span className="num">{fmt(totals.vat)}</span></div>
           <div className="flex justify-between font-bold border-t border-border pt-1"><span>الإجمالي</span><span className={`num ${overOutstanding ? "text-destructive" : ""}`}>{fmt(totals.total)}</span></div>
           {overOutstanding && (
-            <div className="text-xs text-destructive">تحذير: المبلغ يتجاوز الرصيد القابل للعكس ({fmt(outstanding)}).</div>
+            <div className="text-xs text-destructive">المبلغ يتجاوز الرصيد القابل للعكس ({fmt(outstanding)}).</div>
+          )}
+          {hasLineError && (
+            <div className="text-xs text-destructive">يوجد بنود تتجاوز الكميات أو الأسعار الأصلية.</div>
           )}
         </div>
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>إلغاء</Button>
-          <Button onClick={submit} disabled={submitting || totals.count === 0}>
+          <Button onClick={submit} disabled={submitting || blocked}>
             {submitting ? "جارٍ الإصدار…" : "إصدار الإشعار الدائن"}
           </Button>
         </DialogFooter>
