@@ -429,6 +429,19 @@ export default function VehicleProfitability() {
                   )}
                 </td>
                 <td className="p-2 text-left tabular-nums text-muted-foreground">{fmtSAR(r.landed_cost)}</td>
+                <td className="p-2">
+                  <div className="flex flex-col items-end gap-0.5">
+                    <Badge variant="outline" className={`text-[10px] ${COGS_STATUS_TONE[r.cogs_status]}`}>
+                      {COGS_STATUS_LABEL[r.cogs_status]}
+                    </Badge>
+                    <div className="text-[10px] tabular-nums text-muted-foreground">
+                      {r.cogs_posted ? fmtSAR(r.cogs_amount) : "—"}
+                    </div>
+                    {r.cogs_je_no && (
+                      <div className="text-[10px] font-mono text-muted-foreground">{r.cogs_je_no}</div>
+                    )}
+                  </div>
+                </td>
                 <td className={`p-2 text-left tabular-nums font-semibold ${r.profit >= 0 ? "text-success" : "text-destructive"}`}>
                   {fmtSAR(r.profit)}
                 </td>
