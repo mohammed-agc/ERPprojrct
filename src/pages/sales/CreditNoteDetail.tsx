@@ -63,7 +63,29 @@ export default function CreditNoteDetail() {
               {cn.status === "posted" ? "مرحَّل" : cn.status}
             </Badge>
             <span className="text-xs text-muted-foreground">التاريخ: {cn.cn_date}</span>
+            {cn.journal_entry ? (
+              <Link
+                to={`/journals/${cn.journal_entry.id}`}
+                className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition"
+                title="فتح القيد المحاسبي"
+              >
+                <BookOpen className="h-3 w-3" />
+                <span className="font-mono">{cn.journal_entry.entry_no}</span>
+                {cn.journal_entry.is_posted && (
+                  <span className="text-[10px] opacity-80">• مُرحَّل</span>
+                )}
+              </Link>
+            ) : cn.status === "posted" ? (
+              <span className="text-[11px] px-2 py-0.5 rounded border border-amber-500/40 bg-amber-500/10 text-amber-600">
+                لا يوجد قيد محاسبي مرتبط
+              </span>
+            ) : null}
           </div>
+        }
+        actions={
+          <Button variant="ghost" size="sm" onClick={() => nav("/sales/credit-notes")}>
+            <ArrowRight className="h-4 w-4 ml-1" /> رجوع
+          </Button>
         }
         actions={
           <Button variant="ghost" size="sm" onClick={() => nav("/sales/credit-notes")}>
