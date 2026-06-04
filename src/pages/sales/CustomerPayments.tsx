@@ -183,11 +183,12 @@ export default function CustomerPayments() {
         }
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
         <Card className="p-3"><div className="text-[11px] text-muted-foreground">عدد الدفعات</div><div className="text-xl font-bold num">{totals.count}</div></Card>
         <Card className="p-3"><div className="text-[11px] text-muted-foreground">إجمالي المحصّل</div><div className="text-xl font-bold num">{fmtSAR(totals.amount)}</div></Card>
         <Card className="p-3"><div className="text-[11px] text-muted-foreground">عدد العملاء</div><div className="text-xl font-bold num">{totals.customers}</div></Card>
-        <Card className="p-3"><div className="text-[11px] text-muted-foreground">دفعات مرحَّلة محاسبيًا</div><div className="text-xl font-bold num">{totals.posted} / {totals.count}</div></Card>
+        <Card className="p-3"><div className="text-[11px] text-muted-foreground">مرحَّلة محاسبيًا</div><div className="text-xl font-bold num text-success">{totals.posted} / {totals.count}</div></Card>
+        <Card className="p-3"><div className="text-[11px] text-muted-foreground">بدون قيد</div><div className={`text-xl font-bold num ${totals.count - totals.posted > 0 ? "text-destructive" : "text-muted-foreground"}`}>{totals.count - totals.posted}</div></Card>
       </div>
 
       <Card className="p-3 mb-3 flex flex-wrap items-end gap-3">
