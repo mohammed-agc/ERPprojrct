@@ -822,6 +822,7 @@ export interface AccountingServiceExt {
   balanceSheet: (asOf?: string) => Promise<BalanceSheet>;
   cashFlow: (from?: string, to?: string) => Promise<CashFlowReport>;
   financialKpis: () => Promise<FinancialKpis>;
+  reconcileCustomerLedger: () => Promise<ReconciliationRow[]>;
 }
 
 export const accounting = accountingService as unknown as AccountingServiceExt;
