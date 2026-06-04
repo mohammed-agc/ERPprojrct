@@ -124,8 +124,8 @@ export default function VehicleProfitability() {
         .gte("credit_note.cn_date", from)
         .lte("credit_note.cn_date", to);
 
-      // 3) vehicles for lookup
-      let vq = supabase.from("vehicles").select("id, code, name, brand, model, year, vin, status").limit(500);
+      // 3) vehicles for lookup (incl. created_at for days-in-stock baseline)
+      let vq = supabase.from("vehicles").select("id, code, name, brand, model, year, vin, status, created_at").limit(500);
       if (statusFilter !== "all") vq = vq.eq("status", statusFilter as any);
       if (search.trim()) {
         const s = `%${search.trim()}%`;
@@ -149,35 +149,61 @@ export default function VehicleProfitability() {
       }
 
       const vehicles = (vRes.data ?? []).filter(v =>
-        // keep vehicles that have activity OR (no filters limit them) — if filters active, keep only those with revenue
         revMap.has(v.id) || crMap.has(v.id) || (dept === "all" && !search && statusFilter === "all")
       );
 
-      // 4) landed cost in parallel (cap to displayed)
-      const costEntries = await Promise.all(
+      // 4) landed cost + sold_at + COGS posted, in parallel
+      const enriched = await Promise.all(
         vehicles.map(async v => {
-          const { data, error } = await supabase.rpc("compute_vehicle_landed_cost" as any, { p_vehicle_id: v.id });
-          if (error) return [v.id, 0] as const;
-          const row = Array.isArray(data) ? data[0] : data;
-          return [v.id, Number((row as any)?.landed_cost || 0)] as const;
+          const [{ data: cd }, { data: inv }] = await Promise.all([
+            supabase.rpc("compute_vehicle_landed_cost" as any, { p_vehicle_id: v.id }),
+            supabase
+              .from("sales_order_lines")
+              .select("order:sales_orders(invoices(invoice_date, cogs_journal_entry_id))")
+              .eq("vehicle_id", v.id)
+              .limit(20),
+          ]);
+          const row = Array.isArray(cd) ? cd[0] : cd;
+          let sold_at: string | null = null;
+          let cogs_posted = false;
+          for (const l of (inv ?? []) as any[]) {
+            for (const i of l.order?.invoices ?? []) {
+              if (i?.invoice_date && (!sold_at || i.invoice_date < sold_at)) sold_at = i.invoice_date;
+              if (i?.cogs_journal_entry_id) cogs_posted = true;
+            }
+          }
+          return { id: v.id, landed: Number((row as any)?.landed_cost || 0), sold_at, cogs_posted };
         }),
       );
-      const costMap = new Map(costEntries);
+      const enrichMap = new Map(enriched.map(e => [e.id, e]));
 
+      const todayIso = isoDate(new Date());
       const result: VehicleRow[] = vehicles.map(v => {
+        const e = enrichMap.get(v.id)!;
         const revenue = revMap.get(v.id) ?? 0;
         const credited = crMap.get(v.id) ?? 0;
         const net_revenue = revenue - credited;
-        const landed_cost = costMap.get(v.id) ?? 0;
+        const landed_cost = e.landed;
         const profit = net_revenue - landed_cost;
         const margin = net_revenue > 0 ? (profit / net_revenue) * 100 : 0;
+        const acquired_at = (v as any).created_at ? (v as any).created_at.slice(0, 10) : null;
+        const endIso = e.sold_at ?? todayIso;
+        const days_in_stock = acquired_at
+          ? Math.max(0, Math.floor((+new Date(endIso) - +new Date(acquired_at)) / 86400000))
+          : null;
+        const flags: string[] = [];
+        if (profit < 0) flags.push("ربح سالب");
+        if (landed_cost === 0) flags.push("تكلفة مفقودة");
+        if (v.status === "sold" && revenue === 0) flags.push("إيراد مفقود");
+        if (v.status === "sold" && !e.cogs_posted) flags.push("COGS مفقود");
+        if (v.status === "sold" && !e.sold_at) flags.push("مطابقة مخزون مفقودة");
         return {
           id: v.id, code: v.code, name: v.name, brand: v.brand, model: v.model, year: v.year, vin: v.vin, status: v.status,
           revenue, credited, net_revenue, landed_cost, profit, margin,
+          acquired_at, sold_at: e.sold_at, days_in_stock, cogs_posted: e.cogs_posted, flags,
         };
       });
 
-      result.sort((a, b) => b.profit - a.profit);
       setRows(result);
     } catch (e: any) {
       toast({ title: "تعذّر تحميل البيانات", description: e?.message ?? "خطأ غير معروف", variant: "destructive" });
