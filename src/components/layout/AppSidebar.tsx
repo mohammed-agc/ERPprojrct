@@ -52,6 +52,7 @@ const groups: { title: string; items: NavItem[] }[] = [
       { label: "تحليلات المبيعات", to: "/sales/analytics", icon: TrendingUp, deptCode: "vehicles" },
       { label: "الخط الزمني للعميل", to: "/sales/customer-timeline", icon: Contact2, deptCode: "vehicles" },
       { label: "ائتمان العملاء", to: "/sales/customer-credit", icon: ShieldCheck, deptCode: "vehicles" },
+      { label: "دفعات العملاء", to: "/sales/customer-payments", icon: Banknote, deptCode: "vehicles" },
       { label: "الفواتير", to: "/invoices", icon: Receipt },
     ],
   },
