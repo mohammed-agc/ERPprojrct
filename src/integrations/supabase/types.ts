@@ -223,6 +223,7 @@ export type Database = {
           phone: string | null
           settlement_policy: string
           updated_at: string
+          updated_by: string | null
           vat_number: string | null
         }
         Insert: {
@@ -242,6 +243,7 @@ export type Database = {
           phone?: string | null
           settlement_policy?: string
           updated_at?: string
+          updated_by?: string | null
           vat_number?: string | null
         }
         Update: {
@@ -261,6 +263,7 @@ export type Database = {
           phone?: string | null
           settlement_policy?: string
           updated_at?: string
+          updated_by?: string | null
           vat_number?: string | null
         }
         Relationships: []
