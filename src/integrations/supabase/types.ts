@@ -1047,6 +1047,10 @@ export type Database = {
         }[]
       }
       approve_goods_return: { Args: { p_request_id: string }; Returns: string }
+      can_manage_customer_finance: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       compute_vehicle_landed_cost: {
         Args: { p_vehicle_id: string }
         Returns: {
