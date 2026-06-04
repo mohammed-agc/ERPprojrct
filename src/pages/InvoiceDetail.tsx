@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, FileMinus } from "lucide-react";
 import { CreditNoteDialog } from "@/components/erp/CreditNoteDialog";
+import { CreditGateBanner } from "@/components/erp/CreditGateBanner";
 
 const fmt = (n: number) =>
   Number(n).toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
