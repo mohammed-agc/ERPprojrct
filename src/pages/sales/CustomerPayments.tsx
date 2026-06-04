@@ -183,11 +183,12 @@ export default function CustomerPayments() {
         }
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
         <Card className="p-3"><div className="text-[11px] text-muted-foreground">عدد الدفعات</div><div className="text-xl font-bold num">{totals.count}</div></Card>
         <Card className="p-3"><div className="text-[11px] text-muted-foreground">إجمالي المحصّل</div><div className="text-xl font-bold num">{fmtSAR(totals.amount)}</div></Card>
         <Card className="p-3"><div className="text-[11px] text-muted-foreground">عدد العملاء</div><div className="text-xl font-bold num">{totals.customers}</div></Card>
-        <Card className="p-3"><div className="text-[11px] text-muted-foreground">دفعات مرحَّلة محاسبيًا</div><div className="text-xl font-bold num">{totals.posted} / {totals.count}</div></Card>
+        <Card className="p-3"><div className="text-[11px] text-muted-foreground">مرحَّلة محاسبيًا</div><div className="text-xl font-bold num text-success">{totals.posted} / {totals.count}</div></Card>
+        <Card className="p-3"><div className="text-[11px] text-muted-foreground">بدون قيد</div><div className={`text-xl font-bold num ${totals.count - totals.posted > 0 ? "text-destructive" : "text-muted-foreground"}`}>{totals.count - totals.posted}</div></Card>
       </div>
 
       <Card className="p-3 mb-3 flex flex-wrap items-end gap-3">
@@ -260,9 +261,11 @@ export default function CustomerPayments() {
                         <Link to={`/journals/${r.journal_entry.id}`} className="inline-flex items-center gap-1 text-xs hover:underline">
                           <BookOpen className="h-3 w-3" />
                           <span className="font-mono">{r.journal_entry.entry_no}</span>
-                          {r.journal_entry.is_posted && <Badge className="text-[9px] h-4">مُرحَّل</Badge>}
+                          {r.journal_entry.is_posted
+                            ? <Badge className="text-[9px] h-4 bg-success text-success-foreground">مُرحَّل</Badge>
+                            : <Badge variant="outline" className="text-[9px] h-4 text-warning border-warning/40">مسودة</Badge>}
                         </Link>
-                      ) : <Badge variant="outline" className="text-[10px] text-warning border-warning/40">بدون قيد</Badge>}
+                      ) : <Badge variant="destructive" className="text-[10px]">⚠ بدون قيد</Badge>}
                     </td>
                     <td className="text-left">
                       {(() => { const d = buildReceipt(r); return d ? <DocPrintActions doc={d} /> : <span className="text-[10px] text-muted-foreground">—</span>; })()}
