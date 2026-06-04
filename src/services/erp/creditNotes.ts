@@ -82,13 +82,14 @@ export const creditNotesService = {
         invoice_id: invoiceId,
         customer_id: inv.customer_id,
         reason,
+        cn_type: cnType,
         notes: notes ?? `إلغاء الفاتورة ${inv.invoice_no}`,
         subtotal: cnSubtotal,
         vat_amount: cnVat,
         total: remaining,
         status: "posted",
         created_by: userId,
-      })
+      } as any)
       .select()
       .single();
     if (error) throw error;
@@ -141,6 +142,7 @@ export const creditNotesService = {
     invoiceId: string;
     customerId: string;
     reason: string;
+    cnType?: CnType;
     notes?: string;
     lines: CnLineInput[];
   }) {
@@ -161,13 +163,14 @@ export const creditNotesService = {
         invoice_id: args.invoiceId,
         customer_id: args.customerId,
         reason: args.reason,
+        cn_type: args.cnType ?? "cancellation",
         notes: args.notes ?? null,
         subtotal: Number(subtotal.toFixed(2)),
         vat_amount: Number(vat.toFixed(2)),
         total,
         status: "posted",
         created_by: userId,
-      })
+      } as any)
       .select()
       .single();
     if (error) throw error;
