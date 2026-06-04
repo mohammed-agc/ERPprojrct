@@ -38,6 +38,7 @@ export default function ContactDetail() {
   const [freeText, setFreeText] = useState("");
   const [tab, setTab] = useState("overview");
   const [saving, setSaving] = useState(false);
+  const [updatedByName, setUpdatedByName] = useState<string | null>(null);
 
   // related ERP data
   const [orders, setOrders] = useState<any[]>([]);
@@ -50,6 +51,13 @@ export default function ContactDetail() {
     const { meta: m, freeText: ft } = parseContactMeta(c.notes);
     setRow(c); setMeta(m); setFreeText(ft);
 
+    if ((c as any).updated_by) {
+      const { data: p } = await supabase.from("profiles").select("full_name").eq("id", (c as any).updated_by).maybeSingle();
+      setUpdatedByName(p?.full_name ?? null);
+    } else {
+      setUpdatedByName(null);
+    }
+
     const [{ data: so }, { data: inv }] = await Promise.all([
       supabase.from("sales_orders").select("id,order_no,order_date,status,total").eq("customer_id", id).order("order_date", { ascending: false }).limit(50),
       supabase.from("invoices").select("id,invoice_no,invoice_date,status,total").eq("customer_id", id).order("invoice_date", { ascending: false }).limit(50),
@@ -61,16 +69,30 @@ export default function ContactDetail() {
   const save = async () => {
     if (!row) return;
     setSaving(true);
+    const uid = (await supabase.auth.getUser()).data.user?.id ?? null;
     const { error } = await supabase.from("customers").update({
       name: row.name, vat_number: row.vat_number, phone: row.phone, email: row.email,
       city: row.city, address: row.address,
+      is_active: row.is_active ?? true,
       notes: serializeContactMeta(meta, freeText),
-    }).eq("id", row.id);
+      updated_by: uid,
+    } as any).eq("id", row.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
-    toast.success("تم الحفظ");
+    toast.success("تم الحفظ — سُجِّل التغيير في سجل المراجعة");
     load();
   };
+
+  const toggleActive = async () => {
+    if (!row) return;
+    const next = !(row.is_active ?? true);
+    const uid = (await supabase.auth.getUser()).data.user?.id ?? null;
+    const { error } = await supabase.from("customers").update({ is_active: next, updated_by: uid } as any).eq("id", row.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(next ? "تم التفعيل" : "تم التعطيل");
+    load();
+  };
+
 
   const score = useMemo(() => complianceScore(meta), [meta]);
   const TypeIcon = TYPE_ICONS[meta.contact_type ?? "company"];
