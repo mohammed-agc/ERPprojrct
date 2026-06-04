@@ -34,6 +34,7 @@ const JournalDetail = lazy(() => import("./pages/JournalDetail"));
 const GeneralLedger = lazy(() => import("./pages/GeneralLedger"));
 const TrialBalance = lazy(() => import("./pages/TrialBalance"));
 const AccountsReceivable = lazy(() => import("./pages/AccountsReceivable"));
+const ARReconciliation = lazy(() => import("./pages/ARReconciliation"));
 const CustomerStatement = lazy(() => import("./pages/CustomerStatement"));
 const AccountsPayable = lazy(() => import("./pages/AccountsPayable"));
 const FinanceCenter = lazy(() => import("./pages/FinanceCenter"));
