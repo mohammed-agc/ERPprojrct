@@ -158,6 +158,23 @@ export default function ContactDetail() {
               <Switch checked={row.is_active ?? true} onCheckedChange={toggleActive} />
               <span className="text-muted-foreground">{(row.is_active ?? true) ? "نشط" : "غير نشط"}</span>
             </div>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => {
+                setTab("overview");
+                setTimeout(() => {
+                  document.getElementById("edit-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }, 50);
+              }}
+            >
+              <FileText className="h-4 w-4 ml-1" />
+              {hasRole(meta, "vendor") && !hasRole(meta, "customer")
+                ? "تعديل المورد"
+                : hasRole(meta, "vendor") && hasRole(meta, "customer")
+                ? "تعديل البطاقة"
+                : "تعديل العميل"}
+            </Button>
             <Button variant="outline" size="sm" asChild>
               <Link to="/contacts"><ArrowRight className="h-4 w-4 ml-1" /> رجوع</Link>
             </Button>
