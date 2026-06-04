@@ -183,13 +183,13 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
         vat: Number(totals.vat.toFixed(2)),
         total: Number(totals.total.toFixed(2)),
       };
-      const cnId = await creditNotesService.issueFromLines({
+      const { cnId, journalEntryId, inventory } = await creditNotesService.issueFromLines({
         invoiceId: invoice.id,
         customerId: invoice.customer_id,
         reason,
         notes,
-        lines: active.map(({ description, quantity, unit_price, vat_pct }) => ({
-          description, quantity, unit_price, vat_pct,
+        lines: active.map(({ description, quantity, unit_price, vat_pct, vehicle_id }) => ({
+          description, quantity, unit_price, vat_pct, vehicle_id: vehicle_id ?? null,
         })),
       });
 
@@ -213,9 +213,12 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
         match,
         invoiceCreditedAfter: Number(invRow?.credited_amount ?? 0),
         invoiceStatusAfter: String(invRow?.status ?? "—"),
+        journalEntryId,
+        inventoryReleased: inventory.released.length,
+        blockedDelivered: inventory.blockedDelivered,
       });
       setStep("verified");
-      if (match) toast.success("تم النشر وتطابق التحقق المحاسبي");
+      if (match) toast.success("تم النشر مع قيد محاسبي وتحديث المخزون");
       else toast.error("تم النشر لكن النتيجة لا تطابق المعاينة");
     } catch (e: any) {
       toast.error(e.message ?? "فشل إصدار الإشعار الدائن");
