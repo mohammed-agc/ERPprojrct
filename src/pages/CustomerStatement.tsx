@@ -90,6 +90,7 @@ export default function CustomerStatement() {
             <Button variant="outline" size="sm" onClick={exportCsv} disabled={!data.lines.length}>
               <Download className="h-3.5 w-3.5 ml-1" /> تصدير CSV
             </Button>
+            {printDoc && <DocPrintActions doc={printDoc} />}
           </>
         }
       />
