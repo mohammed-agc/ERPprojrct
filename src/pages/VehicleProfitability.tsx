@@ -215,12 +215,25 @@ export default function VehicleProfitability() {
 
   useEffect(() => { fetchData(); /* eslint-disable-line react-hooks/exhaustive-deps */ }, []);
 
+  const sortedRows = useMemo(() => {
+    const arr = [...rows];
+    switch (sortKey) {
+      case "profit_desc": arr.sort((a, b) => b.profit - a.profit); break;
+      case "profit_asc":  arr.sort((a, b) => a.profit - b.profit); break;
+      case "margin_desc": arr.sort((a, b) => b.margin - a.margin); break;
+      case "margin_asc":  arr.sort((a, b) => a.margin - b.margin); break;
+      case "stock_desc":  arr.sort((a, b) => (b.days_in_stock ?? 0) - (a.days_in_stock ?? 0)); break;
+    }
+    return arr;
+  }, [rows, sortKey]);
+
   const totals = useMemo(() => rows.reduce((a, r) => ({
     revenue: a.revenue + r.net_revenue,
     cost: a.cost + r.landed_cost,
     profit: a.profit + r.profit,
     units: a.units + (r.net_revenue > 0 ? 1 : 0),
-  }), { revenue: 0, cost: 0, profit: 0, units: 0 }), [rows]);
+    flagged: a.flagged + (r.flags.length > 0 ? 1 : 0),
+  }), { revenue: 0, cost: 0, profit: 0, units: 0, flagged: 0 }), [rows]);
   const totalMargin = totals.revenue > 0 ? (totals.profit / totals.revenue) * 100 : 0;
 
   return (
