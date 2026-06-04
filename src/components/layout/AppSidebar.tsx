@@ -139,6 +139,7 @@ const groups: { title: string; items: NavItem[] }[] = [
       { label: "الأبعاد المالية", to: "/costing/dimensions", icon: Layers, deptCode: "accounting" },
       { label: "ربحية الأقسام", to: "/costing/departments", icon: PieChart, deptCode: "accounting" },
       { label: "ربحية الفروع", to: "/costing/branches", icon: GitBranch, deptCode: "accounting" },
+      { label: "ربحية المركبات (Per-VIN)", to: "/costing/vehicles", icon: Car, deptCode: "accounting" },
       { label: "توزيع التكاليف", to: "/costing/allocation", icon: Share2, deptCode: "accounting" },
     ],
   },
