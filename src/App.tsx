@@ -92,6 +92,7 @@ const SalesFinancing = lazy(() => import("./pages/sales/Financing"));
 const SalesAnalytics = lazy(() => import("./pages/sales/SalesAnalytics"));
 const CustomerTimeline = lazy(() => import("./pages/sales/CustomerTimeline"));
 const CustomerCredit = lazy(() => import("./pages/sales/CustomerCredit"));
+const CustomerPayments = lazy(() => import("./pages/sales/CustomerPayments"));
 const InventoryDashboard = lazy(() => import("./pages/inventory/InventoryDashboard"));
 const InventoryWarehouses = lazy(() => import("./pages/inventory/Warehouses"));
 const InventoryVehicles = lazy(() => import("./pages/inventory/VehicleInventory"));
@@ -203,6 +204,7 @@ const App = () => (
               <Route path="/sales/analytics" element={<SalesAnalytics />} />
               <Route path="/sales/customer-timeline" element={<CustomerTimeline />} />
               <Route path="/sales/customer-credit" element={<CustomerCredit />} />
+              <Route path="/sales/customer-payments" element={<CustomerPayments />} />
               <Route path="/sales-orders" element={<SalesOrders />} />
               <Route path="/sales-orders/:id" element={<SalesOrderDetail />} />
               <Route path="/invoices" element={<Invoices />} />
