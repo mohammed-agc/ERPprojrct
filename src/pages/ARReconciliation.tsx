@@ -244,7 +244,7 @@ export default function ARReconciliation() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </FragmentRow>
                 );
               })}
           </tbody>
