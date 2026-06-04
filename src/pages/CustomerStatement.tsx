@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/erp/EmptyState";
 import { ArrowRight, Download } from "lucide-react";
 import { accounting, type CustomerStatementLine } from "@/services/erp/accounting";
+import {
+  customerSettlementService,
+  type CustomerStatementSnapshot,
+} from "@/services/erp/customerSettlement";
+import { DocPrintActions } from "@/components/erp/DocPrintActions";
+import { PrintableCustomerStatementDoc } from "@/components/erp/PrintableCustomerStatementDoc";
+import { adminSettings } from "@/services/erp/adminSettings";
 
 const fmt = (n: number) => Number(n || 0).toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -20,13 +27,40 @@ export default function CustomerStatement() {
     lines: CustomerStatementLine[];
     totals: { debit: number; credit: number; balance: number };
   }>({ customer: null, lines: [], totals: { debit: 0, credit: 0, balance: 0 } });
+  const [snapshot, setSnapshot] = useState<CustomerStatementSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    accounting.customerStatement(id, from || undefined, to || undefined)
-      .then(setData).finally(() => setLoading(false));
+    Promise.all([
+      accounting.customerStatement(id, from || undefined, to || undefined),
+      customerSettlementService.customerStatement(id, from || undefined, to || undefined),
+    ]).then(([legacy, snap]) => {
+      setData(legacy);
+      setSnapshot(snap);
+    }).finally(() => setLoading(false));
   }, [id, from, to]);
+
+  const company = adminSettings.get().company;
+  const printDoc = useMemo(() => {
+    if (!snapshot?.customer) return null;
+    return (
+      <PrintableCustomerStatementDoc
+        company={{
+          name: company.name_ar,
+          cr_number: company.cr_number,
+          vat_number: company.vat_number,
+          address: company.address,
+          contact: company.phone,
+        }}
+        customer={snapshot.customer}
+        rows={snapshot.rows}
+        period_from={from || undefined}
+        period_to={to || undefined}
+        totals={snapshot.totals}
+      />
+    );
+  }, [snapshot, company, from, to]);
 
   const exportCsv = () => {
     const headers = ["التاريخ", "النوع", "المرجع", "البيان", "مدين", "دائن", "الرصيد"];
