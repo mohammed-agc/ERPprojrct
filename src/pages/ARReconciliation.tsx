@@ -6,11 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/erp/EmptyState";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { RotateCw, AlertTriangle, CheckCircle2, ChevronDown, FileText } from "lucide-react";
 import { accounting, type ReconciliationRow } from "@/services/erp/accounting";
 
