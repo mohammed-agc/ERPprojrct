@@ -13,6 +13,8 @@ import { salesVehicleStatus } from "@/services/erp/salesVehicleStatus";
  *      goods-return workflow and are NOT silently re-entered into stock).
  */
 
+export type CnType = "cancellation" | "return" | "price_adjustment" | "discount";
+
 type CnLineInput = {
   description: string;
   quantity: number;
@@ -47,7 +49,12 @@ export const creditNotesService = {
    * Issue a credit note that fully reverses the remaining exposure of an invoice.
    * Returns the created credit note id, or null if invoice is already fully credited.
    */
-  async issueFullReversal(invoiceId: string, reason = "invoice_cancellation", notes?: string) {
+  async issueFullReversal(
+    invoiceId: string,
+    reason = "invoice_cancellation",
+    notes?: string,
+    cnType: CnType = "cancellation",
+  ) {
     const { data: inv, error: invErr } = await supabase
       .from("invoices")
       .select("id, customer_id, total, vat_amount, subtotal, credited_amount, status, invoice_no, sales_order_id")
@@ -75,13 +82,14 @@ export const creditNotesService = {
         invoice_id: invoiceId,
         customer_id: inv.customer_id,
         reason,
+        cn_type: cnType,
         notes: notes ?? `إلغاء الفاتورة ${inv.invoice_no}`,
         subtotal: cnSubtotal,
         vat_amount: cnVat,
         total: remaining,
         status: "posted",
         created_by: userId,
-      })
+      } as any)
       .select()
       .single();
     if (error) throw error;
@@ -134,6 +142,7 @@ export const creditNotesService = {
     invoiceId: string;
     customerId: string;
     reason: string;
+    cnType?: CnType;
     notes?: string;
     lines: CnLineInput[];
   }) {
@@ -154,13 +163,14 @@ export const creditNotesService = {
         invoice_id: args.invoiceId,
         customer_id: args.customerId,
         reason: args.reason,
+        cn_type: args.cnType ?? "cancellation",
         notes: args.notes ?? null,
         subtotal: Number(subtotal.toFixed(2)),
         vat_amount: Number(vat.toFixed(2)),
         total,
         status: "posted",
         created_by: userId,
-      })
+      } as any)
       .select()
       .single();
     if (error) throw error;

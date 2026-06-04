@@ -136,11 +136,20 @@ export type Database = {
             referencedRelation: "credit_notes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "credit_note_lines_credit_note_id_fkey"
+            columns: ["credit_note_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_cn_missing_cogs_reversal"
+            referencedColumns: ["credit_note_id"]
+          },
         ]
       }
       credit_notes: {
         Row: {
           cn_date: string
+          cn_type: Database["public"]["Enums"]["cn_type"]
+          cogs_journal_entry_id: string | null
           created_at: string
           created_by: string | null
           credit_note_no: string
@@ -158,6 +167,8 @@ export type Database = {
         }
         Insert: {
           cn_date?: string
+          cn_type?: Database["public"]["Enums"]["cn_type"]
+          cogs_journal_entry_id?: string | null
           created_at?: string
           created_by?: string | null
           credit_note_no: string
@@ -175,6 +186,8 @@ export type Database = {
         }
         Update: {
           cn_date?: string
+          cn_type?: Database["public"]["Enums"]["cn_type"]
+          cogs_journal_entry_id?: string | null
           created_at?: string
           created_by?: string | null
           credit_note_no?: string
@@ -275,6 +288,78 @@ export type Database = {
           name_en?: string
         }
         Relationships: []
+      }
+      goods_return_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          cogs_reversal_je_id: string | null
+          created_at: string
+          created_by: string | null
+          credit_note_id: string | null
+          id: string
+          inspected_at: string | null
+          inspected_by: string | null
+          inspection_notes: string | null
+          reason: string | null
+          reinstated_at: string | null
+          request_no: string
+          status: string
+          updated_at: string
+          vehicle_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          cogs_reversal_je_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          credit_note_id?: string | null
+          id?: string
+          inspected_at?: string | null
+          inspected_by?: string | null
+          inspection_notes?: string | null
+          reason?: string | null
+          reinstated_at?: string | null
+          request_no: string
+          status?: string
+          updated_at?: string
+          vehicle_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          cogs_reversal_je_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          credit_note_id?: string | null
+          id?: string
+          inspected_at?: string | null
+          inspected_by?: string | null
+          inspection_notes?: string | null
+          reason?: string | null
+          reinstated_at?: string | null
+          request_no?: string
+          status?: string
+          updated_at?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goods_return_requests_credit_note_id_fkey"
+            columns: ["credit_note_id"]
+            isOneToOne: false
+            referencedRelation: "credit_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_return_requests_credit_note_id_fkey"
+            columns: ["credit_note_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_cn_missing_cogs_reversal"
+            referencedColumns: ["credit_note_id"]
+          },
+        ]
       }
       invoice_lines: {
         Row: {
@@ -854,6 +939,17 @@ export type Database = {
       }
     }
     Views: {
+      v_gov_cn_missing_cogs_reversal: {
+        Row: {
+          cn_type: Database["public"]["Enums"]["cn_type"] | null
+          credit_note_id: string | null
+          credit_note_no: string | null
+          gap: string | null
+          vehicle_id: string | null
+          vehicle_status: string | null
+        }
+        Relationships: []
+      }
       v_gov_invoices_missing_cogs: {
         Row: {
           id: string | null
@@ -947,6 +1043,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      approve_goods_return: { Args: { p_request_id: string }; Returns: string }
       compute_vehicle_landed_cost: {
         Args: { p_vehicle_id: string }
         Returns: {
@@ -1001,6 +1098,7 @@ export type Database = {
         | "inspection_officer"
         | "workshop_manager"
         | "spare_parts_manager"
+      cn_type: "cancellation" | "return" | "price_adjustment" | "discount"
       department_code:
         | "vehicles"
         | "spare_parts"
@@ -1179,6 +1277,7 @@ export const Constants = {
         "workshop_manager",
         "spare_parts_manager",
       ],
+      cn_type: ["cancellation", "return", "price_adjustment", "discount"],
       department_code: [
         "vehicles",
         "spare_parts",
