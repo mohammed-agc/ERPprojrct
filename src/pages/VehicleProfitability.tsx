@@ -172,28 +172,49 @@ export default function VehicleProfitability() {
         revMap.has(v.id) || crMap.has(v.id) || (dept === "all" && !search && statusFilter === "all")
       );
 
-      // 4) landed cost + COGS posted, in parallel (sold_at now comes from the vehicle row)
+      // 4) landed cost + COGS posted + COGS JE id + invoice existence, in parallel
       const enriched = await Promise.all(
         vehicles.map(async v => {
           const [{ data: cd }, { data: inv }] = await Promise.all([
             supabase.rpc("compute_vehicle_landed_cost" as any, { p_vehicle_id: v.id }),
             supabase
               .from("sales_order_lines")
-              .select("order:sales_orders(invoices(cogs_journal_entry_id))")
+              .select("order:sales_orders(invoices(status, cogs_journal_entry_id))")
               .eq("vehicle_id", v.id)
               .limit(20),
           ]);
           const row = Array.isArray(cd) ? cd[0] : cd;
           let cogs_posted = false;
+          let cogs_je_id: string | null = null;
+          let has_invoice = false;
           for (const l of (inv ?? []) as any[]) {
             for (const i of l.order?.invoices ?? []) {
-              if (i?.cogs_journal_entry_id) cogs_posted = true;
+              if (i?.status && i.status !== "draft" && i.status !== "cancelled") has_invoice = true;
+              if (i?.cogs_journal_entry_id) {
+                cogs_posted = true;
+                if (!cogs_je_id) cogs_je_id = i.cogs_journal_entry_id;
+              }
             }
           }
-          return { id: v.id, landed: Number((row as any)?.landed_cost || 0), cogs_posted };
+          return {
+            id: v.id,
+            landed: Number((row as any)?.landed_cost || 0),
+            cogs_posted, cogs_je_id, has_invoice,
+          };
         }),
       );
       const enrichMap = new Map(enriched.map(e => [e.id, e]));
+
+      // 5) batch-resolve COGS journal entry numbers
+      const jeIds = Array.from(new Set(enriched.map(e => e.cogs_je_id).filter(Boolean) as string[]));
+      const jeMap = new Map<string, string>();
+      if (jeIds.length > 0) {
+        const { data: jes } = await supabase
+          .from("journal_entries")
+          .select("id, entry_no")
+          .in("id", jeIds);
+        for (const j of jes ?? []) jeMap.set((j as any).id, (j as any).entry_no);
+      }
 
       const todayIso = isoDate(new Date());
       const result: VehicleRow[] = vehicles.map(v => {
@@ -204,7 +225,6 @@ export default function VehicleProfitability() {
         const landed_cost = e.landed;
         const profit = net_revenue - landed_cost;
         const margin = net_revenue > 0 ? (profit / net_revenue) * 100 : 0;
-        // Authoritative stored lifecycle dates (no derivation)
         const acquired_raw = (v as any).acquired_at ?? (v as any).created_at;
         const acquired_at = acquired_raw ? String(acquired_raw).slice(0, 10) : null;
         const sold_raw = (v as any).sold_at;
@@ -213,16 +233,33 @@ export default function VehicleProfitability() {
         const days_in_stock = acquired_at
           ? Math.max(0, Math.floor((+new Date(endIso) - +new Date(acquired_at)) / 86400000))
           : null;
+
+        // COGS detailed status (ordered by severity)
+        const cogs_status: VehicleRow["cogs_status"] = e.cogs_posted
+          ? "posted"
+          : landed_cost === 0
+          ? "cost_missing"
+          : v.status === "sold" && e.has_invoice
+          ? "inventory_not_reduced"
+          : e.has_invoice
+          ? "missing_entry"
+          : "n_a";
+        const cogs_amount = e.cogs_posted ? landed_cost : 0;
+        const cogs_je_no = e.cogs_je_id ? (jeMap.get(e.cogs_je_id) ?? null) : null;
+
         const flags: string[] = [];
         if (profit < 0) flags.push("ربح سالب");
         if (landed_cost === 0) flags.push("تكلفة مفقودة");
         if (v.status === "sold" && revenue === 0) flags.push("إيراد مفقود");
-        if (v.status === "sold" && !e.cogs_posted) flags.push("COGS مفقود");
+        if (e.has_invoice && !e.cogs_posted) flags.push("قيد COGS مفقود");
+        if (v.status === "sold" && !e.cogs_posted) flags.push("المخزون لم يُخفَّض");
         if (v.status === "sold" && !sold_at) flags.push("تاريخ بيع مفقود");
         if (!acquired_at) flags.push("تاريخ دخول مخزون مفقود");
         return {
           id: v.id, code: v.code, name: v.name, brand: v.brand, model: v.model, year: v.year, vin: v.vin, status: v.status,
-          revenue, credited, net_revenue, landed_cost, profit, margin,
+          revenue, credited, net_revenue,
+          landed_cost, cogs_amount, cogs_je_no, cogs_status, has_invoice: e.has_invoice,
+          profit, margin,
           acquired_at, sold_at, days_in_stock, cogs_posted: e.cogs_posted, flags,
         };
       });
