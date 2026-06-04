@@ -363,71 +363,98 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
           </div>
 
           <div className="bg-card border border-border rounded-lg overflow-hidden mb-3">
-            <div className="px-3 py-2 border-b border-border text-sm font-semibold">
-              تفاصيل القيد لكل بند
-            </div>
-            <table className="erp-table text-xs">
-              <thead>
-                <tr>
-                  <th style={{ width: 32 }}>#</th>
-                  <th>البند</th>
-                  <th>الحساب</th>
-                  <th className="text-left">مدين</th>
-                  <th className="text-left">دائن</th>
-                </tr>
-              </thead>
-              <tbody>
-                {glLineRows.flatMap(r => [
-                  <tr key={`r-${r.line_no}`}>
-                    <td rowSpan={3} className="align-top">{r.line_no}</td>
-                    <td rowSpan={3} className="align-top">{r.description}</td>
-                    <td>{ACC_RETURNS}</td>
-                    <td className="num text-left">{fmt(r.subtotal)}</td>
-                    <td className="num text-left">—</td>
-                  </tr>,
-                  <tr key={`v-${r.line_no}`}>
-                    <td>{ACC_VAT}</td>
-                    <td className="num text-left">{fmt(r.vat)}</td>
-                    <td className="num text-left">—</td>
-                  </tr>,
-                  <tr key={`a-${r.line_no}`} className="border-b-2 border-border">
-                    <td>{ACC_AR}</td>
-                    <td className="num text-left">—</td>
-                    <td className="num text-left">{fmt(r.total)}</td>
-                  </tr>,
-                ])}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="bg-card border border-border rounded-lg overflow-hidden mb-3">
             <div className="px-3 py-2 border-b border-border text-sm font-semibold flex items-center justify-between">
-              <span>القيد المُجمَّع حسب الحساب</span>
-              <span className={`text-xs ${glBalanced ? "text-success" : "text-destructive"}`}>
-                {glBalanced ? "متوازن" : "غير متوازن"}
-              </span>
+              <span>{previewView === "aggregate" ? "القيد المُجمَّع حسب الحساب" : "تفاصيل القيد لكل بند"}</span>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant={previewView === "aggregate" ? "default" : "ghost"}
+                  className="h-7 text-xs"
+                  onClick={() => setPreviewView("aggregate")}
+                >
+                  القيد المُجمَّع
+                </Button>
+                <Button
+                  size="sm"
+                  variant={previewView === "detail" ? "default" : "ghost"}
+                  className="h-7 text-xs"
+                  onClick={() => setPreviewView("detail")}
+                >
+                  القيد لكل بند
+                </Button>
+              </div>
             </div>
-            <table className="erp-table">
-              <thead>
-                <tr><th>الحساب</th><th className="text-left">مدين</th><th className="text-left">دائن</th></tr>
-              </thead>
-              <tbody>
-                {glRows.map((r, i) => (
-                  <tr key={i}>
-                    <td>{r.account}</td>
-                    <td className="num text-left">{r.debit ? fmt(r.debit) : "—"}</td>
-                    <td className="num text-left">{r.credit ? fmt(r.credit) : "—"}</td>
+
+            {previewView === "aggregate" ? (
+              <table className="erp-table">
+                <thead>
+                  <tr><th>الحساب</th><th className="text-left">مدين</th><th className="text-left">دائن</th></tr>
+                </thead>
+                <tbody>
+                  {glRows.map((r, i) => (
+                    <tr key={i}>
+                      <td>{r.account}</td>
+                      <td className="num text-left">{r.debit ? fmt(r.debit) : "—"}</td>
+                      <td className="num text-left">{r.credit ? fmt(r.credit) : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-muted/60 font-semibold">
+                    <td className="text-left">الإجمالي</td>
+                    <td className="num text-left">{fmt(glDebit)}</td>
+                    <td className="num text-left">{fmt(glCredit)}</td>
                   </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="bg-muted/60 font-semibold">
-                  <td className="text-left">الإجمالي</td>
-                  <td className="num text-left">{fmt(glDebit)}</td>
-                  <td className="num text-left">{fmt(glCredit)}</td>
-                </tr>
-              </tfoot>
-            </table>
+                </tfoot>
+              </table>
+            ) : (
+              <table className="erp-table text-xs">
+                <thead>
+                  <tr>
+                    <th style={{ width: 32 }}>#</th>
+                    <th>البند</th>
+                    <th>الحساب</th>
+                    <th className="text-left">مدين</th>
+                    <th className="text-left">دائن</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {glLineRows.flatMap(r => [
+                    <tr key={`r-${r.line_no}`}>
+                      <td rowSpan={3} className="align-top">{r.line_no}</td>
+                      <td rowSpan={3} className="align-top">{r.description}</td>
+                      <td>{ACC_RETURNS}</td>
+                      <td className="num text-left">{fmt(r.subtotal)}</td>
+                      <td className="num text-left">—</td>
+                    </tr>,
+                    <tr key={`v-${r.line_no}`}>
+                      <td>{ACC_VAT}</td>
+                      <td className="num text-left">{fmt(r.vat)}</td>
+                      <td className="num text-left">—</td>
+                    </tr>,
+                    <tr key={`a-${r.line_no}`} className="border-b-2 border-border">
+                      <td>{ACC_AR}</td>
+                      <td className="num text-left">—</td>
+                      <td className="num text-left">{fmt(r.total)}</td>
+                    </tr>,
+                  ])}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-muted/60 font-semibold">
+                    <td className="text-left" colSpan={3}>الإجمالي</td>
+                    <td className="num text-left">{fmt(glDebit)}</td>
+                    <td className="num text-left">{fmt(glCredit)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            )}
+
+            <div className="px-3 py-2 border-t border-border text-xs flex items-center justify-between">
+              <span className={`font-medium ${glBalanced ? "text-success" : "text-destructive"}`}>
+                {glBalanced ? "القيد متوازن" : "القيد غير متوازن"}
+              </span>
+              <span className="text-muted-foreground">مدين: {fmt(glDebit)} · دائن: {fmt(glCredit)}</span>
+            </div>
           </div>
 
 
