@@ -220,7 +220,8 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
     }
   };
 
-  const glRows = useMemo(() => buildGlImpact(totals.subtotal, totals.vat, totals.total), [totals]);
+  const glLineRows = useMemo(() => buildGlLineRows(lines), [lines]);
+  const glRows = useMemo(() => aggregateGl(glLineRows), [glLineRows]);
   const glDebit = glRows.reduce((s, r) => s + r.debit, 0);
   const glCredit = glRows.reduce((s, r) => s + r.credit, 0);
   const glBalanced = Math.abs(glDebit - glCredit) < 0.01;
