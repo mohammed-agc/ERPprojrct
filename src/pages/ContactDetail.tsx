@@ -38,6 +38,7 @@ export default function ContactDetail() {
   const [freeText, setFreeText] = useState("");
   const [tab, setTab] = useState("overview");
   const [saving, setSaving] = useState(false);
+  const [updatedByName, setUpdatedByName] = useState<string | null>(null);
 
   // related ERP data
   const [orders, setOrders] = useState<any[]>([]);
@@ -50,6 +51,13 @@ export default function ContactDetail() {
     const { meta: m, freeText: ft } = parseContactMeta(c.notes);
     setRow(c); setMeta(m); setFreeText(ft);
 
+    if ((c as any).updated_by) {
+      const { data: p } = await supabase.from("profiles").select("full_name").eq("id", (c as any).updated_by).maybeSingle();
+      setUpdatedByName(p?.full_name ?? null);
+    } else {
+      setUpdatedByName(null);
+    }
+
     const [{ data: so }, { data: inv }] = await Promise.all([
       supabase.from("sales_orders").select("id,order_no,order_date,status,total").eq("customer_id", id).order("order_date", { ascending: false }).limit(50),
       supabase.from("invoices").select("id,invoice_no,invoice_date,status,total").eq("customer_id", id).order("invoice_date", { ascending: false }).limit(50),
@@ -61,16 +69,30 @@ export default function ContactDetail() {
   const save = async () => {
     if (!row) return;
     setSaving(true);
+    const uid = (await supabase.auth.getUser()).data.user?.id ?? null;
     const { error } = await supabase.from("customers").update({
       name: row.name, vat_number: row.vat_number, phone: row.phone, email: row.email,
       city: row.city, address: row.address,
+      is_active: row.is_active ?? true,
       notes: serializeContactMeta(meta, freeText),
-    }).eq("id", row.id);
+      updated_by: uid,
+    } as any).eq("id", row.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
-    toast.success("تم الحفظ");
+    toast.success("تم الحفظ — سُجِّل التغيير في سجل المراجعة");
     load();
   };
+
+  const toggleActive = async () => {
+    if (!row) return;
+    const next = !(row.is_active ?? true);
+    const uid = (await supabase.auth.getUser()).data.user?.id ?? null;
+    const { error } = await supabase.from("customers").update({ is_active: next, updated_by: uid } as any).eq("id", row.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(next ? "تم التفعيل" : "تم التعطيل");
+    load();
+  };
+
 
   const score = useMemo(() => complianceScore(meta), [meta]);
   const TypeIcon = TYPE_ICONS[meta.contact_type ?? "company"];
@@ -120,15 +142,27 @@ export default function ContactDetail() {
               </span>
             )}
             <span className="text-muted-foreground">· اكتمال الملف: <b className={cn(score >= 80 ? "text-success" : score >= 50 ? "text-warning-foreground" : "text-destructive")}>{score}%</b></span>
+            <span className={cn("px-1.5 py-0.5 rounded border text-[10px]", (row.is_active ?? true) ? "border-success/40 text-success" : "border-destructive/40 text-destructive")}>
+              {(row.is_active ?? true) ? "نشط" : "غير نشط"}
+            </span>
+            {(row.updated_at || updatedByName) && (
+              <span className="text-muted-foreground">
+                · آخر تعديل: {updatedByName ?? "—"} {row.updated_at ? `(${String(row.updated_at).slice(0,10)})` : ""}
+              </span>
+            )}
           </div>
         }
         actions={
           <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-2 py-1 border rounded-md text-xs">
+              <Switch checked={row.is_active ?? true} onCheckedChange={toggleActive} />
+              <span className="text-muted-foreground">{(row.is_active ?? true) ? "نشط" : "غير نشط"}</span>
+            </div>
             <Button variant="outline" size="sm" asChild>
               <Link to="/contacts"><ArrowRight className="h-4 w-4 ml-1" /> رجوع</Link>
             </Button>
             <Button size="sm" onClick={save} disabled={saving}>
-              <Save className="h-4 w-4 ml-1" /> {saving ? "..." : "حفظ"}
+              <Save className="h-4 w-4 ml-1" /> {saving ? "..." : "حفظ التعديلات"}
             </Button>
           </div>
         }
