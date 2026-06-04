@@ -65,9 +65,9 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) 
           const invs = o.invoices ?? [];
           for (const inv of invs) {
             if (inv?.cogs_journal_entry_id) cogs_posted = true;
-            if (inv?.invoice_date && (!sold_at || inv.invoice_date < sold_at)) sold_at = inv.invoice_date;
+            if (inv?.invoice_date && (!derived_sold_at || inv.invoice_date < derived_sold_at)) derived_sold_at = inv.invoice_date;
           }
-          if (!sold_at && o.order_date && (o.status === "invoiced" || o.status === "confirmed")) sold_at = o.order_date;
+          if (!derived_sold_at && o.order_date && (o.status === "invoiced" || o.status === "confirmed")) derived_sold_at = o.order_date;
         }
         let credit_notes = 0;
         for (const c of (cnRes.data ?? []) as any[]) {
@@ -76,6 +76,8 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) 
         const net_revenue = revenue - credit_notes;
         const gross_profit = revenue - landed_cost;
         const net_profit = net_revenue - landed_cost;
+        // Prefer authoritative stored sold_at; fall back to derived only if missing
+        const sold_at = soldAt ?? derived_sold_at;
         const inventory_reconciled = status !== "sold" || sold_at !== null;
         setPl({
           purchase_cost, additional_costs, landed_cost,
@@ -84,7 +86,7 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) 
         });
       } finally { setLoading(false); }
     })();
-  }, [vehicleId, status]);
+  }, [vehicleId, status, soldAt]);
 
   if (loading || !pl) {
     return <Card className="p-4 text-xs text-muted-foreground">جارٍ حساب الربحية…</Card>;
