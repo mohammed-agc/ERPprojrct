@@ -221,6 +221,7 @@ const App = () => (
               <Route path="/general-ledger" element={<GeneralLedger />} />
               <Route path="/trial-balance" element={<TrialBalance />} />
               <Route path="/ar" element={<AccountsReceivable />} />
+              <Route path="/ar/reconciliation" element={<ARReconciliation />} />
               <Route path="/ar/:id" element={<CustomerStatement />} />
               <Route path="/ap" element={<AccountsPayable />} />
               <Route path="/treasury" element={<Treasury />} />
