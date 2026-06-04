@@ -69,6 +69,10 @@ interface CnLine {
   _maxQty?: number;
   /** Maximum unit price allowed for this line (= original invoice line unit_price). */
   _maxUnit?: number;
+  /** Vehicle this line is reversing — drives inventory release on post. */
+  vehicle_id?: string | null;
+  /** Human-readable VIN/code for display only. */
+  vehicle_label?: string | null;
 }
 
 interface Props {
@@ -82,7 +86,14 @@ interface Props {
     credited_amount: number;
     paid_amount: number;
   };
-  invoiceLines: Array<{ description: string; quantity: number; unit_price: number; vat_pct: number }>;
+  invoiceLines: Array<{
+    description: string;
+    quantity: number;
+    unit_price: number;
+    vat_pct: number;
+    vehicle_id?: string | null;
+    vehicle_label?: string | null;
+  }>;
   onCreated: (cnId: string) => void;
 }
 
