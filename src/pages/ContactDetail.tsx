@@ -169,11 +169,13 @@ export default function ContactDetail() {
               }}
             >
               <FileText className="h-4 w-4 ml-1" />
-              {hasRole(meta, "vendor") && !hasRole(meta, "customer")
-                ? "تعديل المورد"
-                : hasRole(meta, "vendor") && hasRole(meta, "customer")
-                ? "تعديل البطاقة"
-                : "تعديل العميل"}
+              {(() => {
+                const isVendor = hasRole(meta, "vendor");
+                const isCustomer = (meta.roles ?? []).some(r => r !== "vendor");
+                if (isVendor && !isCustomer) return "تعديل المورد";
+                if (isVendor && isCustomer) return "تعديل البطاقة";
+                return "تعديل العميل";
+              })()}
             </Button>
             <Button variant="outline" size="sm" asChild>
               <Link to="/contacts"><ArrowRight className="h-4 w-4 ml-1" /> رجوع</Link>
