@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { fmtSAR } from "@/lib/erpFormat";
 import { AlertTriangle, CheckCircle2, TrendingDown, TrendingUp, Wallet, Calendar } from "lucide-react";
 
-interface Props { vehicleId: string; status: string; acquiredAt?: string | null; }
+interface Props { vehicleId: string; status: string; acquiredAt?: string | null; soldAt?: string | null; }
 
 interface PL {
   purchase_cost: number;
