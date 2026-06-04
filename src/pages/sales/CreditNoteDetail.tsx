@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, BookOpen } from "lucide-react";
 
 const fmt = (n: number) =>
   Number(n).toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -27,13 +27,16 @@ export default function CreditNoteDetail() {
       if (error) console.error("CN fetch error", error);
       let enriched: any = head;
       if (head) {
-        const [{ data: cust }, invRes] = await Promise.all([
+        const [{ data: cust }, invRes, jeRes] = await Promise.all([
           supabase.from("customers").select("name, vat_number").eq("id", head.customer_id).maybeSingle(),
           head.invoice_id
             ? supabase.from("invoices").select("invoice_no, sales_order_id, invoice_date").eq("id", head.invoice_id).maybeSingle()
             : Promise.resolve({ data: null } as any),
+          head.journal_entry_id
+            ? supabase.from("journal_entries").select("id, entry_no, entry_date, is_posted").eq("id", head.journal_entry_id).maybeSingle()
+            : Promise.resolve({ data: null } as any),
         ]);
-        enriched = { ...head, customers: cust, invoices: invRes.data };
+        enriched = { ...head, customers: cust, invoices: invRes.data, journal_entry: jeRes.data };
       }
       const { data: lns } = await supabase
         .from("credit_note_lines")
@@ -60,6 +63,23 @@ export default function CreditNoteDetail() {
               {cn.status === "posted" ? "مرحَّل" : cn.status}
             </Badge>
             <span className="text-xs text-muted-foreground">التاريخ: {cn.cn_date}</span>
+            {cn.journal_entry ? (
+              <Link
+                to={`/journals/${cn.journal_entry.id}`}
+                className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition"
+                title="فتح القيد المحاسبي"
+              >
+                <BookOpen className="h-3 w-3" />
+                <span className="font-mono">{cn.journal_entry.entry_no}</span>
+                {cn.journal_entry.is_posted && (
+                  <span className="text-[10px] opacity-80">• مُرحَّل</span>
+                )}
+              </Link>
+            ) : cn.status === "posted" ? (
+              <span className="text-[11px] px-2 py-0.5 rounded border border-amber-500/40 bg-amber-500/10 text-amber-600">
+                لا يوجد قيد محاسبي مرتبط
+              </span>
+            ) : null}
           </div>
         }
         actions={
