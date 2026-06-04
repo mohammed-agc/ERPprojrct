@@ -260,9 +260,11 @@ export default function CustomerPayments() {
                         <Link to={`/journals/${r.journal_entry.id}`} className="inline-flex items-center gap-1 text-xs hover:underline">
                           <BookOpen className="h-3 w-3" />
                           <span className="font-mono">{r.journal_entry.entry_no}</span>
-                          {r.journal_entry.is_posted && <Badge className="text-[9px] h-4">مُرحَّل</Badge>}
+                          {r.journal_entry.is_posted
+                            ? <Badge className="text-[9px] h-4 bg-success text-success-foreground">مُرحَّل</Badge>
+                            : <Badge variant="outline" className="text-[9px] h-4 text-warning border-warning/40">مسودة</Badge>}
                         </Link>
-                      ) : <Badge variant="outline" className="text-[10px] text-warning border-warning/40">بدون قيد</Badge>}
+                      ) : <Badge variant="destructive" className="text-[10px]">⚠ بدون قيد</Badge>}
                     </td>
                     <td className="text-left">
                       {(() => { const d = buildReceipt(r); return d ? <DocPrintActions doc={d} /> : <span className="text-[10px] text-muted-foreground">—</span>; })()}
