@@ -202,7 +202,12 @@ export async function createPurchaseRequest(input: {
 }
 
 export async function setPurchaseRequestStatus(id: string, status: PRStatus, rejectedReason?: string): Promise<PRRow> {
-  const patch: Record<string, unknown> = { status };
+  const patch: {
+    status: PRStatus;
+    approved_by?: string | null;
+    approved_at?: string;
+    rejected_reason?: string;
+  } = { status };
   if (status === "approved") {
     const { data: auth } = await supabase.auth.getUser();
     patch.approved_by = auth.user?.id ?? null;
@@ -210,7 +215,7 @@ export async function setPurchaseRequestStatus(id: string, status: PRStatus, rej
   }
   if (status === "rejected" && rejectedReason) patch.rejected_reason = rejectedReason;
   const { data, error } = await supabase
-    .from("purchase_requests").update(patch).eq("id", id).select("*").single();
+    .from("purchase_requests").update(patch as any).eq("id", id).select("*").single();
   if (error) throw error;
   return data as PRRow;
 }
