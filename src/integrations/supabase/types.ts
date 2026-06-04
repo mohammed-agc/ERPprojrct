@@ -753,6 +753,48 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicle_costs: {
+        Row: {
+          amount: number
+          cost_date: string
+          cost_type: Database["public"]["Enums"]["vehicle_cost_type"]
+          created_at: string
+          created_by: string | null
+          id: string
+          journal_entry_id: string | null
+          notes: string | null
+          source_reference: string | null
+          updated_at: string
+          vehicle_id: string
+        }
+        Insert: {
+          amount: number
+          cost_date?: string
+          cost_type: Database["public"]["Enums"]["vehicle_cost_type"]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          journal_entry_id?: string | null
+          notes?: string | null
+          source_reference?: string | null
+          updated_at?: string
+          vehicle_id: string
+        }
+        Update: {
+          amount?: number
+          cost_date?: string
+          cost_type?: Database["public"]["Enums"]["vehicle_cost_type"]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          journal_entry_id?: string | null
+          notes?: string | null
+          source_reference?: string | null
+          updated_at?: string
+          vehicle_id?: string
+        }
+        Relationships: []
+      }
       vehicles: {
         Row: {
           brand: string
@@ -905,6 +947,29 @@ export type Database = {
           user_id: string
         }[]
       }
+      compute_vehicle_landed_cost: {
+        Args: { p_vehicle_id: string }
+        Returns: {
+          additional_costs: number
+          landed_cost: number
+          purchase_cost: number
+          vehicle_id: string
+        }[]
+      }
+      compute_vehicle_pnl: {
+        Args: { p_vehicle_id: string }
+        Returns: {
+          additional_costs: number
+          credit_notes: number
+          discounts: number
+          gross_profit: number
+          landed_cost: number
+          net_profit: number
+          purchase_cost: number
+          sale_revenue: number
+          vehicle_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -959,6 +1024,15 @@ export type Database = {
         | "partially_paid"
         | "paid"
         | "delivered"
+      vehicle_cost_type:
+        | "freight"
+        | "customs"
+        | "transportation"
+        | "preparation"
+        | "registration"
+        | "insurance"
+        | "repair"
+        | "other"
       vehicle_status: "available" | "reserved" | "sold" | "delivered"
     }
     CompositeTypes: {
@@ -1130,6 +1204,16 @@ export const Constants = {
         "partially_paid",
         "paid",
         "delivered",
+      ],
+      vehicle_cost_type: [
+        "freight",
+        "customs",
+        "transportation",
+        "preparation",
+        "registration",
+        "insurance",
+        "repair",
+        "other",
       ],
       vehicle_status: ["available", "reserved", "sold", "delivered"],
     },
