@@ -298,18 +298,30 @@ export default function VehicleProfitability() {
             />
           </div>
         </div>
-        <div className="md:col-span-6 flex justify-end">
+        <div className="md:col-span-4 flex items-end gap-2">
+          <div className="space-y-1 flex-1 max-w-xs">
+            <Label className="text-xs">الترتيب</Label>
+            <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+              <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="md:col-span-2 flex items-end justify-end">
           <Button size="sm" onClick={fetchData} disabled={loading}>تطبيق الفلاتر</Button>
         </div>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-3">
         <KPI label="عدد المركبات" value={String(totals.units)} />
         <KPI label="صافي الإيراد" value={fmtCompact(totals.revenue)} tone="good" />
         <KPI label="إجمالي التكلفة" value={fmtCompact(totals.cost)} />
         <KPI label="صافي الربح" value={fmtCompact(totals.profit)} tone={totals.profit >= 0 ? "good" : "bad"} />
         <KPI label={`متوسط الهامش (${totalMargin.toFixed(1)}%)`} value={`${totalMargin.toFixed(1)}%`} tone={totalMargin >= 0 ? "good" : "bad"} />
+        <KPI label="مركبات بمؤشرات حوكمة" value={String(totals.flagged)} tone={totals.flagged > 0 ? "bad" : "good"} />
       </div>
 
       {/* Table */}
