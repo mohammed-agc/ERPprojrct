@@ -211,7 +211,7 @@ export default function ContactDetail() {
 
 
         {/* ---------- Overview ---------- */}
-        <TabsContent value="overview" className="space-y-3">
+        <TabsContent value="overview" className="space-y-3" id="edit-section">
           <div className="grid grid-cols-3 gap-3">
             <Card>
               <CardHeader className="p-3 pb-1"><CardTitle className="text-xs flex items-center gap-1"><Phone className="h-3.5 w-3.5" /> الاتصال</CardTitle></CardHeader>
