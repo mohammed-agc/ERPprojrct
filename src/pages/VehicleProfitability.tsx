@@ -248,7 +248,7 @@ export default function VehicleProfitability() {
               <RefreshCw className={`h-3.5 w-3.5 ml-1 ${loading ? "animate-spin" : ""}`} />
               تحديث
             </Button>
-            <Button size="sm" variant="outline" onClick={() => exportCsv(rows)} disabled={!rows.length}>
+            <Button size="sm" variant="outline" onClick={() => exportCsv(sortedRows)} disabled={!rows.length}>
               <Download className="h-3.5 w-3.5 ml-1" /> CSV
             </Button>
           </div>
