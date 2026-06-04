@@ -19,15 +19,28 @@ export default function CreditNoteDetail() {
   useEffect(() => {
     if (!id) return;
     (async () => {
-      const [{ data: head }, { data: lns }] = await Promise.all([
-        supabase
-          .from("credit_notes")
-          .select("*, customers(name, vat_number), invoices(invoice_no, sales_order_id, invoice_date)")
-          .eq("id", id)
-          .maybeSingle(),
-        supabase.from("credit_note_lines").select("*").eq("credit_note_id", id).order("line_no"),
-      ]);
-      setCn(head);
+      const { data: head, error } = await supabase
+        .from("credit_notes")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+      if (error) console.error("CN fetch error", error);
+      let enriched: any = head;
+      if (head) {
+        const [{ data: cust }, invRes] = await Promise.all([
+          supabase.from("customers").select("name, vat_number").eq("id", head.customer_id).maybeSingle(),
+          head.invoice_id
+            ? supabase.from("invoices").select("invoice_no, sales_order_id, invoice_date").eq("id", head.invoice_id).maybeSingle()
+            : Promise.resolve({ data: null } as any),
+        ]);
+        enriched = { ...head, customers: cust, invoices: invRes.data };
+      }
+      const { data: lns } = await supabase
+        .from("credit_note_lines")
+        .select("*")
+        .eq("credit_note_id", id)
+        .order("line_no");
+      setCn(enriched);
       setLines(lns ?? []);
       setLoading(false);
     })();
