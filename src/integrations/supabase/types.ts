@@ -755,8 +755,29 @@ export type Database = {
             foreignKeyName: "sales_order_lines_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
+            referencedRelation: "v_gov_vehicles_missing_acquired_at"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_order_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
             referencedRelation: "v_gov_vehicles_missing_cost"
             referencedColumns: ["vehicle_id"]
+          },
+          {
+            foreignKeyName: "sales_order_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_vehicles_negative_days_in_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_order_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_vehicles_sold_missing_sold_at"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "sales_order_lines_vehicle_id_fkey"
@@ -885,6 +906,7 @@ export type Database = {
       }
       vehicles: {
         Row: {
+          acquired_at: string | null
           brand: string
           code: string
           color: string | null
@@ -897,12 +919,14 @@ export type Database = {
           name: string
           notes: string | null
           sale_price: number
+          sold_at: string | null
           status: Database["public"]["Enums"]["vehicle_status"]
           updated_at: string
           vin: string | null
           year: number
         }
         Insert: {
+          acquired_at?: string | null
           brand: string
           code: string
           color?: string | null
@@ -915,12 +939,14 @@ export type Database = {
           name: string
           notes?: string | null
           sale_price?: number
+          sold_at?: string | null
           status?: Database["public"]["Enums"]["vehicle_status"]
           updated_at?: string
           vin?: string | null
           year: number
         }
         Update: {
+          acquired_at?: string | null
           brand?: string
           code?: string
           color?: string | null
@@ -933,6 +959,7 @@ export type Database = {
           name?: string
           notes?: string | null
           sale_price?: number
+          sold_at?: string | null
           status?: Database["public"]["Enums"]["vehicle_status"]
           updated_at?: string
           vin?: string | null
@@ -1004,6 +1031,36 @@ export type Database = {
         }
         Relationships: []
       }
+      v_gov_vehicles_missing_acquired_at: {
+        Row: {
+          brand: string | null
+          code: string | null
+          created_at: string | null
+          id: string | null
+          model: string | null
+          status: Database["public"]["Enums"]["vehicle_status"] | null
+          vin: string | null
+        }
+        Insert: {
+          brand?: string | null
+          code?: string | null
+          created_at?: string | null
+          id?: string | null
+          model?: string | null
+          status?: Database["public"]["Enums"]["vehicle_status"] | null
+          vin?: string | null
+        }
+        Update: {
+          brand?: string | null
+          code?: string | null
+          created_at?: string | null
+          id?: string | null
+          model?: string | null
+          status?: Database["public"]["Enums"]["vehicle_status"] | null
+          vin?: string | null
+        }
+        Relationships: []
+      }
       v_gov_vehicles_missing_cost: {
         Row: {
           brand: string | null
@@ -1024,6 +1081,75 @@ export type Database = {
           model?: string | null
           status?: Database["public"]["Enums"]["vehicle_status"] | null
           vehicle_id?: string | null
+          vin?: string | null
+        }
+        Relationships: []
+      }
+      v_gov_vehicles_negative_days_in_stock: {
+        Row: {
+          acquired_at: string | null
+          brand: string | null
+          code: string | null
+          days_in_stock: number | null
+          id: string | null
+          model: string | null
+          sold_at: string | null
+          status: Database["public"]["Enums"]["vehicle_status"] | null
+          vin: string | null
+        }
+        Insert: {
+          acquired_at?: string | null
+          brand?: string | null
+          code?: string | null
+          days_in_stock?: never
+          id?: string | null
+          model?: string | null
+          sold_at?: string | null
+          status?: Database["public"]["Enums"]["vehicle_status"] | null
+          vin?: string | null
+        }
+        Update: {
+          acquired_at?: string | null
+          brand?: string | null
+          code?: string | null
+          days_in_stock?: never
+          id?: string | null
+          model?: string | null
+          sold_at?: string | null
+          status?: Database["public"]["Enums"]["vehicle_status"] | null
+          vin?: string | null
+        }
+        Relationships: []
+      }
+      v_gov_vehicles_sold_missing_sold_at: {
+        Row: {
+          brand: string | null
+          code: string | null
+          created_at: string | null
+          id: string | null
+          model: string | null
+          status: Database["public"]["Enums"]["vehicle_status"] | null
+          updated_at: string | null
+          vin: string | null
+        }
+        Insert: {
+          brand?: string | null
+          code?: string | null
+          created_at?: string | null
+          id?: string | null
+          model?: string | null
+          status?: Database["public"]["Enums"]["vehicle_status"] | null
+          updated_at?: string | null
+          vin?: string | null
+        }
+        Update: {
+          brand?: string | null
+          code?: string | null
+          created_at?: string | null
+          id?: string | null
+          model?: string | null
+          status?: Database["public"]["Enums"]["vehicle_status"] | null
+          updated_at?: string | null
           vin?: string | null
         }
         Relationships: []
