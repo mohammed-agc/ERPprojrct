@@ -202,12 +202,17 @@ export default function InvoiceDetail() {
           credited_amount: credited,
           paid_amount: paid,
         }}
-        invoiceLines={lines.map(l => ({
-          description: l.description,
-          quantity: Number(l.quantity),
-          unit_price: Number(l.unit_price),
-          vat_pct: Number(l.vat_pct),
-        }))}
+        invoiceLines={lines.map(l => {
+          const v = vehicleByLineNo[Number(l.line_no)];
+          return {
+            description: l.description,
+            quantity: Number(l.quantity),
+            unit_price: Number(l.unit_price),
+            vat_pct: Number(l.vat_pct),
+            vehicle_id: v?.id ?? null,
+            vehicle_label: v?.label ?? null,
+          };
+        })}
         onCreated={(cnId) => { load(); nav(`/sales/credit-notes/${cnId}`); }}
       />
     </div>
