@@ -212,14 +212,49 @@ export default function ContactDetail() {
 
         {/* ---------- Overview ---------- */}
         <TabsContent value="overview" className="space-y-3" id="edit-section">
+          <Card>
+            <CardHeader className="p-3 pb-1">
+              <CardTitle className="text-xs flex items-center gap-1">
+                <FileText className="h-3.5 w-3.5" /> الهوية والبيانات الأساسية
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-1 grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+              <div className="md:col-span-2">
+                <Label className="text-xs text-muted-foreground">الاسم الرسمي *</Label>
+                <Input value={row.name ?? ""} onChange={e=>setRow({...row, name: e.target.value})} className="h-8 text-xs" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">الكود (محمي)</Label>
+                <Input value={row.code ?? ""} readOnly disabled className="h-8 text-xs font-mono bg-muted" />
+              </div>
+              <Field label="الاسم بالعربية" value={meta.name_ar} onChange={v=>setMeta({...meta, name_ar:v})} />
+              <Field label="الاسم بالإنجليزية" value={meta.name_en} onChange={v=>setMeta({...meta, name_en:v})} ltr />
+              <Field label="الاسم المختصر" value={meta.short_name} onChange={v=>setMeta({...meta, short_name:v})} />
+              <Field label="الرقم الضريبي" value={row.vat_number} onChange={v=>setRow({...row, vat_number:v})} ltr />
+              <Field label="السجل التجاري" value={meta.cr_number} onChange={v=>setMeta({...meta, cr_number:v})} ltr />
+              <Field label="رقم الهوية" value={meta.national_id} onChange={v=>setMeta({...meta, national_id:v})} ltr />
+            </CardContent>
+          </Card>
+
           <div className="grid grid-cols-3 gap-3">
             <Card>
               <CardHeader className="p-3 pb-1"><CardTitle className="text-xs flex items-center gap-1"><Phone className="h-3.5 w-3.5" /> الاتصال</CardTitle></CardHeader>
               <CardContent className="p-3 pt-1 space-y-2 text-xs">
                 <Field label="الجوال" value={row.phone} onChange={v=>setRow({...row, phone:v})} ltr />
+                <Field label="جوال إضافي" value={meta.mobile} onChange={v=>setMeta({...meta, mobile:v})} ltr />
                 <Field label="واتساب" value={meta.whatsapp} onChange={v=>setMeta({...meta, whatsapp:v})} ltr />
                 <Field label="البريد" value={row.email} onChange={v=>setRow({...row, email:v})} ltr icon={Mail} />
                 <Field label="الموقع" value={meta.website} onChange={v=>setMeta({...meta, website:v})} ltr icon={Globe} />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="p-3 pb-1"><CardTitle className="text-xs flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> العنوان</CardTitle></CardHeader>
+              <CardContent className="p-3 pt-1 space-y-2 text-xs">
+                <Field label="المدينة" value={row.city} onChange={v=>setRow({...row, city:v})} />
+                <div>
+                  <Label className="text-xs text-muted-foreground">العنوان</Label>
+                  <Textarea value={row.address ?? ""} onChange={e=>setRow({...row, address: e.target.value})} rows={3} className="text-xs" />
+                </div>
               </CardContent>
             </Card>
             <Card>
@@ -229,15 +264,6 @@ export default function ContactDetail() {
                 <KV k="حد الائتمان" v={fmtMoney(meta.credit_limit)} />
                 <KV k="مهلة السداد" v={meta.payment_terms_days ? `${meta.payment_terms_days} يوم` : "—"} />
                 <KV k="الرصيد الافتتاحي" v={fmtMoney(meta.opening_balance)} />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="p-3 pb-1"><CardTitle className="text-xs flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5" /> الامتثال</CardTitle></CardHeader>
-              <CardContent className="p-3 pt-1 text-xs space-y-1.5">
-                <KV k="الرقم الضريبي" v={row.vat_number} mono />
-                <KV k="السجل التجاري" v={meta.cr_number} mono />
-                <KV k="رقم الهوية" v={meta.national_id} mono />
-                <KV k="مسجل ض.ق.م" v={meta.vat_registered ? "نعم" : "لا"} />
               </CardContent>
             </Card>
           </div>
