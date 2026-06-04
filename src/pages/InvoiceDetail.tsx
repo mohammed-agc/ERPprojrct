@@ -104,6 +104,15 @@ export default function InvoiceDetail() {
         }
       />
 
+      <CreditGateBanner
+        customerId={inv.customer_id}
+        documentType="invoice"
+        documentId={inv.id}
+        documentCode={inv.invoice_no}
+      />
+
+
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <div className="bg-card border border-border rounded-lg p-3">
           <div className="text-xs text-muted-foreground mb-1">العميل</div>

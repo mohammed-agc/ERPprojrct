@@ -22,6 +22,7 @@ import { useSalesActions } from "@/hooks/erp/useSalesActions";
 import { Banknote, Truck, XCircle, Printer, FileMinus } from "lucide-react";
 import { salesVehicleStatus } from "@/services/erp/salesVehicleStatus";
 import { creditNotesService } from "@/services/erp/creditNotes";
+import { CreditGateBanner } from "@/components/erp/CreditGateBanner";
 
 interface Line {
   id?: string;
