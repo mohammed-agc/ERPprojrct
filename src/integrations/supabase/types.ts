@@ -498,6 +498,7 @@ export type Database = {
           payment_date: string
           payment_no: string
           reference: string | null
+          status: string
           updated_at: string
         }
         Insert: {
@@ -512,6 +513,7 @@ export type Database = {
           payment_date?: string
           payment_no: string
           reference?: string | null
+          status?: string
           updated_at?: string
         }
         Update: {
@@ -526,6 +528,7 @@ export type Database = {
           payment_date?: string
           payment_no?: string
           reference?: string | null
+          status?: string
           updated_at?: string
         }
         Relationships: []
@@ -810,6 +813,7 @@ export type Database = {
       }
       is_manager_or_admin: { Args: { _user_id: string }; Returns: boolean }
       post_credit_note_journal: { Args: { p_cn_id: string }; Returns: string }
+      post_payment_journal: { Args: { p_payment_id: string }; Returns: string }
       user_department: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {
