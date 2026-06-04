@@ -1,18 +1,19 @@
 /**
  * Vehicle P&L Card — embedded in Vehicle Detail page.
  *
- * Shows full per-vehicle profitability + governance indicators:
+ * Per-vehicle profitability + accounting integrity:
  *  Purchase Cost, Additional Costs, Landed Cost, Revenue, Discounts,
- *  Credit Notes, Gross Profit, Net Profit, Inventory Status, COGS Status,
- *  Days In Stock, and governance flags (negative profit, missing cost,
- *  missing revenue, missing COGS, missing inventory reconciliation).
+ *  Credit Notes, COGS Amount, Gross Profit, Net Profit,
+ *  Inventory Status, COGS Status (with JE number), Days In Stock,
+ *  and governance flags (negative profit, missing cost, missing revenue,
+ *  missing COGS entry, inventory not reduced, cost source missing).
  */
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { fmtSAR } from "@/lib/erpFormat";
-import { AlertTriangle, CheckCircle2, TrendingDown, TrendingUp, Wallet, Calendar } from "lucide-react";
+import { AlertTriangle, CheckCircle2, TrendingDown, TrendingUp, Wallet, Calendar, FileText } from "lucide-react";
 
 interface Props { vehicleId: string; status: string; acquiredAt?: string | null; soldAt?: string | null; }
 
@@ -23,9 +24,12 @@ interface PL {
   revenue: number;
   discounts: number;
   credit_notes: number;
+  cogs_amount: number;
   gross_profit: number;
   net_profit: number;
   cogs_posted: boolean;
+  has_invoice: boolean;
+  cogs_je_no: string | null;
   inventory_reconciled: boolean;
   sold_at: string | null;
 }
@@ -44,7 +48,7 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) 
           supabase.rpc("compute_vehicle_landed_cost" as any, { p_vehicle_id: vehicleId }),
           supabase
             .from("sales_order_lines")
-            .select("quantity, unit_price, discount_pct, line_total, order:sales_orders(id, status, order_date, invoices(id, cogs_journal_entry_id, invoice_date))")
+            .select("quantity, unit_price, discount_pct, line_total, order:sales_orders(id, status, order_date, invoices(id, status, cogs_journal_entry_id, invoice_date))")
             .eq("vehicle_id", vehicleId),
           supabase
             .from("credit_note_lines")
@@ -57,6 +61,8 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) 
         const landed_cost = Number(costRow?.landed_cost || 0);
 
         let revenue = 0, discounts = 0, cogs_posted = false, derived_sold_at: string | null = null;
+        let has_invoice = false;
+        const cogs_je_ids: string[] = [];
         for (const l of (solRes.data ?? []) as any[]) {
           const o = l.order; if (!o || o.status === "cancelled") continue;
           const q = Number(l.quantity || 0), p = Number(l.unit_price || 0), d = Number(l.discount_pct || 0);
@@ -64,25 +70,45 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) 
           discounts += q * p * (d / 100);
           const invs = o.invoices ?? [];
           for (const inv of invs) {
-            if (inv?.cogs_journal_entry_id) cogs_posted = true;
+            if (inv && inv.status && inv.status !== "draft" && inv.status !== "cancelled") {
+              has_invoice = true;
+            }
+            if (inv?.cogs_journal_entry_id) {
+              cogs_posted = true;
+              cogs_je_ids.push(inv.cogs_journal_entry_id);
+            }
             if (inv?.invoice_date && (!derived_sold_at || inv.invoice_date < derived_sold_at)) derived_sold_at = inv.invoice_date;
           }
           if (!derived_sold_at && o.order_date && (o.status === "invoiced" || o.status === "confirmed")) derived_sold_at = o.order_date;
         }
+
+        // Resolve COGS JE number (first one if multiple)
+        let cogs_je_no: string | null = null;
+        if (cogs_je_ids.length > 0) {
+          const { data: jes } = await supabase
+            .from("journal_entries")
+            .select("id, entry_no")
+            .in("id", cogs_je_ids)
+            .limit(1);
+          cogs_je_no = jes?.[0]?.entry_no ?? null;
+        }
+
         let credit_notes = 0;
         for (const c of (cnRes.data ?? []) as any[]) {
           if (c.credit_note?.status !== "cancelled") credit_notes += Number(c.line_total || 0);
         }
+        const cogs_amount = cogs_posted ? landed_cost : 0;
         const net_revenue = revenue - credit_notes;
         const gross_profit = revenue - landed_cost;
         const net_profit = net_revenue - landed_cost;
-        // Prefer authoritative stored sold_at; fall back to derived only if missing
         const sold_at = soldAt ?? derived_sold_at;
         const inventory_reconciled = status !== "sold" || sold_at !== null;
         setPl({
           purchase_cost, additional_costs, landed_cost,
-          revenue, discounts, credit_notes, gross_profit, net_profit,
-          cogs_posted, inventory_reconciled, sold_at,
+          revenue, discounts, credit_notes, cogs_amount,
+          gross_profit, net_profit,
+          cogs_posted, has_invoice, cogs_je_no,
+          inventory_reconciled, sold_at,
         });
       } finally { setLoading(false); }
     })();
@@ -95,12 +121,25 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) 
   const endDate = pl.sold_at ?? new Date().toISOString().slice(0, 10);
   const daysInStock = acquiredAt ? daysBetween(acquiredAt, endDate) : null;
 
+  // COGS detailed status (mutually exclusive, ordered by severity)
+  const cogsStatus: { tone: "success" | "warning" | "destructive"; label: string } =
+    pl.cogs_posted
+      ? { tone: "success",     label: "✅ مرحّل" }
+      : pl.landed_cost === 0
+      ? { tone: "destructive", label: "⚠ مصدر التكلفة مفقود" }
+      : status === "sold" && pl.has_invoice
+      ? { tone: "destructive", label: "⚠ المخزون لم يُخفَّض" }
+      : pl.has_invoice
+      ? { tone: "warning",     label: "⚠ قيد COGS مفقود" }
+      : { tone: "warning",     label: "—" };
+
   // Governance flags
   const flags: { ok: boolean; label: string }[] = [
     { ok: pl.net_profit >= 0, label: "ربحية موجبة" },
     { ok: pl.landed_cost > 0, label: "التكلفة مسجّلة" },
     { ok: status === "available" || pl.revenue > 0, label: status === "sold" ? "الإيراد مسجّل" : "—" },
-    { ok: status !== "sold" || pl.cogs_posted, label: "قيد COGS مرحّل" },
+    { ok: !pl.has_invoice || pl.cogs_posted, label: "قيد COGS مرحّل" },
+    { ok: status !== "sold" || pl.cogs_posted, label: "المخزون مُخفَّض" },
     { ok: pl.inventory_reconciled, label: "مطابقة المخزون" },
   ].filter(f => f.label !== "—");
 
@@ -127,16 +166,17 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) 
         <Cell label="الإيراد" value={fmtSAR(pl.revenue)} muted={pl.revenue === 0} />
         <Cell label="الخصومات" value={fmtSAR(pl.discounts)} />
         <Cell label="الإشعارات الدائنة" value={fmtSAR(pl.credit_notes)} danger={pl.credit_notes > 0} />
+        <Cell
+          label="تكلفة البضاعة المباعة (COGS)"
+          value={pl.cogs_posted ? fmtSAR(pl.cogs_amount) : "غير مرحّل"}
+          tone={pl.cogs_posted ? undefined : "destructive"}
+          muted={!pl.cogs_posted}
+        />
         <Cell label="مجمل الربح" value={fmtSAR(pl.gross_profit)} tone={pl.gross_profit >= 0 ? "success" : "destructive"} />
         <Cell label="صافي الربح" value={fmtSAR(pl.net_profit)} tone={pl.net_profit >= 0 ? "success" : "destructive"} accent />
-        <Cell
-          label="أيام في المخزون"
-          value={daysInStock !== null ? `${daysInStock} يوم` : "—"}
-          icon={<Calendar className="h-3 w-3" />}
-        />
       </div>
 
-      <div className="mt-3 pt-3 border-t border-border grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+      <div className="mt-3 pt-3 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">حالة المخزون:</span>
           <Badge variant={status === "sold" ? "default" : "secondary"} className="text-[10px]">
@@ -144,10 +184,31 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) 
           </Badge>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">قيد COGS:</span>
-          {pl.cogs_posted
-            ? <Badge className="text-[10px] bg-success text-success-foreground">مرحّل</Badge>
-            : <Badge variant="outline" className="text-[10px] border-warning/40 text-warning">غير مرحّل</Badge>}
+          <span className="text-muted-foreground">حالة COGS:</span>
+          <Badge
+            variant="outline"
+            className={`text-[10px] ${
+              cogsStatus.tone === "success"
+                ? "border-success/40 text-success bg-success/5"
+                : cogsStatus.tone === "warning"
+                ? "border-warning/40 text-warning bg-warning/5"
+                : "border-destructive/40 text-destructive bg-destructive/5"
+            }`}
+          >
+            {cogsStatus.label}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground inline-flex items-center gap-1">
+            <FileText className="h-3 w-3" /> قيد COGS:
+          </span>
+          <span className="font-mono font-medium">{pl.cogs_je_no ?? "—"}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground inline-flex items-center gap-1">
+            <Calendar className="h-3 w-3" /> أيام في المخزون:
+          </span>
+          <span className="font-medium tabular-nums">{daysInStock !== null ? `${daysInStock} يوم` : "—"}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">تاريخ البيع:</span>

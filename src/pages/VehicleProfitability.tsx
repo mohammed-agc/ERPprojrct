@@ -36,6 +36,10 @@ interface VehicleRow {
   credited: number;
   net_revenue: number;
   landed_cost: number;
+  cogs_amount: number;
+  cogs_je_no: string | null;
+  cogs_status: "posted" | "missing_entry" | "inventory_not_reduced" | "cost_missing" | "n_a";
+  has_invoice: boolean;
   profit: number;
   margin: number;
   acquired_at: string | null;
@@ -44,6 +48,21 @@ interface VehicleRow {
   cogs_posted: boolean;
   flags: string[];
 }
+
+const COGS_STATUS_LABEL: Record<VehicleRow["cogs_status"], string> = {
+  posted:                 "✅ مرحّل",
+  missing_entry:          "⚠ قيد COGS مفقود",
+  inventory_not_reduced:  "⚠ المخزون لم يُخفَّض",
+  cost_missing:           "⚠ مصدر التكلفة مفقود",
+  n_a:                    "—",
+};
+const COGS_STATUS_TONE: Record<VehicleRow["cogs_status"], string> = {
+  posted:                 "border-success/40 text-success bg-success/5",
+  missing_entry:          "border-warning/40 text-warning bg-warning/5",
+  inventory_not_reduced:  "border-destructive/40 text-destructive bg-destructive/5",
+  cost_missing:           "border-destructive/40 text-destructive bg-destructive/5",
+  n_a:                    "border-border text-muted-foreground",
+};
 
 type SortKey = "profit_desc" | "profit_asc" | "margin_desc" | "margin_asc" | "stock_desc";
 
@@ -68,12 +87,13 @@ const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 const firstOfYear = new Date(today.getFullYear(), 0, 1);
 
 const exportCsv = (rows: VehicleRow[]) => {
-  const header = ["الكود","VIN","الماركة","الموديل","السنة","الحالة","تاريخ الاستلام","تاريخ البيع","أيام في المخزون","الإيراد","خصم/إرجاع","صافي الإيراد","التكلفة الكلية","صافي الربح","هامش %","COGS","ملاحظات الحوكمة"];
+  const header = ["الكود","VIN","الماركة","الموديل","السنة","الحالة","تاريخ الاستلام","تاريخ البيع","أيام في المخزون","الإيراد","خصم/إرجاع","صافي الإيراد","التكلفة الكلية","تكلفة COGS","رقم قيد COGS","حالة COGS","صافي الربح","هامش %","ملاحظات الحوكمة"];
   const lines = rows.map(r => [
     r.code, r.vin ?? "", r.brand, r.model, r.year, r.status,
     r.acquired_at ?? "", r.sold_at ?? "", r.days_in_stock ?? "",
-    r.revenue, r.credited, r.net_revenue, r.landed_cost, r.profit, r.margin.toFixed(2),
-    r.cogs_posted ? "مرحّل" : "غير مرحّل",
+    r.revenue, r.credited, r.net_revenue, r.landed_cost,
+    r.cogs_amount, r.cogs_je_no ?? "", COGS_STATUS_LABEL[r.cogs_status],
+    r.profit, r.margin.toFixed(2),
     r.flags.join(" | "),
   ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(","));
   const blob = new Blob(["\ufeff" + [header.join(","), ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
@@ -152,28 +172,49 @@ export default function VehicleProfitability() {
         revMap.has(v.id) || crMap.has(v.id) || (dept === "all" && !search && statusFilter === "all")
       );
 
-      // 4) landed cost + COGS posted, in parallel (sold_at now comes from the vehicle row)
+      // 4) landed cost + COGS posted + COGS JE id + invoice existence, in parallel
       const enriched = await Promise.all(
         vehicles.map(async v => {
           const [{ data: cd }, { data: inv }] = await Promise.all([
             supabase.rpc("compute_vehicle_landed_cost" as any, { p_vehicle_id: v.id }),
             supabase
               .from("sales_order_lines")
-              .select("order:sales_orders(invoices(cogs_journal_entry_id))")
+              .select("order:sales_orders(invoices(status, cogs_journal_entry_id))")
               .eq("vehicle_id", v.id)
               .limit(20),
           ]);
           const row = Array.isArray(cd) ? cd[0] : cd;
           let cogs_posted = false;
+          let cogs_je_id: string | null = null;
+          let has_invoice = false;
           for (const l of (inv ?? []) as any[]) {
             for (const i of l.order?.invoices ?? []) {
-              if (i?.cogs_journal_entry_id) cogs_posted = true;
+              if (i?.status && i.status !== "draft" && i.status !== "cancelled") has_invoice = true;
+              if (i?.cogs_journal_entry_id) {
+                cogs_posted = true;
+                if (!cogs_je_id) cogs_je_id = i.cogs_journal_entry_id;
+              }
             }
           }
-          return { id: v.id, landed: Number((row as any)?.landed_cost || 0), cogs_posted };
+          return {
+            id: v.id,
+            landed: Number((row as any)?.landed_cost || 0),
+            cogs_posted, cogs_je_id, has_invoice,
+          };
         }),
       );
       const enrichMap = new Map(enriched.map(e => [e.id, e]));
+
+      // 5) batch-resolve COGS journal entry numbers
+      const jeIds = Array.from(new Set(enriched.map(e => e.cogs_je_id).filter(Boolean) as string[]));
+      const jeMap = new Map<string, string>();
+      if (jeIds.length > 0) {
+        const { data: jes } = await supabase
+          .from("journal_entries")
+          .select("id, entry_no")
+          .in("id", jeIds);
+        for (const j of jes ?? []) jeMap.set((j as any).id, (j as any).entry_no);
+      }
 
       const todayIso = isoDate(new Date());
       const result: VehicleRow[] = vehicles.map(v => {
@@ -184,7 +225,6 @@ export default function VehicleProfitability() {
         const landed_cost = e.landed;
         const profit = net_revenue - landed_cost;
         const margin = net_revenue > 0 ? (profit / net_revenue) * 100 : 0;
-        // Authoritative stored lifecycle dates (no derivation)
         const acquired_raw = (v as any).acquired_at ?? (v as any).created_at;
         const acquired_at = acquired_raw ? String(acquired_raw).slice(0, 10) : null;
         const sold_raw = (v as any).sold_at;
@@ -193,16 +233,33 @@ export default function VehicleProfitability() {
         const days_in_stock = acquired_at
           ? Math.max(0, Math.floor((+new Date(endIso) - +new Date(acquired_at)) / 86400000))
           : null;
+
+        // COGS detailed status (ordered by severity)
+        const cogs_status: VehicleRow["cogs_status"] = e.cogs_posted
+          ? "posted"
+          : landed_cost === 0
+          ? "cost_missing"
+          : v.status === "sold" && e.has_invoice
+          ? "inventory_not_reduced"
+          : e.has_invoice
+          ? "missing_entry"
+          : "n_a";
+        const cogs_amount = e.cogs_posted ? landed_cost : 0;
+        const cogs_je_no = e.cogs_je_id ? (jeMap.get(e.cogs_je_id) ?? null) : null;
+
         const flags: string[] = [];
         if (profit < 0) flags.push("ربح سالب");
         if (landed_cost === 0) flags.push("تكلفة مفقودة");
         if (v.status === "sold" && revenue === 0) flags.push("إيراد مفقود");
-        if (v.status === "sold" && !e.cogs_posted) flags.push("COGS مفقود");
+        if (e.has_invoice && !e.cogs_posted) flags.push("قيد COGS مفقود");
+        if (v.status === "sold" && !e.cogs_posted) flags.push("المخزون لم يُخفَّض");
         if (v.status === "sold" && !sold_at) flags.push("تاريخ بيع مفقود");
         if (!acquired_at) flags.push("تاريخ دخول مخزون مفقود");
         return {
           id: v.id, code: v.code, name: v.name, brand: v.brand, model: v.model, year: v.year, vin: v.vin, status: v.status,
-          revenue, credited, net_revenue, landed_cost, profit, margin,
+          revenue, credited, net_revenue,
+          landed_cost, cogs_amount, cogs_je_no, cogs_status, has_invoice: e.has_invoice,
+          profit, margin,
           acquired_at, sold_at, days_in_stock, cogs_posted: e.cogs_posted, flags,
         };
       });
@@ -338,6 +395,7 @@ export default function VehicleProfitability() {
               <th className="text-right p-2">أيام في المخزون</th>
               <th className="text-left p-2">صافي الإيراد</th>
               <th className="text-left p-2">التكلفة الكلية</th>
+              <th className="text-right p-2">COGS</th>
               <th className="text-left p-2">صافي الربح</th>
               <th className="text-right p-2 w-32">الهامش</th>
               <th className="text-right p-2">الحوكمة</th>
@@ -345,9 +403,9 @@ export default function VehicleProfitability() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={9} className="text-center text-muted-foreground py-8">جارٍ التحميل…</td></tr>
+              <tr><td colSpan={10} className="text-center text-muted-foreground py-8">جارٍ التحميل…</td></tr>
             ) : !sortedRows.length ? (
-              <EmptyState inTable colSpan={9} icon={<Car className="h-7 w-7" />} title="لا توجد بيانات" description="لا توجد مركبات تطابق الفلاتر المختارة." />
+              <EmptyState inTable colSpan={10} icon={<Car className="h-7 w-7" />} title="لا توجد بيانات" description="لا توجد مركبات تطابق الفلاتر المختارة." />
             ) : sortedRows.map(r => (
               <tr key={r.id} className="border-t hover:bg-muted/30">
                 <td className="p-2">
@@ -371,6 +429,19 @@ export default function VehicleProfitability() {
                   )}
                 </td>
                 <td className="p-2 text-left tabular-nums text-muted-foreground">{fmtSAR(r.landed_cost)}</td>
+                <td className="p-2">
+                  <div className="flex flex-col items-end gap-0.5">
+                    <Badge variant="outline" className={`text-[10px] ${COGS_STATUS_TONE[r.cogs_status]}`}>
+                      {COGS_STATUS_LABEL[r.cogs_status]}
+                    </Badge>
+                    <div className="text-[10px] tabular-nums text-muted-foreground">
+                      {r.cogs_posted ? fmtSAR(r.cogs_amount) : "—"}
+                    </div>
+                    {r.cogs_je_no && (
+                      <div className="text-[10px] font-mono text-muted-foreground">{r.cogs_je_no}</div>
+                    )}
+                  </div>
+                </td>
                 <td className={`p-2 text-left tabular-nums font-semibold ${r.profit >= 0 ? "text-success" : "text-destructive"}`}>
                   {fmtSAR(r.profit)}
                 </td>
