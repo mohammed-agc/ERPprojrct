@@ -91,6 +91,11 @@ export type ContactMeta = {
   risk_class?: RiskClass;
   opening_balance?: number;
 
+  // alternate names
+  name_ar?: string;
+  name_en?: string;
+  short_name?: string;
+
   // additional contact data
   mobile?: string;
   whatsapp?: string;
