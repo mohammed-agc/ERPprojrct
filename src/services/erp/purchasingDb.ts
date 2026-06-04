@@ -290,14 +290,14 @@ export async function createPurchaseOrder(input: {
 }
 
 export async function setPurchaseOrderStatus(id: string, status: POStatus): Promise<PORow> {
-  const patch: Record<string, unknown> = { status };
+  const patch: { status: POStatus; acknowledged_by?: string | null; acknowledged_at?: string } = { status };
   if (status === "acknowledged") {
     const { data: auth } = await supabase.auth.getUser();
     patch.acknowledged_by = auth.user?.id ?? null;
     patch.acknowledged_at = new Date().toISOString();
   }
   const { data, error } = await supabase
-    .from("purchase_orders").update(patch).eq("id", id).select("*").single();
+    .from("purchase_orders").update(patch as any).eq("id", id).select("*").single();
   if (error) throw error;
   return data as PORow;
 }
