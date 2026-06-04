@@ -54,6 +54,7 @@ const CostCenters = lazy(() => import("./pages/CostCenters"));
 const FinancialDimensions = lazy(() => import("./pages/FinancialDimensions"));
 const DepartmentProfitability = lazy(() => import("./pages/CenterProfitability").then(m => ({ default: m.DepartmentProfitability })));
 const BranchProfitability = lazy(() => import("./pages/CenterProfitability").then(m => ({ default: m.BranchProfitability })));
+const VehicleProfitability = lazy(() => import("./pages/VehicleProfitability"));
 const FinancialAnalysis = lazy(() => import("./pages/FinancialAnalysis"));
 const CostAllocation = lazy(() => import("./pages/CostAllocation"));
 const GovernanceDashboard = lazy(() => import("./pages/GovernanceDashboard"));
