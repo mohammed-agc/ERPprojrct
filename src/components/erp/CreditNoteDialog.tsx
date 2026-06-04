@@ -101,6 +101,9 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
     match: boolean;
     invoiceCreditedAfter: number;
     invoiceStatusAfter: string;
+    journalEntryId: string | null;
+    inventoryReleased: number;
+    blockedDelivered: string[];
   } | null>(null);
 
 
