@@ -142,15 +142,27 @@ export default function ContactDetail() {
               </span>
             )}
             <span className="text-muted-foreground">· اكتمال الملف: <b className={cn(score >= 80 ? "text-success" : score >= 50 ? "text-warning-foreground" : "text-destructive")}>{score}%</b></span>
+            <span className={cn("px-1.5 py-0.5 rounded border text-[10px]", (row.is_active ?? true) ? "border-success/40 text-success" : "border-destructive/40 text-destructive")}>
+              {(row.is_active ?? true) ? "نشط" : "غير نشط"}
+            </span>
+            {(row.updated_at || updatedByName) && (
+              <span className="text-muted-foreground">
+                · آخر تعديل: {updatedByName ?? "—"} {row.updated_at ? `(${String(row.updated_at).slice(0,10)})` : ""}
+              </span>
+            )}
           </div>
         }
         actions={
           <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-2 py-1 border rounded-md text-xs">
+              <Switch checked={row.is_active ?? true} onCheckedChange={toggleActive} />
+              <span className="text-muted-foreground">{(row.is_active ?? true) ? "نشط" : "غير نشط"}</span>
+            </div>
             <Button variant="outline" size="sm" asChild>
               <Link to="/contacts"><ArrowRight className="h-4 w-4 ml-1" /> رجوع</Link>
             </Button>
             <Button size="sm" onClick={save} disabled={saving}>
-              <Save className="h-4 w-4 ml-1" /> {saving ? "..." : "حفظ"}
+              <Save className="h-4 w-4 ml-1" /> {saving ? "..." : "حفظ التعديلات"}
             </Button>
           </div>
         }
