@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, FileMinus } from "lucide-react";
 import { CreditNoteDialog } from "@/components/erp/CreditNoteDialog";
+import { CreditGateBanner } from "@/components/erp/CreditGateBanner";
 
 const fmt = (n: number) =>
   Number(n).toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -102,6 +103,15 @@ export default function InvoiceDetail() {
           </div>
         }
       />
+
+      <CreditGateBanner
+        customerId={inv.customer_id}
+        documentType="invoice"
+        documentId={inv.id}
+        documentCode={inv.invoice_no}
+      />
+
+
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <div className="bg-card border border-border rounded-lg p-3">
