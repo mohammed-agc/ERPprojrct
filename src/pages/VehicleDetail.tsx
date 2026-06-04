@@ -385,7 +385,7 @@ export default function VehicleDetail() {
             </div>
           </Card>
 
-          <VehiclePLCard vehicleId={vehicle.id} status={vehicle.status} acquiredAt={meta.procurement?.received_at ?? vehicle.created_at} />
+          <VehiclePLCard vehicleId={vehicle.id} status={vehicle.status} acquiredAt={vehicle.acquired_at ?? vehicle.created_at} soldAt={vehicle.sold_at ?? null} />
 
 
           {/* Photos */}
