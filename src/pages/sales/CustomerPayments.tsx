@@ -265,7 +265,7 @@ export default function CustomerPayments() {
                       ) : <Badge variant="outline" className="text-[10px] text-warning border-warning/40">بدون قيد</Badge>}
                     </td>
                     <td className="text-left">
-                      <DocPrintActions doc={buildReceipt(r)} />
+                      {(() => { const d = buildReceipt(r); return d ? <DocPrintActions doc={d} /> : <span className="text-[10px] text-muted-foreground">—</span>; })()}
                     </td>
                   </tr>
                 ))}
