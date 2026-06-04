@@ -36,6 +36,10 @@ interface VehicleRow {
   credited: number;
   net_revenue: number;
   landed_cost: number;
+  cogs_amount: number;
+  cogs_je_no: string | null;
+  cogs_status: "posted" | "missing_entry" | "inventory_not_reduced" | "cost_missing" | "n_a";
+  has_invoice: boolean;
   profit: number;
   margin: number;
   acquired_at: string | null;
@@ -44,6 +48,21 @@ interface VehicleRow {
   cogs_posted: boolean;
   flags: string[];
 }
+
+const COGS_STATUS_LABEL: Record<VehicleRow["cogs_status"], string> = {
+  posted:                 "✅ مرحّل",
+  missing_entry:          "⚠ قيد COGS مفقود",
+  inventory_not_reduced:  "⚠ المخزون لم يُخفَّض",
+  cost_missing:           "⚠ مصدر التكلفة مفقود",
+  n_a:                    "—",
+};
+const COGS_STATUS_TONE: Record<VehicleRow["cogs_status"], string> = {
+  posted:                 "border-success/40 text-success bg-success/5",
+  missing_entry:          "border-warning/40 text-warning bg-warning/5",
+  inventory_not_reduced:  "border-destructive/40 text-destructive bg-destructive/5",
+  cost_missing:           "border-destructive/40 text-destructive bg-destructive/5",
+  n_a:                    "border-border text-muted-foreground",
+};
 
 type SortKey = "profit_desc" | "profit_asc" | "margin_desc" | "margin_asc" | "stock_desc";
 
