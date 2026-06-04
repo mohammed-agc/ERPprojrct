@@ -87,11 +87,6 @@ export default function CreditNoteDetail() {
             <ArrowRight className="h-4 w-4 ml-1" /> رجوع
           </Button>
         }
-        actions={
-          <Button variant="ghost" size="sm" onClick={() => nav("/sales/credit-notes")}>
-            <ArrowRight className="h-4 w-4 ml-1" /> رجوع
-          </Button>
-        }
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
