@@ -381,7 +381,15 @@ export default function SalesOrderDetail() {
         />
       </div>
 
-
+      {order.customer_id && (
+        <CreditGateBanner
+          customerId={order.customer_id}
+          additionalExposure={Number(order.total ?? 0)}
+          documentType="sales_order"
+          documentId={id}
+          documentCode={order.order_no}
+        />
+      )}
 
       {/* Header form */}
       <div className="bg-card border border-border rounded-lg p-4 mb-4">
