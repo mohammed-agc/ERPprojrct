@@ -41,10 +41,9 @@ function findPartIdForLine(line: LineItem): string | undefined {
 export const inventoryIntegration = {
   /* ===================== PURCHASING SIDE ===================== */
 
-  /** Called by purchasingService when an inspection is approved.
-   *  - For PARTS lines: bumps on_hand and logs p_receive movements.
-   *  - For VEHICLE lines: vehicle records are still created via VehicleIntakeDialog
-   *    + recordVehicleIntake; this hook only logs an inspection movement.
+  /** Legacy mock hook retained only for parts movements in non-DB flows.
+   *  Vehicle records are now created authoritatively by the
+   *  `approve_inspection` Supabase function (see receivingDb.ts).
    */
   onInspectionApproved(ins: InspectionRecord, po: PurchaseOrder | undefined) {
     if (!po) return;
@@ -98,8 +97,9 @@ export const inventoryIntegration = {
     });
   },
 
-  /** Called when VehicleIntakeDialog finishes inserting vehicles into Supabase.
-   *  Pushes mirrored records into the inventory engine + receive/intake movements.
+  /** Legacy mirror used by older non-DB flows to push intake movements
+   *  into the in-memory inventory engine. The authoritative vehicle
+   *  intake now happens server-side via `approve_inspection`.
    */
   onVehicleIntake(input: {
     po: PurchaseOrder;
