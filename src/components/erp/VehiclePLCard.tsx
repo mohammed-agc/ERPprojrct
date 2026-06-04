@@ -56,7 +56,7 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) 
         const additional_costs = Number(costRow?.additional_costs || 0);
         const landed_cost = Number(costRow?.landed_cost || 0);
 
-        let revenue = 0, discounts = 0, cogs_posted = false, sold_at: string | null = null;
+        let revenue = 0, discounts = 0, cogs_posted = false, derived_sold_at: string | null = null;
         for (const l of (solRes.data ?? []) as any[]) {
           const o = l.order; if (!o || o.status === "cancelled") continue;
           const q = Number(l.quantity || 0), p = Number(l.unit_price || 0), d = Number(l.discount_pct || 0);
