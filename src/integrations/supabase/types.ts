@@ -1264,6 +1264,7 @@ export type Database = {
         | "insurance"
         | "repair"
         | "other"
+        | "purchase"
       vehicle_status: "available" | "reserved" | "sold" | "delivered"
     }
     CompositeTypes: {
@@ -1446,6 +1447,7 @@ export const Constants = {
         "insurance",
         "repair",
         "other",
+        "purchase",
       ],
       vehicle_status: ["available", "reserved", "sold", "delivered"],
     },
