@@ -362,8 +362,46 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
           </div>
 
           <div className="bg-card border border-border rounded-lg overflow-hidden mb-3">
+            <div className="px-3 py-2 border-b border-border text-sm font-semibold">
+              تفاصيل القيد لكل بند
+            </div>
+            <table className="erp-table text-xs">
+              <thead>
+                <tr>
+                  <th style={{ width: 32 }}>#</th>
+                  <th>البند</th>
+                  <th>الحساب</th>
+                  <th className="text-left">مدين</th>
+                  <th className="text-left">دائن</th>
+                </tr>
+              </thead>
+              <tbody>
+                {glLineRows.flatMap(r => [
+                  <tr key={`r-${r.line_no}`}>
+                    <td rowSpan={3} className="align-top">{r.line_no}</td>
+                    <td rowSpan={3} className="align-top">{r.description}</td>
+                    <td>{ACC_RETURNS}</td>
+                    <td className="num text-left">{fmt(r.subtotal)}</td>
+                    <td className="num text-left">—</td>
+                  </tr>,
+                  <tr key={`v-${r.line_no}`}>
+                    <td>{ACC_VAT}</td>
+                    <td className="num text-left">{fmt(r.vat)}</td>
+                    <td className="num text-left">—</td>
+                  </tr>,
+                  <tr key={`a-${r.line_no}`} className="border-b-2 border-border">
+                    <td>{ACC_AR}</td>
+                    <td className="num text-left">—</td>
+                    <td className="num text-left">{fmt(r.total)}</td>
+                  </tr>,
+                ])}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="bg-card border border-border rounded-lg overflow-hidden mb-3">
             <div className="px-3 py-2 border-b border-border text-sm font-semibold flex items-center justify-between">
-              <span>قيد اليومية المتوقع</span>
+              <span>القيد المُجمَّع حسب الحساب</span>
               <span className={`text-xs ${glBalanced ? "text-success" : "text-destructive"}`}>
                 {glBalanced ? "متوازن" : "غير متوازن"}
               </span>
@@ -390,6 +428,7 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
               </tfoot>
             </table>
           </div>
+
 
           <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3 mb-2 leading-6">
             <div>• سيُنشر إشعار دائن بإجمالي <b className="num">{fmt(totals.total)}</b> مقابل الفاتورة {invoice.invoice_no}.</div>
