@@ -315,11 +315,19 @@ export type Database = {
             referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "invoice_lines_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_invoices_missing_cogs"
+            referencedColumns: ["id"]
+          },
         ]
       }
       invoices: {
         Row: {
           branch: string | null
+          cogs_journal_entry_id: string | null
           created_at: string
           created_by: string | null
           credited_amount: number
@@ -328,6 +336,7 @@ export type Database = {
           id: string
           invoice_date: string
           invoice_no: string
+          journal_entry_id: string | null
           notes: string | null
           paid_amount: number
           payment_method: string | null
@@ -343,6 +352,7 @@ export type Database = {
         }
         Insert: {
           branch?: string | null
+          cogs_journal_entry_id?: string | null
           created_at?: string
           created_by?: string | null
           credited_amount?: number
@@ -351,6 +361,7 @@ export type Database = {
           id?: string
           invoice_date?: string
           invoice_no: string
+          journal_entry_id?: string | null
           notes?: string | null
           paid_amount?: number
           payment_method?: string | null
@@ -366,6 +377,7 @@ export type Database = {
         }
         Update: {
           branch?: string | null
+          cogs_journal_entry_id?: string | null
           created_at?: string
           created_by?: string | null
           credited_amount?: number
@@ -374,6 +386,7 @@ export type Database = {
           id?: string
           invoice_date?: string
           invoice_no?: string
+          journal_entry_id?: string | null
           notes?: string | null
           paid_amount?: number
           payment_method?: string | null
@@ -647,6 +660,20 @@ export type Database = {
             foreignKeyName: "sales_order_lines_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
+            referencedRelation: "v_gov_sold_vehicles_without_cogs"
+            referencedColumns: ["vehicle_id"]
+          },
+          {
+            foreignKeyName: "sales_order_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_vehicles_missing_cost"
+            referencedColumns: ["vehicle_id"]
+          },
+          {
+            foreignKeyName: "sales_order_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
             referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
@@ -785,7 +812,81 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_gov_invoices_missing_cogs: {
+        Row: {
+          id: string | null
+          invoice_date: string | null
+          invoice_no: string | null
+          status: Database["public"]["Enums"]["invoice_status"] | null
+          total: number | null
+        }
+        Insert: {
+          id?: string | null
+          invoice_date?: string | null
+          invoice_no?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"] | null
+          total?: number | null
+        }
+        Update: {
+          id?: string | null
+          invoice_date?: string | null
+          invoice_no?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"] | null
+          total?: number | null
+        }
+        Relationships: []
+      }
+      v_gov_sold_vehicles_without_cogs: {
+        Row: {
+          brand: string | null
+          cost_price: number | null
+          model: string | null
+          status: Database["public"]["Enums"]["vehicle_status"] | null
+          vehicle_id: string | null
+          vin: string | null
+        }
+        Insert: {
+          brand?: string | null
+          cost_price?: number | null
+          model?: string | null
+          status?: Database["public"]["Enums"]["vehicle_status"] | null
+          vehicle_id?: string | null
+          vin?: string | null
+        }
+        Update: {
+          brand?: string | null
+          cost_price?: number | null
+          model?: string | null
+          status?: Database["public"]["Enums"]["vehicle_status"] | null
+          vehicle_id?: string | null
+          vin?: string | null
+        }
+        Relationships: []
+      }
+      v_gov_vehicles_missing_cost: {
+        Row: {
+          brand: string | null
+          model: string | null
+          status: Database["public"]["Enums"]["vehicle_status"] | null
+          vehicle_id: string | null
+          vin: string | null
+        }
+        Insert: {
+          brand?: string | null
+          model?: string | null
+          status?: Database["public"]["Enums"]["vehicle_status"] | null
+          vehicle_id?: string | null
+          vin?: string | null
+        }
+        Update: {
+          brand?: string | null
+          model?: string | null
+          status?: Database["public"]["Enums"]["vehicle_status"] | null
+          vehicle_id?: string | null
+          vin?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_list_sessions: {
@@ -813,6 +914,7 @@ export type Database = {
       }
       is_manager_or_admin: { Args: { _user_id: string }; Returns: boolean }
       post_credit_note_journal: { Args: { p_cn_id: string }; Returns: string }
+      post_invoice_journal: { Args: { p_invoice_id: string }; Returns: string }
       post_payment_journal: { Args: { p_payment_id: string }; Returns: string }
       user_department: { Args: { _user_id: string }; Returns: string }
     }
