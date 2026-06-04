@@ -1105,6 +1105,8 @@ export interface AccountingServiceExt {
   cashFlow: (from?: string, to?: string) => Promise<CashFlowReport>;
   financialKpis: () => Promise<FinancialKpis>;
   reconcileCustomerLedger: () => Promise<ReconciliationRow[]>;
+  listPurchaseInvoices: (filters?: { status?: string; query?: string }) => Promise<PurchaseInvoiceRow[]>;
+  getPurchaseInvoice: (id: string) => Promise<PurchaseInvoiceDetail | null>;
 }
 
 export const accounting = accountingService as unknown as AccountingServiceExt;
