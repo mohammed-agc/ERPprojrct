@@ -14,11 +14,49 @@ const fmt = (n: number) =>
 
 /** GL impact rows for a sales credit note (mirror of sales invoice, reversed). */
 type GlRow = { account: string; debit: number; credit: number };
-const buildGlImpact = (subtotal: number, vat: number, total: number): GlRow[] => [
-  { account: "4100 — مرتجعات المبيعات", debit: Number(subtotal.toFixed(2)), credit: 0 },
-  { account: "2310 — ضريبة القيمة المضافة (مخرجات)", debit: Number(vat.toFixed(2)), credit: 0 },
-  { account: "1200 — الذمم المدينة (العملاء)", debit: 0, credit: Number(total.toFixed(2)) },
-];
+
+const ACC_RETURNS = "4100 — مرتجعات المبيعات";
+const ACC_VAT = "2310 — ضريبة القيمة المضافة (مخرجات)";
+const ACC_AR = "1200 — الذمم المدينة (العملاء)";
+
+/** Per-line GL contributions (used for the detailed pre-post journal preview). */
+type GlLineRow = {
+  line_no: number;
+  description: string;
+  subtotal: number;
+  vat: number;
+  total: number;
+};
+
+const buildGlLineRows = (
+  lines: Array<{ description: string; quantity: number; unit_price: number; vat_pct: number; _selected?: boolean }>
+): GlLineRow[] =>
+  lines
+    .filter(l => l._selected !== false && l.quantity > 0 && l.unit_price > 0)
+    .map((l, i) => {
+      const subtotal = Number((l.quantity * l.unit_price).toFixed(2));
+      const vat = Number((subtotal * (l.vat_pct / 100)).toFixed(2));
+      return {
+        line_no: i + 1,
+        description: l.description || `بند ${i + 1}`,
+        subtotal,
+        vat,
+        total: Number((subtotal + vat).toFixed(2)),
+      };
+    });
+
+/** Aggregate per-line contributions into per-account debit/credit totals. */
+const aggregateGl = (rows: GlLineRow[]): GlRow[] => {
+  const subtotal = rows.reduce((s, r) => s + r.subtotal, 0);
+  const vat = rows.reduce((s, r) => s + r.vat, 0);
+  const total = rows.reduce((s, r) => s + r.total, 0);
+  return [
+    { account: ACC_RETURNS, debit: Number(subtotal.toFixed(2)), credit: 0 },
+    { account: ACC_VAT, debit: Number(vat.toFixed(2)), credit: 0 },
+    { account: ACC_AR, debit: 0, credit: Number(total.toFixed(2)) },
+  ];
+};
+
 
 
 interface CnLine {
@@ -182,7 +220,8 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
     }
   };
 
-  const glRows = useMemo(() => buildGlImpact(totals.subtotal, totals.vat, totals.total), [totals]);
+  const glLineRows = useMemo(() => buildGlLineRows(lines), [lines]);
+  const glRows = useMemo(() => aggregateGl(glLineRows), [glLineRows]);
   const glDebit = glRows.reduce((s, r) => s + r.debit, 0);
   const glCredit = glRows.reduce((s, r) => s + r.credit, 0);
   const glBalanced = Math.abs(glDebit - glCredit) < 0.01;
@@ -323,8 +362,46 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
           </div>
 
           <div className="bg-card border border-border rounded-lg overflow-hidden mb-3">
+            <div className="px-3 py-2 border-b border-border text-sm font-semibold">
+              تفاصيل القيد لكل بند
+            </div>
+            <table className="erp-table text-xs">
+              <thead>
+                <tr>
+                  <th style={{ width: 32 }}>#</th>
+                  <th>البند</th>
+                  <th>الحساب</th>
+                  <th className="text-left">مدين</th>
+                  <th className="text-left">دائن</th>
+                </tr>
+              </thead>
+              <tbody>
+                {glLineRows.flatMap(r => [
+                  <tr key={`r-${r.line_no}`}>
+                    <td rowSpan={3} className="align-top">{r.line_no}</td>
+                    <td rowSpan={3} className="align-top">{r.description}</td>
+                    <td>{ACC_RETURNS}</td>
+                    <td className="num text-left">{fmt(r.subtotal)}</td>
+                    <td className="num text-left">—</td>
+                  </tr>,
+                  <tr key={`v-${r.line_no}`}>
+                    <td>{ACC_VAT}</td>
+                    <td className="num text-left">{fmt(r.vat)}</td>
+                    <td className="num text-left">—</td>
+                  </tr>,
+                  <tr key={`a-${r.line_no}`} className="border-b-2 border-border">
+                    <td>{ACC_AR}</td>
+                    <td className="num text-left">—</td>
+                    <td className="num text-left">{fmt(r.total)}</td>
+                  </tr>,
+                ])}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="bg-card border border-border rounded-lg overflow-hidden mb-3">
             <div className="px-3 py-2 border-b border-border text-sm font-semibold flex items-center justify-between">
-              <span>قيد اليومية المتوقع</span>
+              <span>القيد المُجمَّع حسب الحساب</span>
               <span className={`text-xs ${glBalanced ? "text-success" : "text-destructive"}`}>
                 {glBalanced ? "متوازن" : "غير متوازن"}
               </span>
@@ -351,6 +428,7 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
               </tfoot>
             </table>
           </div>
+
 
           <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3 mb-2 leading-6">
             <div>• سيُنشر إشعار دائن بإجمالي <b className="num">{fmt(totals.total)}</b> مقابل الفاتورة {invoice.invoice_no}.</div>
