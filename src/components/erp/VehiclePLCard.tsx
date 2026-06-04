@@ -32,7 +32,7 @@ interface PL {
 
 const daysBetween = (a: string, b: string) => Math.max(0, Math.floor((+new Date(b) - +new Date(a)) / 86400000));
 
-export function VehiclePLCard({ vehicleId, status, acquiredAt }: Props) {
+export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) {
   const [pl, setPl] = useState<PL | null>(null);
   const [loading, setLoading] = useState(true);
 
