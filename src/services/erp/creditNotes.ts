@@ -13,6 +13,8 @@ import { salesVehicleStatus } from "@/services/erp/salesVehicleStatus";
  *      goods-return workflow and are NOT silently re-entered into stock).
  */
 
+export type CnType = "cancellation" | "return" | "price_adjustment" | "discount";
+
 type CnLineInput = {
   description: string;
   quantity: number;
@@ -47,7 +49,12 @@ export const creditNotesService = {
    * Issue a credit note that fully reverses the remaining exposure of an invoice.
    * Returns the created credit note id, or null if invoice is already fully credited.
    */
-  async issueFullReversal(invoiceId: string, reason = "invoice_cancellation", notes?: string) {
+  async issueFullReversal(
+    invoiceId: string,
+    reason = "invoice_cancellation",
+    notes?: string,
+    cnType: CnType = "cancellation",
+  ) {
     const { data: inv, error: invErr } = await supabase
       .from("invoices")
       .select("id, customer_id, total, vat_amount, subtotal, credited_amount, status, invoice_no, sales_order_id")
