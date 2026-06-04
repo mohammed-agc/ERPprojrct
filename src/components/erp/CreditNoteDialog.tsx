@@ -531,8 +531,24 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
             </table>
           </div>
 
-          <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3 mb-2">
+          <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3 mb-2 space-y-1">
             <div>الفاتورة بعد النشر — رصيد العكس: <b className="num">{fmt(verify.invoiceCreditedAfter)}</b> · الحالة: <b>{verify.invoiceStatusAfter}</b></div>
+            <div>
+              قيد محاسبي:{" "}
+              {verify.journalEntryId ? (
+                <span className="font-mono text-foreground">JE {verify.journalEntryId.slice(0, 8)}…</span>
+              ) : (
+                <span className="text-destructive">لم يُنشأ</span>
+              )}
+              {" · "}
+              مركبات أُعيدت للمخزون: <b className="text-foreground">{verify.inventoryReleased}</b>
+            </div>
+            {verify.blockedDelivered.length > 0 && (
+              <div className="text-amber-600 dark:text-amber-400">
+                ⚠ مركبات مُسلَّمة لم تُعَد للمخزون تلقائياً (يلزم بدء سير عمل إرجاع بضاعة):{" "}
+                <span className="font-mono">{verify.blockedDelivered.join("، ")}</span>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
