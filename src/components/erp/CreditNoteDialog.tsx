@@ -93,6 +93,7 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
   const [lines, setLines] = useState<CnLine[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState<"edit" | "preview" | "verified">("edit");
+  const [previewView, setPreviewView] = useState<"detail" | "aggregate">("aggregate");
   const [verify, setVerify] = useState<{
     cnId: string;
     expected: { subtotal: number; vat: number; total: number };
