@@ -1,14 +1,47 @@
 import { supabase } from "@/integrations/supabase/client";
+import { salesVehicleStatus } from "@/services/erp/salesVehicleStatus";
 
 /**
  * Credit Notes service — formal reversal documents for posted sales invoices.
  *
- * Cancelling a draft invoice is destructive (status flip). Cancelling a
- * posted/partially_paid/paid invoice must NEVER simply flip status, since
- * the GL has already been impacted. Instead we issue a credit note for the
- * net outstanding (total - already credited) and let the DB trigger update
- * `invoices.credited_amount` and set status to `cancelled` once fully credited.
+ * On post, in addition to inserting the CN header + lines, the service:
+ *   1. Calls the `post_credit_note_journal` RPC to create an authoritative
+ *      journal entry (debit returns/output VAT, credit AR) so customer
+ *      balances are sourced from the GL rather than derived.
+ *   2. Calls `salesVehicleStatus.releaseForCreditNote` to revert reserved/sold
+ *      vehicles back to `available` (delivered units require a separate
+ *      goods-return workflow and are NOT silently re-entered into stock).
  */
+
+type CnLineInput = {
+  description: string;
+  quantity: number;
+  unit_price: number;
+  vat_pct: number;
+  vehicle_id?: string | null;
+};
+
+async function finalizeCreditNote(cnId: string) {
+  let journalEntryId: string | null = null;
+  try {
+    const { data, error } = await supabase.rpc("post_credit_note_journal" as any, { p_cn_id: cnId });
+    if (error) throw error;
+    journalEntryId = (data as string) ?? null;
+  } catch (e) {
+    // Re-throw so the caller can surface the failure; CN exists but JE failed
+    throw new Error(
+      `تم إنشاء الإشعار الدائن لكنّ ترحيل القيد فشل: ${(e as any)?.message ?? e}`,
+    );
+  }
+
+  const inventory = await salesVehicleStatus.releaseForCreditNote(cnId).catch(() => ({
+    released: [] as string[],
+    blockedDelivered: [] as string[],
+  }));
+
+  return { journalEntryId, inventory };
+}
+
 export const creditNotesService = {
   /**
    * Issue a credit note that fully reverses the remaining exposure of an invoice.
@@ -17,7 +50,7 @@ export const creditNotesService = {
   async issueFullReversal(invoiceId: string, reason = "invoice_cancellation", notes?: string) {
     const { data: inv, error: invErr } = await supabase
       .from("invoices")
-      .select("id, customer_id, total, vat_amount, subtotal, credited_amount, status, invoice_no")
+      .select("id, customer_id, total, vat_amount, subtotal, credited_amount, status, invoice_no, sales_order_id")
       .eq("id", invoiceId)
       .single();
     if (invErr) throw invErr;
@@ -53,29 +86,56 @@ export const creditNotesService = {
       .single();
     if (error) throw error;
 
-    await supabase.from("credit_note_lines").insert({
-      credit_note_id: cn.id,
-      line_no: 1,
-      description: `عكس قيمة الفاتورة ${inv.invoice_no}`,
-      quantity: 1,
-      unit_price: cnSubtotal,
-      vat_pct: 15,
-      line_total: remaining,
-    });
+    // Pull vehicle ids from the originating SO so each credited "line" can carry one.
+    let soVehicles: Array<{ vehicle_id: string | null }> = [];
+    if (inv.sales_order_id) {
+      const { data } = await supabase
+        .from("sales_order_lines")
+        .select("vehicle_id, line_no")
+        .eq("order_id", inv.sales_order_id)
+        .order("line_no");
+      soVehicles = data ?? [];
+    }
 
+    if (soVehicles.length > 0) {
+      await supabase.from("credit_note_lines").insert(
+        soVehicles.map((sv, i) => ({
+          credit_note_id: cn.id,
+          line_no: i + 1,
+          description: `عكس قيمة الفاتورة ${inv.invoice_no} — مركبة`,
+          quantity: 1,
+          unit_price: Number((cnSubtotal / soVehicles.length).toFixed(2)),
+          vat_pct: 15,
+          line_total: Number((remaining / soVehicles.length).toFixed(2)),
+          vehicle_id: sv.vehicle_id,
+        })),
+      );
+    } else {
+      await supabase.from("credit_note_lines").insert({
+        credit_note_id: cn.id,
+        line_no: 1,
+        description: `عكس قيمة الفاتورة ${inv.invoice_no}`,
+        quantity: 1,
+        unit_price: cnSubtotal,
+        vat_pct: 15,
+        line_total: remaining,
+      });
+    }
+
+    await finalizeCreditNote(cn.id);
     return cn.id as string;
   },
 
   /**
    * Create a credit note from caller-provided lines (custom reason / partial / line-level CN).
-   * Lines are { description, quantity, unit_price, vat_pct }. Totals are computed here.
+   * Lines accept an optional `vehicle_id` for inventory release.
    */
   async issueFromLines(args: {
     invoiceId: string;
     customerId: string;
     reason: string;
     notes?: string;
-    lines: Array<{ description: string; quantity: number; unit_price: number; vat_pct: number }>;
+    lines: CnLineInput[];
   }) {
     const subtotal = args.lines.reduce((s, l) => s + l.quantity * l.unit_price, 0);
     const vat = args.lines.reduce(
@@ -114,9 +174,16 @@ export const creditNotesService = {
         unit_price: l.unit_price,
         vat_pct: l.vat_pct,
         line_total: Number((l.quantity * l.unit_price * (1 + l.vat_pct / 100)).toFixed(2)),
+        vehicle_id: l.vehicle_id ?? null,
       })),
     );
-    return cn.id as string;
+
+    const finalize = await finalizeCreditNote(cn.id);
+    return {
+      cnId: cn.id as string,
+      journalEntryId: finalize.journalEntryId,
+      inventory: finalize.inventory,
+    };
   },
 
   async listForInvoice(invoiceId: string) {
@@ -129,4 +196,3 @@ export const creditNotesService = {
     return data ?? [];
   },
 };
-
