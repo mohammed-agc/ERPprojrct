@@ -241,6 +241,7 @@ const App = () => (
               <Route path="/costing/dimensions" element={<FinancialDimensions />} />
               <Route path="/costing/departments" element={<DepartmentProfitability />} />
               <Route path="/costing/branches" element={<BranchProfitability />} />
+              <Route path="/costing/vehicles" element={<VehicleProfitability />} />
               <Route path="/costing/allocation" element={<CostAllocation />} />
               <Route path="/governance" element={<GovernanceDashboard />} />
               <Route path="/governance/periods" element={<FinancialPeriods />} />
