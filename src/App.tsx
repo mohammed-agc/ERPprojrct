@@ -92,6 +92,7 @@ const SalesFinancing = lazy(() => import("./pages/sales/Financing"));
 const SalesAnalytics = lazy(() => import("./pages/sales/SalesAnalytics"));
 const CustomerTimeline = lazy(() => import("./pages/sales/CustomerTimeline"));
 const CustomerCredit = lazy(() => import("./pages/sales/CustomerCredit"));
+const CustomerPayments = lazy(() => import("./pages/sales/CustomerPayments"));
 const InventoryDashboard = lazy(() => import("./pages/inventory/InventoryDashboard"));
 const InventoryWarehouses = lazy(() => import("./pages/inventory/Warehouses"));
 const InventoryVehicles = lazy(() => import("./pages/inventory/VehicleInventory"));
