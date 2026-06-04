@@ -313,6 +313,9 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
                     </td>
                     <td>
                       <Input className="h-7" value={l.description} onChange={e => update(i, { description: e.target.value })} />
+                      {l.vehicle_label && (
+                        <div className="text-[10px] text-primary mt-0.5">🚗 VIN: <span className="font-mono">{l.vehicle_label}</span></div>
+                      )}
                       {err && <div className="text-[10px] text-destructive mt-0.5">{err}</div>}
                     </td>
                     <td>
