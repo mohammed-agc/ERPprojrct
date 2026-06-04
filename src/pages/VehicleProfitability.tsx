@@ -332,18 +332,20 @@ export default function VehicleProfitability() {
               <th className="text-right p-2">المركبة</th>
               <th className="text-right p-2">VIN</th>
               <th className="text-right p-2">الحالة</th>
+              <th className="text-right p-2">أيام في المخزون</th>
               <th className="text-left p-2">صافي الإيراد</th>
               <th className="text-left p-2">التكلفة الكلية</th>
               <th className="text-left p-2">صافي الربح</th>
               <th className="text-right p-2 w-32">الهامش</th>
+              <th className="text-right p-2">الحوكمة</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="text-center text-muted-foreground py-8">جارٍ التحميل…</td></tr>
-            ) : !rows.length ? (
-              <EmptyState inTable colSpan={7} icon={<Car className="h-7 w-7" />} title="لا توجد بيانات" description="لا توجد مركبات تطابق الفلاتر المختارة." />
-            ) : rows.map(r => (
+              <tr><td colSpan={9} className="text-center text-muted-foreground py-8">جارٍ التحميل…</td></tr>
+            ) : !sortedRows.length ? (
+              <EmptyState inTable colSpan={9} icon={<Car className="h-7 w-7" />} title="لا توجد بيانات" description="لا توجد مركبات تطابق الفلاتر المختارة." />
+            ) : sortedRows.map(r => (
               <tr key={r.id} className="border-t hover:bg-muted/30">
                 <td className="p-2">
                   <div className="font-medium">{r.brand} {r.model} {r.year}</div>
@@ -354,6 +356,10 @@ export default function VehicleProfitability() {
                   <Badge variant={r.status === "sold" ? "default" : "secondary"} className="text-[10px]">
                     {r.status === "sold" ? "مباعة" : r.status === "available" ? "متوفّرة" : r.status}
                   </Badge>
+                </td>
+                <td className="p-2 text-right tabular-nums text-xs">
+                  {r.days_in_stock !== null ? `${r.days_in_stock} يوم` : "—"}
+                  {r.sold_at && <div className="text-[10px] text-muted-foreground">بيع: {r.sold_at}</div>}
                 </td>
                 <td className="p-2 text-left tabular-nums">
                   {fmtSAR(r.net_revenue)}
@@ -373,6 +379,17 @@ export default function VehicleProfitability() {
                       ? <TrendingUp className="h-3 w-3 text-success" />
                       : <TrendingDown className="h-3 w-3 text-destructive" />}
                   </div>
+                </td>
+                <td className="p-2">
+                  {r.flags.length === 0 ? (
+                    <Badge variant="outline" className="text-[10px] border-success/40 text-success">سليم</Badge>
+                  ) : (
+                    <div className="flex flex-wrap gap-1 justify-end max-w-[180px]">
+                      {r.flags.map((f, i) => (
+                        <Badge key={i} variant="outline" className="text-[10px] border-destructive/40 text-destructive bg-destructive/5">{f}</Badge>
+                      ))}
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
