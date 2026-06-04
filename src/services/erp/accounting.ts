@@ -1044,11 +1044,12 @@ Object.assign(accountingService, {
 
   async financialKpis(): Promise<FinancialKpis> {
     const accounts: AccountRow[] = await (accountingService as any).listAccounts();
-    const [balAll, balYtd, balMtd, recv] = await Promise.all([
+    const [balAll, balYtd, balMtd, recv, pay] = await Promise.all([
       (accountingService as any).accountBalances(),
       (accountingService as any).accountBalances(startOfYear(), todayStr()),
       (accountingService as any).accountBalances(startOfMonth(), todayStr()),
       (accountingService as any).listReceivables() as Promise<ARCustomerBalance[]>,
+      (accountingService as any).listPayables() as Promise<APVendorBalance[]>,
     ]);
     const sumByMatch = (m: Map<string, { debit: number; credit: number }>, pred: (a: AccountRow) => boolean) => {
       let s = 0;
@@ -1070,7 +1071,7 @@ Object.assign(accountingService, {
     return {
       cash, bank, liquidity: cash + bank,
       receivables: (recv as ARCustomerBalance[]).reduce((s, r) => s + r.remaining_balance, 0),
-      payables: 0,
+      payables: (pay as APVendorBalance[]).reduce((s, r) => s + r.remaining_balance, 0),
       vat_payable: sumByMatch(balAll, isVat),
       revenue_ytd: revYtd, expense_ytd: expYtd, net_income_ytd: revYtd - expYtd,
       revenue_mtd: revMtd, expense_mtd: expMtd, net_income_mtd: revMtd - expMtd,
