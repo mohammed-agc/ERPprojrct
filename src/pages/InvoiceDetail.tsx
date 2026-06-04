@@ -25,6 +25,7 @@ export default function InvoiceDetail() {
   const [lines, setLines] = useState<any[]>([]);
   const [creditNotes, setCreditNotes] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
+  const [vehicleByLineNo, setVehicleByLineNo] = useState<Record<number, { id: string; label: string }>>({});
   const [dlgOpen, setDlgOpen] = useState(false);
 
   const load = async () => {
@@ -39,6 +40,23 @@ export default function InvoiceDetail() {
     setLines(lns ?? []);
     setCreditNotes(cns ?? []);
     setPayments(pmts ?? []);
+
+    // Pull vehicle linkage from the originating SO so credit notes can release inventory.
+    if (head?.sales_order_id) {
+      const { data: soLines } = await supabase
+        .from("sales_order_lines")
+        .select("line_no, vehicle_id, vehicles(vin, code)")
+        .eq("order_id", head.sales_order_id);
+      const map: Record<number, { id: string; label: string }> = {};
+      (soLines ?? []).forEach((r: any) => {
+        if (r.vehicle_id) {
+          map[r.line_no] = { id: r.vehicle_id, label: r.vehicles?.vin || r.vehicles?.code || r.vehicle_id.slice(0, 6) };
+        }
+      });
+      setVehicleByLineNo(map);
+    } else {
+      setVehicleByLineNo({});
+    }
   };
   useEffect(() => { load(); }, [id]);
 
