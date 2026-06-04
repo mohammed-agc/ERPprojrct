@@ -520,17 +520,298 @@ export interface VendorStatementLine {
   source_id: string;
 }
 
+export interface PurchaseInvoiceRow {
+  id: string;
+  invoice_no: string;
+  supplier_id: string;
+  supplier_code?: string;
+  supplier_name?: string;
+  supplier_invoice_ref: string | null;
+  invoice_date: string;
+  due_date: string | null;
+  status: string;
+  subtotal: number;
+  vat_amount: number;
+  total: number;
+  paid_amount: number;
+  remaining: number;
+  journal_entry_id: string | null;
+  notes: string | null;
+  posted_at: string | null;
+  created_at: string;
+}
+
+export interface PurchaseInvoiceLineRow {
+  id: string;
+  invoice_id: string;
+  line_no: number;
+  description: string;
+  vehicle_id: string | null;
+  vehicle_vin?: string | null;
+  vehicle_code?: string | null;
+  quantity: number;
+  unit_cost: number;
+  vat_pct: number;
+  line_total: number;
+}
+
+export interface SupplierPaymentRow {
+  id: string;
+  payment_no: string;
+  supplier_id: string;
+  purchase_invoice_id: string | null;
+  payment_date: string;
+  amount: number;
+  method: string;
+  reference: string | null;
+  notes: string | null;
+  status: string;
+  journal_entry_id: string | null;
+  created_at: string;
+}
+
+export interface PurchaseInvoiceDetail extends PurchaseInvoiceRow {
+  lines: PurchaseInvoiceLineRow[];
+  payments: SupplierPaymentRow[];
+}
+
+const DEFAULT_AP_NET_DAYS = 30;
+
 Object.assign(accountingService, {
-  async listPayables(_asOf?: string): Promise<APVendorBalance[]> {
-    // Backend vendor module not yet available — return empty list.
-    return [];
+  async listPayables(asOf?: string): Promise<APVendorBalance[]> {
+    const today = asOf ? new Date(asOf) : new Date();
+    const [{ data: suppliers, error: se }, { data: invoices, error: ie }, { data: payments, error: pe }] =
+      await Promise.all([
+        supabase.from("suppliers").select("id, code, name"),
+        supabase
+          .from("purchase_invoices")
+          .select("id, supplier_id, invoice_date, due_date, total, paid_amount, status")
+          .neq("status", "cancelled"),
+        supabase
+          .from("supplier_payments")
+          .select("supplier_id, amount, status"),
+      ]);
+    if (se) throw se;
+    if (ie) throw ie;
+    if (pe) throw pe;
+
+    const byVendor = new Map<string, APVendorBalance>();
+    for (const s of (suppliers ?? []) as any[]) {
+      byVendor.set(s.id, {
+        vendor_id: s.id,
+        vendor_code: s.code,
+        vendor_name: s.name,
+        bill_count: 0,
+        total_payable: 0,
+        paid_amount: 0,
+        remaining_balance: 0,
+        overdue_amount: 0,
+        aging: emptyAging(),
+      });
+    }
+
+    for (const inv of (invoices ?? []) as any[]) {
+      const row = byVendor.get(inv.supplier_id);
+      if (!row) continue;
+      const total = Number(inv.total || 0);
+      const paid = Number(inv.paid_amount || 0);
+      const remaining = Math.max(0, total - paid);
+      row.bill_count += 1;
+      row.total_payable += total;
+      row.paid_amount += paid;
+      row.remaining_balance += remaining;
+      if (remaining > 0) {
+        const due = inv.due_date
+          ? new Date(inv.due_date)
+          : (() => { const d = new Date(inv.invoice_date); d.setDate(d.getDate() + DEFAULT_AP_NET_DAYS); return d; })();
+        const overdueDays = daysBetween(today, due);
+        bucketize(row.aging, remaining, overdueDays);
+        if (overdueDays > 0) row.overdue_amount += remaining;
+      }
+    }
+
+    return Array.from(byVendor.values())
+      .filter(r => r.bill_count > 0)
+      .sort((a, b) => b.remaining_balance - a.remaining_balance);
   },
-  async vendorStatement(_vendorId: string, _from?: string, _to?: string): Promise<{
+
+  async vendorStatement(vendorId: string, from?: string, to?: string): Promise<{
     vendor: { id: string; code: string; name: string } | null;
     lines: VendorStatementLine[];
     totals: { debit: number; credit: number; balance: number };
   }> {
-    return { vendor: null, lines: [], totals: { debit: 0, credit: 0, balance: 0 } };
+    const { data: vendor } = await supabase
+      .from("suppliers")
+      .select("id, code, name")
+      .eq("id", vendorId)
+      .maybeSingle();
+
+    const [{ data: invoices }, { data: payments }] = await Promise.all([
+      supabase
+        .from("purchase_invoices")
+        .select("id, invoice_no, invoice_date, total, status, notes")
+        .eq("supplier_id", vendorId)
+        .neq("status", "cancelled"),
+      supabase
+        .from("supplier_payments")
+        .select("id, payment_no, payment_date, amount, status, notes, reference")
+        .eq("supplier_id", vendorId)
+        .neq("status", "cancelled"),
+    ]);
+
+    const events: Omit<VendorStatementLine, "running_balance">[] = [];
+    for (const inv of (invoices ?? []) as any[]) {
+      events.push({
+        date: inv.invoice_date,
+        type: "bill",
+        reference: inv.invoice_no,
+        description: inv.notes || "فاتورة شراء",
+        debit: 0,
+        credit: Number(inv.total || 0),
+        source_id: inv.id,
+      });
+    }
+    for (const p of (payments ?? []) as any[]) {
+      events.push({
+        date: p.payment_date,
+        type: "payment",
+        reference: p.payment_no,
+        description: p.notes || p.reference || "دفعة لمورد",
+        debit: Number(p.amount || 0),
+        credit: 0,
+        source_id: p.id,
+      });
+    }
+
+    const filtered = events
+      .filter(e => (!from || e.date >= from) && (!to || e.date <= to))
+      .sort((a, b) => a.date.localeCompare(b.date) || (a.type === "bill" ? -1 : 1));
+
+    let bal = 0;
+    const lines: VendorStatementLine[] = filtered.map(e => {
+      bal += e.credit - e.debit;
+      return { ...e, running_balance: bal };
+    });
+    const totals = lines.reduce(
+      (a, l) => ({ debit: a.debit + l.debit, credit: a.credit + l.credit, balance: bal }),
+      { debit: 0, credit: 0, balance: 0 }
+    );
+
+    return { vendor: (vendor as any) ?? null, lines, totals };
+  },
+
+  async listPurchaseInvoices(filters?: { status?: string; query?: string }): Promise<PurchaseInvoiceRow[]> {
+    const { data, error } = await supabase
+      .from("purchase_invoices")
+      .select("*, suppliers(code, name)")
+      .order("invoice_date", { ascending: false })
+      .order("invoice_no", { ascending: false });
+    if (error) throw error;
+    let rows = (data ?? []).map((r: any) => ({
+      id: r.id,
+      invoice_no: r.invoice_no,
+      supplier_id: r.supplier_id,
+      supplier_code: r.suppliers?.code,
+      supplier_name: r.suppliers?.name,
+      supplier_invoice_ref: r.supplier_invoice_ref,
+      invoice_date: r.invoice_date,
+      due_date: r.due_date,
+      status: r.status,
+      subtotal: Number(r.subtotal || 0),
+      vat_amount: Number(r.vat_amount || 0),
+      total: Number(r.total || 0),
+      paid_amount: Number(r.paid_amount || 0),
+      remaining: Number(r.total || 0) - Number(r.paid_amount || 0),
+      journal_entry_id: r.journal_entry_id,
+      notes: r.notes,
+      posted_at: r.posted_at,
+      created_at: r.created_at,
+    }) as PurchaseInvoiceRow);
+    if (filters?.status && filters.status !== "all") {
+      rows = rows.filter(r => r.status === filters.status);
+    }
+    if (filters?.query?.trim()) {
+      const t = filters.query.trim().toLowerCase();
+      rows = rows.filter(r =>
+        r.invoice_no.toLowerCase().includes(t) ||
+        (r.supplier_name ?? "").toLowerCase().includes(t) ||
+        (r.supplier_code ?? "").toLowerCase().includes(t) ||
+        (r.supplier_invoice_ref ?? "").toLowerCase().includes(t)
+      );
+    }
+    return rows;
+  },
+
+  async getPurchaseInvoice(id: string): Promise<PurchaseInvoiceDetail | null> {
+    const { data, error } = await supabase
+      .from("purchase_invoices")
+      .select("*, suppliers(code, name)")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const [{ data: lines }, { data: payments }] = await Promise.all([
+      supabase
+        .from("purchase_invoice_lines")
+        .select("*, vehicles(vin, code)")
+        .eq("invoice_id", id)
+        .order("line_no", { ascending: true }),
+      supabase
+        .from("supplier_payments")
+        .select("*")
+        .eq("purchase_invoice_id", id)
+        .order("payment_date", { ascending: true }),
+    ]);
+    const r: any = data;
+    const total = Number(r.total || 0);
+    const paid = Number(r.paid_amount || 0);
+    return {
+      id: r.id,
+      invoice_no: r.invoice_no,
+      supplier_id: r.supplier_id,
+      supplier_code: r.suppliers?.code,
+      supplier_name: r.suppliers?.name,
+      supplier_invoice_ref: r.supplier_invoice_ref,
+      invoice_date: r.invoice_date,
+      due_date: r.due_date,
+      status: r.status,
+      subtotal: Number(r.subtotal || 0),
+      vat_amount: Number(r.vat_amount || 0),
+      total,
+      paid_amount: paid,
+      remaining: total - paid,
+      journal_entry_id: r.journal_entry_id,
+      notes: r.notes,
+      posted_at: r.posted_at,
+      created_at: r.created_at,
+      lines: (lines ?? []).map((l: any) => ({
+        id: l.id,
+        invoice_id: l.invoice_id,
+        line_no: l.line_no,
+        description: l.description,
+        vehicle_id: l.vehicle_id,
+        vehicle_vin: l.vehicles?.vin ?? null,
+        vehicle_code: l.vehicles?.code ?? null,
+        quantity: Number(l.quantity || 0),
+        unit_cost: Number(l.unit_cost || 0),
+        vat_pct: Number(l.vat_pct || 0),
+        line_total: Number(l.line_total || 0),
+      })) as PurchaseInvoiceLineRow[],
+      payments: (payments ?? []).map((p: any) => ({
+        id: p.id,
+        payment_no: p.payment_no,
+        supplier_id: p.supplier_id,
+        purchase_invoice_id: p.purchase_invoice_id,
+        payment_date: p.payment_date,
+        amount: Number(p.amount || 0),
+        method: p.method,
+        reference: p.reference,
+        notes: p.notes,
+        status: p.status,
+        journal_entry_id: p.journal_entry_id,
+        created_at: p.created_at,
+      })) as SupplierPaymentRow[],
+    };
   },
 });
 
@@ -763,11 +1044,12 @@ Object.assign(accountingService, {
 
   async financialKpis(): Promise<FinancialKpis> {
     const accounts: AccountRow[] = await (accountingService as any).listAccounts();
-    const [balAll, balYtd, balMtd, recv] = await Promise.all([
+    const [balAll, balYtd, balMtd, recv, pay] = await Promise.all([
       (accountingService as any).accountBalances(),
       (accountingService as any).accountBalances(startOfYear(), todayStr()),
       (accountingService as any).accountBalances(startOfMonth(), todayStr()),
       (accountingService as any).listReceivables() as Promise<ARCustomerBalance[]>,
+      (accountingService as any).listPayables() as Promise<APVendorBalance[]>,
     ]);
     const sumByMatch = (m: Map<string, { debit: number; credit: number }>, pred: (a: AccountRow) => boolean) => {
       let s = 0;
@@ -789,7 +1071,7 @@ Object.assign(accountingService, {
     return {
       cash, bank, liquidity: cash + bank,
       receivables: (recv as ARCustomerBalance[]).reduce((s, r) => s + r.remaining_balance, 0),
-      payables: 0,
+      payables: (pay as APVendorBalance[]).reduce((s, r) => s + r.remaining_balance, 0),
       vat_payable: sumByMatch(balAll, isVat),
       revenue_ytd: revYtd, expense_ytd: expYtd, net_income_ytd: revYtd - expYtd,
       revenue_mtd: revMtd, expense_mtd: expMtd, net_income_mtd: revMtd - expMtd,
@@ -823,6 +1105,8 @@ export interface AccountingServiceExt {
   cashFlow: (from?: string, to?: string) => Promise<CashFlowReport>;
   financialKpis: () => Promise<FinancialKpis>;
   reconcileCustomerLedger: () => Promise<ReconciliationRow[]>;
+  listPurchaseInvoices: (filters?: { status?: string; query?: string }) => Promise<PurchaseInvoiceRow[]>;
+  getPurchaseInvoice: (id: string) => Promise<PurchaseInvoiceDetail | null>;
 }
 
 export const accounting = accountingService as unknown as AccountingServiceExt;
