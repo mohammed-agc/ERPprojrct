@@ -87,12 +87,13 @@ const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 const firstOfYear = new Date(today.getFullYear(), 0, 1);
 
 const exportCsv = (rows: VehicleRow[]) => {
-  const header = ["الكود","VIN","الماركة","الموديل","السنة","الحالة","تاريخ الاستلام","تاريخ البيع","أيام في المخزون","الإيراد","خصم/إرجاع","صافي الإيراد","التكلفة الكلية","صافي الربح","هامش %","COGS","ملاحظات الحوكمة"];
+  const header = ["الكود","VIN","الماركة","الموديل","السنة","الحالة","تاريخ الاستلام","تاريخ البيع","أيام في المخزون","الإيراد","خصم/إرجاع","صافي الإيراد","التكلفة الكلية","تكلفة COGS","رقم قيد COGS","حالة COGS","صافي الربح","هامش %","ملاحظات الحوكمة"];
   const lines = rows.map(r => [
     r.code, r.vin ?? "", r.brand, r.model, r.year, r.status,
     r.acquired_at ?? "", r.sold_at ?? "", r.days_in_stock ?? "",
-    r.revenue, r.credited, r.net_revenue, r.landed_cost, r.profit, r.margin.toFixed(2),
-    r.cogs_posted ? "مرحّل" : "غير مرحّل",
+    r.revenue, r.credited, r.net_revenue, r.landed_cost,
+    r.cogs_amount, r.cogs_je_no ?? "", COGS_STATUS_LABEL[r.cogs_status],
+    r.profit, r.margin.toFixed(2),
     r.flags.join(" | "),
   ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(","));
   const blob = new Blob(["\ufeff" + [header.join(","), ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
