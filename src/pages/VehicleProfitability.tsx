@@ -38,7 +38,22 @@ interface VehicleRow {
   landed_cost: number;
   profit: number;
   margin: number;
+  acquired_at: string | null;
+  sold_at: string | null;
+  days_in_stock: number | null;
+  cogs_posted: boolean;
+  flags: string[];
 }
+
+type SortKey = "profit_desc" | "profit_asc" | "margin_desc" | "margin_asc" | "stock_desc";
+
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: "profit_desc", label: "أعلى ربح" },
+  { value: "profit_asc",  label: "أقل ربح" },
+  { value: "margin_desc", label: "أعلى هامش %" },
+  { value: "margin_asc",  label: "أقل هامش %" },
+  { value: "stock_desc",  label: "أطول مدة في المخزون" },
+];
 
 const DEPT_OPTIONS: { value: DeptCode | "all"; label: string }[] = [
   { value: "all", label: "كل الأقسام" },
