@@ -66,6 +66,11 @@ export default function AccountsReceivable() {
         sticky
         actions={
           <>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/ar/reconciliation">
+                <FileText className="h-3.5 w-3.5 ml-1" /> مطابقة الذمم
+              </Link>
+            </Button>
             <Button variant="outline" size="sm" onClick={() => exportCsv(filtered)}>
               <Download className="h-3.5 w-3.5 ml-1" /> تصدير CSV
             </Button>

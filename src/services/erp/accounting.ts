@@ -367,7 +367,129 @@ Object.assign(accountingService, {
 
     return { customer: cust ?? null, lines, totals };
   },
+
+  /**
+   * Reconcile derived customer balances vs the authoritative GL ledger after
+   * credit-note posting. Returns one row per customer with:
+   *   - derived_remaining: sum(invoices.total - paid_amount - credited_amount)
+   *   - cn_posted_total:   sum of posted credit notes (status='posted')
+   *   - cn_with_je:        portion already mirrored in GL (journal_entry_id set)
+   *   - ar_ledger_credit:  authoritative credits posted to AR account 1200
+   *                        from credit-note journal entries for this customer
+   *   - mismatch:          cn_posted_total - ar_ledger_credit (≠ 0 → broken link)
+   *   - notes[]:           per-CN trace { credit_note_no, total, journal_entry_id, ar_credit, ok }
+   */
+  async reconcileCustomerLedger(): Promise<ReconciliationRow[]> {
+    const [{ data: customers }, { data: invoices }, { data: cns }, { data: arAcc }] =
+      await Promise.all([
+        supabase.from("customers").select("id, code, name"),
+        supabase.from("invoices").select("id, customer_id, total, paid_amount, credited_amount, status"),
+        supabase
+          .from("credit_notes")
+          .select("id, credit_note_no, customer_id, total, status, journal_entry_id"),
+        supabase.from("accounts").select("id").eq("code", "1200").maybeSingle(),
+      ]);
+
+    const cnJeIds = ((cns ?? []) as any[]).map(c => c.journal_entry_id).filter(Boolean) as string[];
+    const arById = new Map<string, number>();
+    if ((arAcc as any)?.id && cnJeIds.length) {
+      const { data: lines } = await supabase
+        .from("journal_entry_lines")
+        .select("entry_id, credit")
+        .eq("account_id", (arAcc as any).id)
+        .in("entry_id", cnJeIds);
+      for (const l of (lines ?? []) as any[]) {
+        arById.set(l.entry_id, (arById.get(l.entry_id) ?? 0) + Number(l.credit || 0));
+      }
+    }
+
+    const rows = new Map<string, ReconciliationRow>();
+    for (const c of (customers ?? []) as any[]) {
+      rows.set(c.id, {
+        customer_id: c.id,
+        customer_code: c.code,
+        customer_name: c.name,
+        derived_remaining: 0,
+        cn_posted_total: 0,
+        cn_with_je: 0,
+        ar_ledger_credit: 0,
+        mismatch: 0,
+        notes: [],
+      });
+    }
+
+    for (const inv of (invoices ?? []) as any[]) {
+      if (inv.status === "cancelled") continue;
+      const r = rows.get(inv.customer_id);
+      if (!r) continue;
+      r.derived_remaining +=
+        Number(inv.total || 0) - Number(inv.paid_amount || 0) - Number(inv.credited_amount || 0);
+    }
+
+    for (const cn of (cns ?? []) as any[]) {
+      if (cn.status !== "posted") continue;
+      const r = rows.get(cn.customer_id);
+      if (!r) continue;
+      const total = Number(cn.total || 0);
+      r.cn_posted_total += total;
+      if (cn.journal_entry_id) {
+        r.cn_with_je += total;
+        const arCredit = arById.get(cn.journal_entry_id) ?? 0;
+        r.ar_ledger_credit += arCredit;
+        r.notes.push({
+          credit_note_id: cn.id,
+          credit_note_no: cn.credit_note_no,
+          total,
+          journal_entry_id: cn.journal_entry_id,
+          ar_credit: arCredit,
+          ok: Math.abs(arCredit - total) < 0.01,
+        });
+      } else {
+        r.notes.push({
+          credit_note_id: cn.id,
+          credit_note_no: cn.credit_note_no,
+          total,
+          journal_entry_id: null,
+          ar_credit: 0,
+          ok: false,
+        });
+      }
+    }
+
+    for (const r of rows.values()) {
+      r.mismatch = Number((r.cn_posted_total - r.ar_ledger_credit).toFixed(2));
+      r.derived_remaining = Number(r.derived_remaining.toFixed(2));
+      r.cn_posted_total = Number(r.cn_posted_total.toFixed(2));
+      r.cn_with_je = Number(r.cn_with_je.toFixed(2));
+      r.ar_ledger_credit = Number(r.ar_ledger_credit.toFixed(2));
+    }
+
+    return Array.from(rows.values())
+      .filter(r => r.cn_posted_total > 0 || Math.abs(r.derived_remaining) > 0.01)
+      .sort((a, b) => Math.abs(b.mismatch) - Math.abs(a.mismatch));
+  },
 });
+
+export interface ReconciliationNote {
+  credit_note_id: string;
+  credit_note_no: string;
+  total: number;
+  journal_entry_id: string | null;
+  ar_credit: number;
+  ok: boolean;
+}
+
+export interface ReconciliationRow {
+  customer_id: string;
+  customer_code: string;
+  customer_name: string;
+  derived_remaining: number;
+  cn_posted_total: number;
+  cn_with_je: number;
+  ar_ledger_credit: number;
+  mismatch: number;
+  notes: ReconciliationNote[];
+}
 
 // ============================================================================
 // Accounts Payable (AP) — vendor module pending backend.
@@ -700,6 +822,7 @@ export interface AccountingServiceExt {
   balanceSheet: (asOf?: string) => Promise<BalanceSheet>;
   cashFlow: (from?: string, to?: string) => Promise<CashFlowReport>;
   financialKpis: () => Promise<FinancialKpis>;
+  reconcileCustomerLedger: () => Promise<ReconciliationRow[]>;
 }
 
 export const accounting = accountingService as unknown as AccountingServiceExt;
