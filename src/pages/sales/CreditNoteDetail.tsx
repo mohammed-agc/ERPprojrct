@@ -27,13 +27,16 @@ export default function CreditNoteDetail() {
       if (error) console.error("CN fetch error", error);
       let enriched: any = head;
       if (head) {
-        const [{ data: cust }, invRes] = await Promise.all([
+        const [{ data: cust }, invRes, jeRes] = await Promise.all([
           supabase.from("customers").select("name, vat_number").eq("id", head.customer_id).maybeSingle(),
           head.invoice_id
             ? supabase.from("invoices").select("invoice_no, sales_order_id, invoice_date").eq("id", head.invoice_id).maybeSingle()
             : Promise.resolve({ data: null } as any),
+          head.journal_entry_id
+            ? supabase.from("journal_entries").select("id, entry_no, entry_date, is_posted").eq("id", head.journal_entry_id).maybeSingle()
+            : Promise.resolve({ data: null } as any),
         ]);
-        enriched = { ...head, customers: cust, invoices: invRes.data };
+        enriched = { ...head, customers: cust, invoices: invRes.data, journal_entry: jeRes.data };
       }
       const { data: lns } = await supabase
         .from("credit_note_lines")
