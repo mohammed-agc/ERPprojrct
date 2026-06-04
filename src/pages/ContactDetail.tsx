@@ -158,6 +158,25 @@ export default function ContactDetail() {
               <Switch checked={row.is_active ?? true} onCheckedChange={toggleActive} />
               <span className="text-muted-foreground">{(row.is_active ?? true) ? "نشط" : "غير نشط"}</span>
             </div>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => {
+                setTab("overview");
+                setTimeout(() => {
+                  document.getElementById("edit-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }, 50);
+              }}
+            >
+              <FileText className="h-4 w-4 ml-1" />
+              {(() => {
+                const isVendor = hasRole(meta, "vendor");
+                const isCustomer = (meta.roles ?? []).some(r => r !== "vendor");
+                if (isVendor && !isCustomer) return "تعديل المورد";
+                if (isVendor && isCustomer) return "تعديل البطاقة";
+                return "تعديل العميل";
+              })()}
+            </Button>
             <Button variant="outline" size="sm" asChild>
               <Link to="/contacts"><ArrowRight className="h-4 w-4 ml-1" /> رجوع</Link>
             </Button>
@@ -192,7 +211,7 @@ export default function ContactDetail() {
 
 
         {/* ---------- Overview ---------- */}
-        <TabsContent value="overview" className="space-y-3">
+        <TabsContent value="overview" className="space-y-3" id="edit-section">
           <div className="grid grid-cols-3 gap-3">
             <Card>
               <CardHeader className="p-3 pb-1"><CardTitle className="text-xs flex items-center gap-1"><Phone className="h-3.5 w-3.5" /> الاتصال</CardTitle></CardHeader>
