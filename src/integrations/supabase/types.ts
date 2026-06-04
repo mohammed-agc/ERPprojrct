@@ -675,6 +675,191 @@ export type Database = {
           },
         ]
       }
+      purchase_invoice_lines: {
+        Row: {
+          description: string
+          id: string
+          invoice_id: string
+          line_no: number
+          line_total: number
+          quantity: number
+          unit_cost: number
+          vat_pct: number
+          vehicle_id: string | null
+        }
+        Insert: {
+          description: string
+          id?: string
+          invoice_id: string
+          line_no: number
+          line_total?: number
+          quantity?: number
+          unit_cost?: number
+          vat_pct?: number
+          vehicle_id?: string | null
+        }
+        Update: {
+          description?: string
+          id?: string
+          invoice_id?: string
+          line_no?: number
+          line_total?: number
+          quantity?: number
+          unit_cost?: number
+          vat_pct?: number
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_invoice_lines_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_invoice_lines_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "v_ap_vendor_aging"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "purchase_invoice_lines_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_purchase_invoices_missing_je"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_invoice_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_inventory_without_purchase_cost"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_invoice_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_sold_vehicles_without_cogs"
+            referencedColumns: ["vehicle_id"]
+          },
+          {
+            foreignKeyName: "purchase_invoice_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_vehicles_missing_acquired_at"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_invoice_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_vehicles_missing_cost"
+            referencedColumns: ["vehicle_id"]
+          },
+          {
+            foreignKeyName: "purchase_invoice_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_vehicles_negative_days_in_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_invoice_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_vehicles_sold_missing_sold_at"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_invoice_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_invoices: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          due_date: string | null
+          id: string
+          invoice_date: string
+          invoice_no: string
+          journal_entry_id: string | null
+          notes: string | null
+          paid_amount: number
+          posted_at: string | null
+          posted_by: string | null
+          status: string
+          subtotal: number
+          supplier_id: string
+          supplier_invoice_ref: string | null
+          total: number
+          updated_at: string
+          vat_amount: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_no: string
+          journal_entry_id?: string | null
+          notes?: string | null
+          paid_amount?: number
+          posted_at?: string | null
+          posted_by?: string | null
+          status?: string
+          subtotal?: number
+          supplier_id: string
+          supplier_invoice_ref?: string | null
+          total?: number
+          updated_at?: string
+          vat_amount?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_no?: string
+          journal_entry_id?: string | null
+          notes?: string | null
+          paid_amount?: number
+          posted_at?: string | null
+          posted_by?: string | null
+          status?: string
+          subtotal?: number
+          supplier_id?: string
+          supplier_invoice_ref?: string | null
+          total?: number
+          updated_at?: string
+          vat_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_invoices_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_invoices_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_ap_vendor_balances"
+            referencedColumns: ["supplier_id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           created_at: string
@@ -742,6 +927,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "sales_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_order_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_inventory_without_purchase_cost"
             referencedColumns: ["id"]
           },
           {
@@ -843,6 +1035,135 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      supplier_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          journal_entry_id: string | null
+          method: string
+          notes: string | null
+          payment_date: string
+          payment_no: string
+          purchase_invoice_id: string | null
+          reference: string | null
+          status: string
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          journal_entry_id?: string | null
+          method?: string
+          notes?: string | null
+          payment_date?: string
+          payment_no: string
+          purchase_invoice_id?: string | null
+          reference?: string | null
+          status?: string
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          journal_entry_id?: string | null
+          method?: string
+          notes?: string | null
+          payment_date?: string
+          payment_no?: string
+          purchase_invoice_id?: string | null
+          reference?: string | null
+          status?: string
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_payments_purchase_invoice_id_fkey"
+            columns: ["purchase_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_purchase_invoice_id_fkey"
+            columns: ["purchase_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "v_ap_vendor_aging"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_purchase_invoice_id_fkey"
+            columns: ["purchase_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_purchase_invoices_missing_je"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_ap_vendor_balances"
+            referencedColumns: ["supplier_id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          address: string | null
+          code: string
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          phone: string | null
+          updated_at: string
+          vat_number: string | null
+        }
+        Insert: {
+          address?: string | null
+          code: string
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          phone?: string | null
+          updated_at?: string
+          vat_number?: string | null
+        }
+        Update: {
+          address?: string | null
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          phone?: string | null
+          updated_at?: string
+          vat_number?: string | null
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
@@ -969,6 +1290,82 @@ export type Database = {
       }
     }
     Views: {
+      v_ap_vendor_aging: {
+        Row: {
+          aging_bucket: string | null
+          balance: number | null
+          due_date: string | null
+          invoice_date: string | null
+          invoice_id: string | null
+          invoice_no: string | null
+          paid_amount: number | null
+          supplier_id: string | null
+          total: number | null
+        }
+        Insert: {
+          aging_bucket?: never
+          balance?: never
+          due_date?: string | null
+          invoice_date?: string | null
+          invoice_id?: string | null
+          invoice_no?: string | null
+          paid_amount?: number | null
+          supplier_id?: string | null
+          total?: number | null
+        }
+        Update: {
+          aging_bucket?: never
+          balance?: never
+          due_date?: string | null
+          invoice_date?: string | null
+          invoice_id?: string | null
+          invoice_no?: string | null
+          paid_amount?: number | null
+          supplier_id?: string | null
+          total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_invoices_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_invoices_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_ap_vendor_balances"
+            referencedColumns: ["supplier_id"]
+          },
+        ]
+      }
+      v_ap_vendor_balances: {
+        Row: {
+          bill_count: number | null
+          overdue_amount: number | null
+          paid_amount: number | null
+          remaining_balance: number | null
+          supplier_code: string | null
+          supplier_id: string | null
+          supplier_name: string | null
+          total_payable: number | null
+        }
+        Relationships: []
+      }
+      v_ap_vendor_statement: {
+        Row: {
+          credit: number | null
+          debit: number | null
+          doc_date: string | null
+          doc_no: string | null
+          doc_type: string | null
+          journal_entry_id: string | null
+          supplier_id: string | null
+        }
+        Relationships: []
+      }
       v_gov_cn_missing_cogs_reversal: {
         Row: {
           cn_type: Database["public"]["Enums"]["cn_type"] | null
@@ -977,6 +1374,39 @@ export type Database = {
           gap: string | null
           vehicle_id: string | null
           vehicle_status: string | null
+        }
+        Relationships: []
+      }
+      v_gov_inventory_without_purchase_cost: {
+        Row: {
+          brand: string | null
+          code: string | null
+          cost_price: number | null
+          id: string | null
+          model: string | null
+          status: Database["public"]["Enums"]["vehicle_status"] | null
+          vin: string | null
+          year: number | null
+        }
+        Insert: {
+          brand?: string | null
+          code?: string | null
+          cost_price?: number | null
+          id?: string | null
+          model?: string | null
+          status?: Database["public"]["Enums"]["vehicle_status"] | null
+          vin?: string | null
+          year?: number | null
+        }
+        Update: {
+          brand?: string | null
+          code?: string | null
+          cost_price?: number | null
+          id?: string | null
+          model?: string | null
+          status?: Database["public"]["Enums"]["vehicle_status"] | null
+          vin?: string | null
+          year?: number | null
         }
         Relationships: []
       }
@@ -1004,6 +1434,48 @@ export type Database = {
         }
         Relationships: []
       }
+      v_gov_purchase_invoices_missing_je: {
+        Row: {
+          id: string | null
+          invoice_date: string | null
+          invoice_no: string | null
+          status: string | null
+          supplier_id: string | null
+          total: number | null
+        }
+        Insert: {
+          id?: string | null
+          invoice_date?: string | null
+          invoice_no?: string | null
+          status?: string | null
+          supplier_id?: string | null
+          total?: number | null
+        }
+        Update: {
+          id?: string | null
+          invoice_date?: string | null
+          invoice_no?: string | null
+          status?: string | null
+          supplier_id?: string | null
+          total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_invoices_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_invoices_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_ap_vendor_balances"
+            referencedColumns: ["supplier_id"]
+          },
+        ]
+      }
       v_gov_sold_vehicles_without_cogs: {
         Row: {
           brand: string | null
@@ -1030,6 +1502,45 @@ export type Database = {
           vin?: string | null
         }
         Relationships: []
+      }
+      v_gov_supplier_payments_missing_je: {
+        Row: {
+          amount: number | null
+          id: string | null
+          payment_date: string | null
+          payment_no: string | null
+          supplier_id: string | null
+        }
+        Insert: {
+          amount?: number | null
+          id?: string | null
+          payment_date?: string | null
+          payment_no?: string | null
+          supplier_id?: string | null
+        }
+        Update: {
+          amount?: number | null
+          id?: string | null
+          payment_date?: string | null
+          payment_no?: string | null
+          supplier_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_ap_vendor_balances"
+            referencedColumns: ["supplier_id"]
+          },
+        ]
       }
       v_gov_vehicles_missing_acquired_at: {
         Row: {
@@ -1211,6 +1722,14 @@ export type Database = {
       post_credit_note_journal: { Args: { p_cn_id: string }; Returns: string }
       post_invoice_journal: { Args: { p_invoice_id: string }; Returns: string }
       post_payment_journal: { Args: { p_payment_id: string }; Returns: string }
+      post_purchase_invoice_journal: {
+        Args: { p_invoice_id: string }
+        Returns: string
+      }
+      post_supplier_payment_journal: {
+        Args: { p_payment_id: string }
+        Returns: string
+      }
       user_department: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {
