@@ -124,8 +124,8 @@ export default function VehicleProfitability() {
         .gte("credit_note.cn_date", from)
         .lte("credit_note.cn_date", to);
 
-      // 3) vehicles for lookup (incl. created_at for days-in-stock baseline)
-      let vq = supabase.from("vehicles").select("id, code, name, brand, model, year, vin, status, created_at").limit(500);
+      // 3) vehicles for lookup — use authoritative stored acquired_at / sold_at
+      let vq = supabase.from("vehicles").select("id, code, name, brand, model, year, vin, status, acquired_at, sold_at, created_at").limit(500);
       if (statusFilter !== "all") vq = vq.eq("status", statusFilter as any);
       if (search.trim()) {
         const s = `%${search.trim()}%`;
@@ -152,27 +152,25 @@ export default function VehicleProfitability() {
         revMap.has(v.id) || crMap.has(v.id) || (dept === "all" && !search && statusFilter === "all")
       );
 
-      // 4) landed cost + sold_at + COGS posted, in parallel
+      // 4) landed cost + COGS posted, in parallel (sold_at now comes from the vehicle row)
       const enriched = await Promise.all(
         vehicles.map(async v => {
           const [{ data: cd }, { data: inv }] = await Promise.all([
             supabase.rpc("compute_vehicle_landed_cost" as any, { p_vehicle_id: v.id }),
             supabase
               .from("sales_order_lines")
-              .select("order:sales_orders(invoices(invoice_date, cogs_journal_entry_id))")
+              .select("order:sales_orders(invoices(cogs_journal_entry_id))")
               .eq("vehicle_id", v.id)
               .limit(20),
           ]);
           const row = Array.isArray(cd) ? cd[0] : cd;
-          let sold_at: string | null = null;
           let cogs_posted = false;
           for (const l of (inv ?? []) as any[]) {
             for (const i of l.order?.invoices ?? []) {
-              if (i?.invoice_date && (!sold_at || i.invoice_date < sold_at)) sold_at = i.invoice_date;
               if (i?.cogs_journal_entry_id) cogs_posted = true;
             }
           }
-          return { id: v.id, landed: Number((row as any)?.landed_cost || 0), sold_at, cogs_posted };
+          return { id: v.id, landed: Number((row as any)?.landed_cost || 0), cogs_posted };
         }),
       );
       const enrichMap = new Map(enriched.map(e => [e.id, e]));
@@ -186,8 +184,12 @@ export default function VehicleProfitability() {
         const landed_cost = e.landed;
         const profit = net_revenue - landed_cost;
         const margin = net_revenue > 0 ? (profit / net_revenue) * 100 : 0;
-        const acquired_at = (v as any).created_at ? (v as any).created_at.slice(0, 10) : null;
-        const endIso = e.sold_at ?? todayIso;
+        // Authoritative stored lifecycle dates (no derivation)
+        const acquired_raw = (v as any).acquired_at ?? (v as any).created_at;
+        const acquired_at = acquired_raw ? String(acquired_raw).slice(0, 10) : null;
+        const sold_raw = (v as any).sold_at;
+        const sold_at = sold_raw ? String(sold_raw).slice(0, 10) : null;
+        const endIso = sold_at ?? todayIso;
         const days_in_stock = acquired_at
           ? Math.max(0, Math.floor((+new Date(endIso) - +new Date(acquired_at)) / 86400000))
           : null;
@@ -196,11 +198,12 @@ export default function VehicleProfitability() {
         if (landed_cost === 0) flags.push("تكلفة مفقودة");
         if (v.status === "sold" && revenue === 0) flags.push("إيراد مفقود");
         if (v.status === "sold" && !e.cogs_posted) flags.push("COGS مفقود");
-        if (v.status === "sold" && !e.sold_at) flags.push("مطابقة مخزون مفقودة");
+        if (v.status === "sold" && !sold_at) flags.push("تاريخ بيع مفقود");
+        if (!acquired_at) flags.push("تاريخ دخول مخزون مفقود");
         return {
           id: v.id, code: v.code, name: v.name, brand: v.brand, model: v.model, year: v.year, vin: v.vin, status: v.status,
           revenue, credited, net_revenue, landed_cost, profit, margin,
-          acquired_at, sold_at: e.sold_at, days_in_stock, cogs_posted: e.cogs_posted, flags,
+          acquired_at, sold_at, days_in_stock, cogs_posted: e.cogs_posted, flags,
         };
       });
 

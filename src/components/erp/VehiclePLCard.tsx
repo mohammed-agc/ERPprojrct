@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { fmtSAR } from "@/lib/erpFormat";
 import { AlertTriangle, CheckCircle2, TrendingDown, TrendingUp, Wallet, Calendar } from "lucide-react";
 
-interface Props { vehicleId: string; status: string; acquiredAt?: string | null; }
+interface Props { vehicleId: string; status: string; acquiredAt?: string | null; soldAt?: string | null; }
 
 interface PL {
   purchase_cost: number;
@@ -32,7 +32,7 @@ interface PL {
 
 const daysBetween = (a: string, b: string) => Math.max(0, Math.floor((+new Date(b) - +new Date(a)) / 86400000));
 
-export function VehiclePLCard({ vehicleId, status, acquiredAt }: Props) {
+export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) {
   const [pl, setPl] = useState<PL | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -56,7 +56,7 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt }: Props) {
         const additional_costs = Number(costRow?.additional_costs || 0);
         const landed_cost = Number(costRow?.landed_cost || 0);
 
-        let revenue = 0, discounts = 0, cogs_posted = false, sold_at: string | null = null;
+        let revenue = 0, discounts = 0, cogs_posted = false, derived_sold_at: string | null = null;
         for (const l of (solRes.data ?? []) as any[]) {
           const o = l.order; if (!o || o.status === "cancelled") continue;
           const q = Number(l.quantity || 0), p = Number(l.unit_price || 0), d = Number(l.discount_pct || 0);
@@ -65,9 +65,9 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt }: Props) {
           const invs = o.invoices ?? [];
           for (const inv of invs) {
             if (inv?.cogs_journal_entry_id) cogs_posted = true;
-            if (inv?.invoice_date && (!sold_at || inv.invoice_date < sold_at)) sold_at = inv.invoice_date;
+            if (inv?.invoice_date && (!derived_sold_at || inv.invoice_date < derived_sold_at)) derived_sold_at = inv.invoice_date;
           }
-          if (!sold_at && o.order_date && (o.status === "invoiced" || o.status === "confirmed")) sold_at = o.order_date;
+          if (!derived_sold_at && o.order_date && (o.status === "invoiced" || o.status === "confirmed")) derived_sold_at = o.order_date;
         }
         let credit_notes = 0;
         for (const c of (cnRes.data ?? []) as any[]) {
@@ -76,6 +76,8 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt }: Props) {
         const net_revenue = revenue - credit_notes;
         const gross_profit = revenue - landed_cost;
         const net_profit = net_revenue - landed_cost;
+        // Prefer authoritative stored sold_at; fall back to derived only if missing
+        const sold_at = soldAt ?? derived_sold_at;
         const inventory_reconciled = status !== "sold" || sold_at !== null;
         setPl({
           purchase_cost, additional_costs, landed_cost,
@@ -84,7 +86,7 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt }: Props) {
         });
       } finally { setLoading(false); }
     })();
-  }, [vehicleId, status]);
+  }, [vehicleId, status, soldAt]);
 
   if (loading || !pl) {
     return <Card className="p-4 text-xs text-muted-foreground">جارٍ حساب الربحية…</Card>;
