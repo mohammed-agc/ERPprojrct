@@ -99,6 +99,7 @@ export default function VehicleProfitability() {
   const [dept, setDept] = useState<DeptCode | "all">("all");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "sold" | "available">("all");
+  const [sortKey, setSortKey] = useState<SortKey>("profit_desc");
 
   const [rows, setRows] = useState<VehicleRow[]>([]);
   const [loading, setLoading] = useState(true);
