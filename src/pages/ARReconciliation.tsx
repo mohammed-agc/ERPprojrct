@@ -135,8 +135,8 @@ export default function ARReconciliation() {
                 const bad = Math.abs(r.mismatch) > 0.01;
                 const isOpen = !!open[r.customer_id];
                 return (
-                  <>
-                    <tr key={r.customer_id} className={bad ? "bg-destructive/5" : ""}>
+                  <FragmentRow key={r.customer_id}>
+                    <tr className={bad ? "bg-destructive/5" : ""}>
                       <td className="w-8">
                         <button
                           className="text-muted-foreground hover:text-foreground"
