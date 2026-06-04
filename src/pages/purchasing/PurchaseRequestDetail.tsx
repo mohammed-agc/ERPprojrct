@@ -1,134 +1,99 @@
-import { useMemo, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useState } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
-import { Check, X } from "lucide-react";
 import {
-  purchasingService, PR_LABEL, PR_TONE, URGENCY_LABEL, URGENCY_TONE, fmtSAR, fmtDate,
-} from "@/services/erp/purchasing";
-import { PrintablePurchaseDoc } from "@/components/erp/PrintablePurchaseDoc";
-import { DocPrintActions } from "@/components/erp/DocPrintActions";
-import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
-import { makeAudit, type AuditEntry, type ErpGovRole } from "@/services/erp/erpRoles";
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { Check, X, FileText } from "lucide-react";
+import {
+  getPurchaseRequest, setPurchaseRequestStatus, convertPRtoPO, listActiveSuppliers,
+  PR_STATUS_LABEL, PR_STATUS_TONE, fmtSAR, fmtDate,
+} from "@/services/erp/purchasingDb";
 
 export default function PurchaseRequestDetail() {
   const { id = "" } = useParams();
-  const [tick, setTick] = useState(0);
-  const refresh = () => setTick(t => t + 1);
+  const nav = useNavigate();
+  const qc = useQueryClient();
+  const [convertOpen, setConvertOpen] = useState(false);
 
-  const pr = useMemo(() => purchasingService.listPRs().find(p => p.id === id), [id, tick]);
-  if (!pr) return <div className="p-6 text-sm text-muted-foreground">طلب الشراء غير موجود</div>;
+  const { data, isLoading } = useQuery({
+    queryKey: ["pr", id],
+    queryFn: () => getPurchaseRequest(id),
+    enabled: !!id,
+  });
 
-  const po = pr.po_id ? purchasingService.getPO(pr.po_id) : undefined;
-  const supplier = pr.supplier_id ? purchasingService.getSupplier(pr.supplier_id) : undefined;
-  const totalEst = pr.items.reduce((s, i) => s + i.qty * i.unit_cost, 0);
+  if (isLoading) return <div className="p-6 text-sm text-muted-foreground">جاري التحميل...</div>;
+  if (!data) return <div className="p-6 text-sm text-muted-foreground">طلب الشراء غير موجود</div>;
 
+  const { header: pr, lines } = data;
+  const refresh = () => qc.invalidateQueries({ queryKey: ["pr", id] });
 
-  // Synthesize audit from timestamps if not present
-  const audit: AuditEntry[] = pr.audit && pr.audit.length > 0 ? pr.audit : [
-    makeAudit({ role: "purchasing_officer", action: "إنشاء طلب الشراء", to_status: "draft", actor: pr.requester }),
-    ...(pr.status !== "draft" ? [makeAudit({ role: "purchasing_officer", action: "إرسال للاعتماد", to_status: "pending", actor: pr.requester })] : []),
-    ...(pr.approved_at ? [makeAudit({ role: "purchasing_manager", action: "اعتماد", to_status: "approved", actor: pr.approver })] : []),
-  ];
-
-  const responsibleRole: ErpGovRole =
-    pr.status === "draft" || pr.status === "pending" ? "purchasing_manager" :
-    pr.status === "approved" ? "purchasing_officer" : "purchasing_officer";
-
-  const approve = () => {
-    const generatedPO = purchasingService.approvePR(pr.id);
-    toast.success(generatedPO ? `تم الاعتماد وإنشاء أمر الشراء ${generatedPO.code}` : "تم الاعتماد");
-    refresh();
+  const onStatus = async (s: any, label: string) => {
+    try {
+      await setPurchaseRequestStatus(id, s);
+      toast.success(label);
+      refresh();
+    } catch (e: any) { toast.error(e?.message ?? "تعذّر التحديث"); }
   };
-  const reject = () => { purchasingService.rejectPR(pr.id); toast.error("تم الرفض"); refresh(); };
-
-  const subtotal = pr.items.reduce((s, i) => s + i.qty * i.unit_cost, 0);
-  const vatAmount = pr.items.reduce((s, i) => s + i.qty * i.unit_cost * ((i.vat_pct ?? 15) / 100), 0);
-
-  const printable = (
-    <PrintablePurchaseDoc
-      title={pr.code}
-      docType="purchase_request"
-      documentNo={pr.code}
-      documentDate={fmtDate(pr.created_at)}
-      watermark={pr.status === "approved" ? "معتمد" : pr.status === "rejected" ? "مرفوض" : "مسودة"}
-      partyTitle="مقدم الطلب"
-      partyName={pr.requester}
-      partyMeta={[
-        { label: "القسم", value: pr.department },
-        { label: "الفرع", value: pr.branch },
-        { label: "الإلحاح", value: URGENCY_LABEL[pr.urgency] },
-      ]}
-      meta={[
-        { label: "الحالة", value: PR_LABEL[pr.status] },
-        { label: "أمر شراء مرتبط", value: po?.code ?? "—" },
-      ]}
-      items={pr.items}
-      subtotal={subtotal}
-      vatAmount={vatAmount}
-      total={subtotal + vatAmount}
-      notes={pr.justification}
-    />
-  );
 
   return (
     <div className="p-4 lg:p-6 space-y-4" dir="rtl">
-      <PageHeader
-        title={`طلب شراء ${pr.code}`}
-        subtitle={pr.requester}
-        actions={<DocPrintActions doc={printable} />}
-      />
-
+      <PageHeader title={`طلب شراء ${pr.pr_no}`} subtitle={fmtDate(pr.request_date)} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-card border border-border rounded-lg p-4 space-y-3 text-xs">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <div className="text-base font-bold">{pr.code}</div>
-                <div className="text-muted-foreground">{pr.department} · {pr.branch}</div>
+                <div className="text-base font-bold">{pr.pr_no}</div>
+                <div className="text-muted-foreground">{pr.department_code}</div>
               </div>
-              <div className="flex gap-2">
-                <Badge className={URGENCY_TONE[pr.urgency]}>{URGENCY_LABEL[pr.urgency]}</Badge>
-                <Badge className={PR_TONE[pr.status]}>{PR_LABEL[pr.status]}</Badge>
-              </div>
+              <Badge className={PR_STATUS_TONE[pr.status]}>{PR_STATUS_LABEL[pr.status]}</Badge>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2 border-t border-border">
-
-              <div><div className="text-[10px] text-muted-foreground">التاريخ</div><div>{fmtDate(pr.created_at)}</div></div>
-              <div><div className="text-[10px] text-muted-foreground">المورد</div>
-                <div className="font-semibold">{supplier?.name ?? "—"}</div>
-                {supplier && <div className="text-[10px] text-muted-foreground font-mono">{supplier.code}</div>}
-              </div>
-              <div><div className="text-[10px] text-muted-foreground">عدد الأصناف</div><div>{pr.items.length}</div></div>
-              <div><div className="text-[10px] text-muted-foreground">إجمالي تقديري</div><div className="font-bold">{fmtSAR(totalEst)}</div></div>
-              <div><div className="text-[10px] text-muted-foreground">أمر الشراء المرتبط</div>
-                <div>{po ? <Link to={`/purchasing/orders/${po.id}`} className="text-primary hover:underline font-mono">{po.code}</Link> : "—"}</div>
-              </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-border">
+              <div><div className="text-[10px] text-muted-foreground">التاريخ</div><div>{fmtDate(pr.request_date)}</div></div>
+              <div><div className="text-[10px] text-muted-foreground">عدد البنود</div><div>{lines.length}</div></div>
+              <div><div className="text-[10px] text-muted-foreground">إجمالي تقديري</div><div className="font-bold">{fmtSAR(Number(pr.total_estimated))}</div></div>
+              <div><div className="text-[10px] text-muted-foreground">آخر تحديث</div><div>{fmtDate(pr.updated_at)}</div></div>
             </div>
-
-            <div>
-              <div className="text-[10px] text-muted-foreground mb-1">التبرير</div>
-              <div className="bg-muted/30 rounded p-2">{pr.justification}</div>
-            </div>
+            {pr.notes && (
+              <div>
+                <div className="text-[10px] text-muted-foreground mb-1">ملاحظات</div>
+                <div className="bg-muted/30 rounded p-2">{pr.notes}</div>
+              </div>
+            )}
+            {pr.rejected_reason && (
+              <div>
+                <div className="text-[10px] text-destructive mb-1">سبب الرفض</div>
+                <div className="bg-destructive/5 border border-destructive/30 rounded p-2">{pr.rejected_reason}</div>
+              </div>
+            )}
           </div>
 
           <div className="bg-card border border-border rounded-lg overflow-hidden">
-            <div className="px-3 py-2 border-b border-border font-semibold text-xs">الأصناف</div>
+            <div className="px-3 py-2 border-b border-border font-semibold text-xs">البنود</div>
             <table className="erp-table text-xs">
               <thead>
-                <tr><th>الوصف</th><th>النوع</th><th>الكمية</th><th>تكلفة الوحدة</th><th>الإجمالي</th></tr>
+                <tr><th>#</th><th>الماركة</th><th>الموديل</th><th>السنة</th><th>اللون</th><th>الكمية</th><th>سعر تقديري</th><th>الإجمالي</th></tr>
               </thead>
               <tbody>
-                {pr.items.map(i => (
-                  <tr key={i.id}>
-                    <td>{i.description}</td>
-                    <td>{i.kind === "vehicle" ? "مركبة" : "قطعة غيار"}</td>
-                    <td className="num">{i.qty}</td>
-                    <td className="num">{fmtSAR(i.unit_cost)}</td>
-                    <td className="num font-semibold">{fmtSAR(i.qty * i.unit_cost)}</td>
+                {lines.map(l => (
+                  <tr key={l.id}>
+                    <td>{l.line_no}</td>
+                    <td>{l.brand}</td>
+                    <td>{l.model}</td>
+                    <td>{l.year ?? "—"}</td>
+                    <td>{l.color ?? "—"}</td>
+                    <td className="num">{Number(l.quantity)}</td>
+                    <td className="num">{fmtSAR(Number(l.estimated_unit_cost))}</td>
+                    <td className="num font-semibold">{fmtSAR(Number(l.quantity) * Number(l.estimated_unit_cost))}</td>
                   </tr>
                 ))}
               </tbody>
@@ -136,30 +101,90 @@ export default function PurchaseRequestDetail() {
           </div>
         </div>
 
-        <div className="space-y-3">
-          <DocGovernancePanel
-            status={PR_LABEL[pr.status]}
-            statusTone={PR_TONE[pr.status]}
-            responsibleRole={responsibleRole}
-            audit={audit}
-            approvals={pr.approvals ?? []}
-            nextActions={
-              pr.status === "pending" || pr.status === "draft"
-                ? [
-                    { label: "اعتماد", role: "purchasing_manager", onClick: approve },
-                    { label: "رفض", role: "purchasing_manager", onClick: reject, variant: "destructive" },
-                  ]
-                : []
-            }
-          />
-          {pr.status === "pending" && (
-            <div className="flex gap-2">
-              <Button className="flex-1" onClick={approve}><Check className="h-4 w-4 ml-1" /> اعتماد</Button>
-              <Button variant="destructive" className="flex-1" onClick={reject}><X className="h-4 w-4 ml-1" /> رفض</Button>
-            </div>
+        <div className="space-y-2">
+          {pr.status === "draft" && (
+            <Button className="w-full" onClick={() => onStatus("submitted", "أُرسل للاعتماد")}>
+              إرسال للاعتماد
+            </Button>
+          )}
+          {pr.status === "submitted" && (
+            <>
+              <Button className="w-full" onClick={() => onStatus("approved", "تم الاعتماد")}>
+                <Check className="h-4 w-4 ml-1" /> اعتماد
+              </Button>
+              <Button variant="destructive" className="w-full" onClick={() => onStatus("rejected", "تم الرفض")}>
+                <X className="h-4 w-4 ml-1" /> رفض
+              </Button>
+            </>
+          )}
+          {pr.status === "approved" && (
+            <Button className="w-full" onClick={() => setConvertOpen(true)}>
+              <FileText className="h-4 w-4 ml-1" /> تحويل لأمر شراء
+            </Button>
+          )}
+          {(pr.status === "draft" || pr.status === "submitted" || pr.status === "approved") && (
+            <Button variant="outline" className="w-full"
+              onClick={() => onStatus("cancelled", "تم الإلغاء")}>إلغاء الطلب</Button>
           )}
         </div>
       </div>
+
+      <ConvertDialog open={convertOpen} onOpenChange={setConvertOpen} prId={id} onDone={(poId) => {
+        toast.success("تم إنشاء أمر الشراء");
+        refresh();
+        nav(`/purchasing/orders/${poId}`);
+      }} />
     </div>
+  );
+}
+
+function ConvertDialog({
+  open, onOpenChange, prId, onDone,
+}: { open: boolean; onOpenChange: (v: boolean) => void; prId: string; onDone: (poId: string) => void }) {
+  const { data: suppliers = [] } = useQuery({ queryKey: ["active-suppliers"], queryFn: listActiveSuppliers, enabled: open });
+  const [supplierId, setSupplierId] = useState("");
+  const [expected, setExpected] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    if (!supplierId) return toast.error("اختر المورد");
+    setSaving(true);
+    try {
+      const po = await convertPRtoPO(prId, supplierId, expected || null);
+      onOpenChange(false);
+      onDone(po.id);
+    } catch (e: any) {
+      toast.error(e?.message ?? "تعذّر التحويل");
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent dir="rtl">
+        <DialogHeader>
+          <DialogTitle>تحويل لأمر شراء</DialogTitle>
+          <DialogDescription>اختر المورد ليُنشأ أمر شراء يحتوي نفس بنود الطلب.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">المورد</Label>
+            <Select value={supplierId} onValueChange={setSupplierId}>
+              <SelectTrigger className="h-9"><SelectValue placeholder="اختر المورد" /></SelectTrigger>
+              <SelectContent>
+                {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">تاريخ الوصول المتوقع</Label>
+            <Input type="date" className="h-9" value={expected} onChange={e => setExpected(e.target.value)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>إلغاء</Button>
+          <Button onClick={submit} disabled={saving}>إنشاء أمر الشراء</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
