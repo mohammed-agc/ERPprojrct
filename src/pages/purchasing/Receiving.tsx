@@ -1,48 +1,59 @@
-import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, PackageCheck, AlertTriangle } from "lucide-react";
+import { Search, Plus, PackageCheck } from "lucide-react";
 import {
-  purchasingService, RECV_LABEL, RECV_TONE, INSP_LABEL, INSP_TONE, fmtDate,
-} from "@/services/erp/purchasing";
+  listGRNs, GRN_LABEL, GRN_TONE, fmtDate, type GrnRow,
+} from "@/services/erp/receivingDb";
+import { GRNDbCreateDialog } from "@/components/erp/GRNDbCreateDialog";
 
 export default function Receiving() {
+  const qc = useQueryClient();
   const [q, setQ] = useState("");
-  const grns = useMemo(() => purchasingService.listGRNs(), []);
-  const pos = useMemo(() => purchasingService.listPOs(), []);
+  const [open, setOpen] = useState(false);
 
-  const filtered = useMemo(() => {
-    const qv = q.trim().toLowerCase();
-    return grns.filter(g => {
-      if (!qv) return true;
-      const po = pos.find(p => p.id === g.po_id);
-      return `${g.code} ${g.warehouse} ${g.receiver} ${po?.code ?? ""}`.toLowerCase().includes(qv);
-    });
-  }, [grns, q, pos]);
+  const { data: grns = [], isLoading } = useQuery({
+    queryKey: ["grns"], queryFn: listGRNs,
+  });
 
-  const totals = {
-    pending: grns.filter(g => g.status === "pending").length,
-    partial: grns.filter(g => g.status === "partial").length,
+  const filtered = grns.filter((g: GrnRow) => {
+    const v = q.trim().toLowerCase();
+    if (!v) return true;
+    return `${g.grn_no} ${g.warehouse ?? ""} ${g.notes ?? ""}`.toLowerCase().includes(v);
+  });
+
+  const k = {
     received: grns.filter(g => g.status === "received").length,
-    discrepancy: grns.filter(g => g.status === "with_discrepancy").length,
+    inspected: grns.filter(g => g.status === "inspected").length,
+    closed: grns.filter(g => g.status === "closed").length,
+    cancelled: grns.filter(g => g.status === "cancelled").length,
   };
 
   return (
     <div>
-      <PageHeader title="استلام البضائع" subtitle={`${grns.length} مذكرة استلام`} />
+      <PageHeader
+        title="استلام البضائع"
+        subtitle={`${grns.length} مذكرة استلام`}
+        actions={<Button size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4 ml-1" /> مذكرة جديدة</Button>}
+      />
+      <GRNDbCreateDialog open={open} onOpenChange={setOpen}
+        onCreated={() => qc.invalidateQueries({ queryKey: ["grns"] })} />
 
       <div className="grid grid-cols-4 gap-2 mb-4">
-        <Kpi label="بانتظار" value={totals.pending} tone="muted" />
-        <Kpi label="جزئي" value={totals.partial} tone="warning" />
-        <Kpi label="مكتمل" value={totals.received} tone="success" />
-        <Kpi label="بفروقات" value={totals.discrepancy} tone="destructive" />
+        <Kpi label="مستلم" value={k.received} tone="primary" />
+        <Kpi label="مفحوص" value={k.inspected} tone="info" />
+        <Kpi label="مغلق" value={k.closed} tone="success" />
+        <Kpi label="ملغي" value={k.cancelled} tone="destructive" />
       </div>
 
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border border-border rounded-lg p-3 mb-3 flex items-center gap-2">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input className="pr-9 h-9" placeholder="بحث..." value={q} onChange={e => setQ(e.target.value)} />
+          <Input className="pr-9 h-9" placeholder="بحث برقم المذكرة..." value={q} onChange={e => setQ(e.target.value)} />
         </div>
         <div className="text-xs text-muted-foreground ml-auto">{filtered.length} نتيجة</div>
       </div>
@@ -51,48 +62,29 @@ export default function Receiving() {
         <table className="erp-table">
           <thead>
             <tr>
-              <th>مذكرة الاستلام</th>
-              <th>أمر الشراء</th>
-              <th>المستودع</th>
-              <th>المستلم</th>
-              <th>التاريخ</th>
-              <th>الكميات</th>
-              <th>حالة الاستلام</th>
-              <th>حالة الفحص</th>
+              <th>المذكرة</th><th>الشحنة</th><th>التخصيص</th><th>تاريخ الاستلام</th>
+              <th>المستودع</th><th>الحالة</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 && (
-              <tr><td colSpan={8} className="text-center text-muted-foreground py-8">لا توجد مذكرات</td></tr>
+            {isLoading && <tr><td colSpan={6} className="text-center py-6 text-muted-foreground text-xs">جارٍ التحميل...</td></tr>}
+            {!isLoading && filtered.length === 0 && (
+              <tr><td colSpan={6} className="text-center py-8 text-muted-foreground text-xs">لا توجد مذكرات</td></tr>
             )}
-            {filtered.map(g => {
-              const po = pos.find(p => p.id === g.po_id);
-              const totalQty = g.items.reduce((s, i) => s + i.qty, 0);
-              const hasDamage = g.items.some(i => i.condition !== "ok");
-              return (
-                <tr key={g.id}>
-                  <td className="font-mono text-[11px]">
-                    <div className="flex items-center gap-1.5">
-                      <PackageCheck className="h-3 w-3 text-muted-foreground" />{g.code}
-                    </div>
-                  </td>
-                  <td className="font-mono text-[11px]">{po?.code ?? "—"}</td>
-                  <td className="text-xs">{g.warehouse}</td>
-                  <td className="text-xs">{g.receiver}</td>
-                  <td className="text-xs">{fmtDate(g.received_at)}</td>
-                  <td className="text-xs">
-                    <span className="num font-semibold">{totalQty}</span> وحدة
-                    {hasDamage && (
-                      <span className="ml-1 inline-flex items-center gap-0.5 text-destructive text-[10px]">
-                        <AlertTriangle className="h-3 w-3" /> فروقات
-                      </span>
-                    )}
-                  </td>
-                  <td><Badge className={RECV_TONE[g.status]}>{RECV_LABEL[g.status]}</Badge></td>
-                  <td><Badge className={INSP_TONE[g.inspection_status]}>{INSP_LABEL[g.inspection_status]}</Badge></td>
-                </tr>
-              );
-            })}
+            {filtered.map(g => (
+              <tr key={g.id}>
+                <td className="font-mono text-[11px]">
+                  <Link to={`/grn/${g.id}`} className="hover:underline flex items-center gap-1.5">
+                    <PackageCheck className="h-3 w-3 text-muted-foreground" />{g.grn_no}
+                  </Link>
+                </td>
+                <td className="font-mono text-[11px] text-muted-foreground">{g.shipment_id.slice(0, 8)}</td>
+                <td className="font-mono text-[11px] text-muted-foreground">{g.allocation_id.slice(0, 8)}</td>
+                <td className="text-xs">{fmtDate(g.received_at)}</td>
+                <td className="text-xs">{g.warehouse ?? "—"}</td>
+                <td><Badge className={GRN_TONE[g.status]}>{GRN_LABEL[g.status]}</Badge></td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -100,9 +92,9 @@ export default function Receiving() {
   );
 }
 
-function Kpi({ label, value, tone }: { label: string; value: number; tone: "muted" | "warning" | "success" | "destructive" }) {
-  const c = tone === "success" ? "text-success" : tone === "warning" ? "text-warning" :
-    tone === "destructive" ? "text-destructive" : "text-muted-foreground";
+function Kpi({ label, value, tone }: { label: string; value: number; tone: "primary" | "info" | "success" | "destructive" }) {
+  const c = tone === "success" ? "text-success" : tone === "info" ? "text-info"
+    : tone === "destructive" ? "text-destructive" : "text-primary";
   return (
     <div className="border border-border bg-card rounded-lg p-2.5">
       <div className="text-[10px] text-muted-foreground mb-0.5">{label}</div>

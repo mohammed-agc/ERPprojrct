@@ -1,182 +1,194 @@
-import { useMemo, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { ShieldCheck, X, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { ShieldCheck, X, Car } from "lucide-react";
 import {
-  purchasingService, INSP_LABEL, INSP_TONE, fmtDate,
-} from "@/services/erp/purchasing";
-import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
-import { VehicleIntakeDialog } from "@/components/erp/VehicleIntakeDialog";
-import { makeAudit, type AuditEntry, type ErpGovRole } from "@/services/erp/erpRoles";
-import { getPoVehicleUnits, groupUnitsByPoLine } from "@/lib/poVehicleUnits";
+  getInspection, setInspectionLineResult, bulkPassInspection,
+  approveInspection, rejectInspection,
+  INS_LABEL, INS_TONE, INS_RESULT_LABEL, INS_RESULT_TONE, fmtDate,
+  type InspectionResult,
+} from "@/services/erp/receivingDb";
 
 export default function InspectionDetail() {
   const { id = "" } = useParams();
-  const [tick, setTick] = useState(0);
-  const [intakeOpen, setIntakeOpen] = useState(false);
-  const refresh = () => setTick(t => t + 1);
+  const qc = useQueryClient();
+  const [rejectReason, setRejectReason] = useState("");
 
-  const ins = useMemo(() => purchasingService.listInspections().find(i => i.id === id), [id, tick]);
-  if (!ins) {
-    return <div className="p-6 text-sm text-muted-foreground">
-      سجل الفحص غير موجود — <Link to="/purchasing/inspection" className="text-primary">رجوع</Link>
-    </div>;
+  const q = useQuery({ queryKey: ["inspection", id], queryFn: () => getInspection(id), enabled: !!id });
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["inspection", id] });
+    qc.invalidateQueries({ queryKey: ["inspections"] });
+    qc.invalidateQueries({ queryKey: ["vehicles"] });
+  };
+
+  const lineMut = useMutation({
+    mutationFn: ({ lineId, result }: { lineId: string; result: InspectionResult }) =>
+      setInspectionLineResult(lineId, result),
+    onSuccess: invalidate,
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const bulkPass = useMutation({
+    mutationFn: () => bulkPassInspection(id),
+    onSuccess: () => { toast.success("تم اعتماد جميع البنود كناجح"); invalidate(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const approve = useMutation({
+    mutationFn: () => approveInspection(id),
+    onSuccess: (created) => {
+      toast.success(`تم اعتماد الفحص — أُنشئت ${created} مركبة`);
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const reject = useMutation({
+    mutationFn: () => rejectInspection(id, rejectReason || undefined),
+    onSuccess: () => { toast.error("تم رفض الفحص"); setRejectReason(""); invalidate(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  if (q.isLoading) return <div className="p-6 text-sm text-muted-foreground">جارٍ التحميل...</div>;
+  if (!q.data) {
+    return (
+      <div className="p-6 text-sm text-muted-foreground">
+        سجل الفحص غير موجود — <Link to="/purchasing/inspection" className="text-primary">رجوع</Link>
+      </div>
+    );
   }
 
-  const po = purchasingService.getPO(ins.po_id);
-  const grn = purchasingService.getGRN(ins.grn_id);
-  const passed = ins.items.reduce((s, x) => s + x.passed, 0);
-  const failed = ins.items.reduce((s, x) => s + x.failed, 0);
-
-  const audit: AuditEntry[] = [
-    makeAudit({ role: "inspection", action: "بدء الفحص", to_status: "in_progress" }),
-    ...(ins.status === "approved" ? [makeAudit({ role: "inspection", action: "اعتماد الفحص", to_status: "approved" })] : []),
-    ...(ins.status === "rejected" ? [makeAudit({ role: "inspection", action: "رفض الفحص", to_status: "rejected" })] : []),
-    ...((ins.vehicle_ids?.length ?? 0) > 0 ? [makeAudit({ role: "inventory", action: `إدخال ${ins.vehicle_ids!.length} مركبة للمخزون` })] : []),
-  ];
-
-  const responsibleRole: ErpGovRole =
-    ins.status === "approved" ? "inventory" :
-    ins.status === "rejected" ? "purchasing_manager" : "inspection";
-
-  const vehicleApproved = po
-    ? ins.items.reduce((s, it) => {
-        const line = po.items.find(l => l.id === it.line_id);
-        return s + (line?.kind === "vehicle" ? (it.passed ?? 0) : 0);
-      }, 0)
-    : 0;
-  const intaked = ins.vehicle_ids?.length ?? 0;
-  const remaining = Math.max(0, vehicleApproved - intaked);
-
-  const approve = () => { purchasingService.setInspectionStatus(ins.id, "approved"); toast.success("تم الاعتماد"); refresh(); };
-  const reject = () => { purchasingService.setInspectionStatus(ins.id, "rejected"); toast.error("تم الرفض"); refresh(); };
-
-  const nextActions: any[] = [];
-  if (ins.status === "pending" || ins.status === "in_progress") {
-    nextActions.push({ label: "اعتماد", role: "inspection", onClick: approve });
-    nextActions.push({ label: "رفض", role: "inspection", onClick: reject, variant: "destructive" });
-  }
-  if (ins.status === "approved" && remaining > 0) {
-    nextActions.push({ label: "إدخال المركبات للمخزون", role: "inventory", onClick: () => setIntakeOpen(true) });
-  }
+  const { header: ins, lines } = q.data;
+  const passed = lines.filter(l => l.result === "passed").length;
+  const rejected = lines.filter(l => l.result === "rejected").length;
+  const pending = lines.filter(l => l.result === "pending").length;
+  const canDecide = ins.status === "pending" || ins.status === "in_progress";
+  const created = lines.filter(l => l.vehicle_id).length;
 
   return (
-    <div className="p-4 lg:p-6 space-y-4" dir="rtl">
+    <div className="space-y-4">
       <PageHeader
-        title={`فحص ${ins.id}`}
+        title={`${ins.insp_no} — سجل فحص`}
         subtitle={
           <div className="flex items-center gap-2 text-xs">
-            <Badge className={INSP_TONE[ins.status]}>{INSP_LABEL[ins.status]}</Badge>
-            <span className="text-muted-foreground">PO:</span>
-            {po && <Link to={`/purchasing/orders/${po.id}`} className="text-primary font-mono hover:underline">{po.code}</Link>}
-            {grn && <>
-              <span className="text-muted-foreground">· GRN:</span>
-              <Link to={`/grn/${grn.id}`} className="text-primary font-mono hover:underline">{grn.code}</Link>
-            </>}
+            <Badge className={INS_TONE[ins.status]}>{INS_LABEL[ins.status]}</Badge>
+            <span className="text-muted-foreground">GRN:</span>
+            <Link to={`/grn/${ins.grn_id}`} className="text-primary font-mono hover:underline">{ins.grn_id.slice(0, 8)}</Link>
           </div>
         }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 space-y-4">
-          <div className="bg-card border border-border rounded-lg p-4 text-xs grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div><div className="text-[10px] text-muted-foreground">المفتش</div><div>{ins.inspector}</div></div>
-            <div><div className="text-[10px] text-muted-foreground">تاريخ البدء</div><div>{fmtDate(ins.started_at)}</div></div>
-            <div><div className="text-[10px] text-muted-foreground">ناجح</div><div className="text-success font-bold num">{passed}</div></div>
-            <div><div className="text-[10px] text-muted-foreground">راسب</div><div className="text-destructive font-bold num">{failed}</div></div>
-          </div>
-
-          <div className="bg-card border border-border rounded-lg overflow-hidden">
-            <div className="px-3 py-2 border-b border-border font-semibold text-xs">نتائج الفحص حسب البند</div>
-            <table className="erp-table text-xs">
-              <thead><tr><th>الصنف</th><th>VIN / مرجع</th><th>اللون / المحرك</th><th>ناجح</th><th>راسب</th><th>ملاحظات</th></tr></thead>
-              <tbody>
-                {(() => {
-                  const unitsByLine = groupUnitsByPoLine(getPoVehicleUnits(po?.id));
-                  return ins.items.flatMap((it, i) => {
-                    const line = po?.items.find(l => l.id === it.line_id);
-                    const units = line?.kind === "vehicle" ? (unitsByLine.get(line.id) ?? []) : [];
-                    if (units.length === 0) {
-                      return [(
-                        <tr key={i}>
-                          <td>{line?.description ?? it.line_id}</td>
-                          <td className="font-mono text-[10px]">—</td>
-                          <td className="text-[10px]">—</td>
-                          <td className="num text-success">{it.passed}</td>
-                          <td className="num text-destructive">{it.failed}</td>
-                          <td>{it.remarks ?? "—"}</td>
-                        </tr>
-                      )];
-                    }
-                    return units.map((u, j) => (
-                      <tr key={`${i}_${j}`}>
-                        <td>
-                          {j === 0 ? line!.description : <span className="text-muted-foreground">↳</span>}
-                        </td>
-                        <td className="font-mono text-[10px]" dir="ltr">{u.vin}</td>
-                        <td className="text-[10px]">{u.color}{u.trim ? " · " + u.trim : ""}<div className="text-muted-foreground" dir="ltr">⚙ {u.engine_no}</div></td>
-                        <td className="num text-success">{j === 0 ? it.passed : ""}</td>
-                        <td className="num text-destructive">{j === 0 ? it.failed : ""}</td>
-                        <td>{j === 0 ? (it.remarks ?? "—") : ""}</td>
-                      </tr>
-                    ));
-                  });
-                })()}
-              </tbody>
-            </table>
-          </div>
-
-          {ins.notes && (
-            <div className="bg-card border border-border rounded-lg p-3 text-xs">
-              <div className="text-[10px] text-muted-foreground mb-1">ملاحظات</div>
-              <div className="bg-muted/30 rounded p-2">{ins.notes}</div>
-            </div>
-          )}
-
-          {vehicleApproved > 0 && (
-            <div className="bg-card border border-border rounded-lg p-3 text-xs">
-              <div className="flex items-center justify-between">
-                <div className="font-semibold">إدخال المخزون</div>
-                <div className="text-muted-foreground">{intaked}/{vehicleApproved} مركبة</div>
-              </div>
-              {ins.status === "approved" && remaining > 0 && (
-                <Button size="sm" className="mt-2" onClick={() => setIntakeOpen(true)}>
-                  <Car className="h-3.5 w-3.5 ml-1" /> إدخال {remaining} مركبة
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-3">
-          <DocGovernancePanel
-            status={INSP_LABEL[ins.status]}
-            statusTone={INSP_TONE[ins.status]}
-            responsibleRole={responsibleRole}
-            previous={grn ? { kind: "grn", id: grn.id, code: grn.code } : undefined}
-            audit={audit}
-            nextActions={nextActions}
-          />
-
-          {(ins.status === "pending" || ins.status === "in_progress") && (
-            <div className="flex gap-2">
-              <Button className="flex-1" onClick={approve}><ShieldCheck className="h-4 w-4 ml-1" /> اعتماد</Button>
-              <Button variant="destructive" className="flex-1" onClick={reject}><X className="h-4 w-4 ml-1" /> رفض</Button>
-            </div>
-          )}
-        </div>
+      <div className="grid grid-cols-5 gap-2">
+        <Kpi label="بنود" value={lines.length} tone="primary" />
+        <Kpi label="ناجح" value={passed} tone="success" />
+        <Kpi label="مرفوض" value={rejected} tone="destructive" />
+        <Kpi label="بانتظار" value={pending} tone="warning" />
+        <Kpi label="مركبات أُنشئت" value={created} tone="info" />
       </div>
 
-      <VehicleIntakeDialog
-        open={intakeOpen}
-        onOpenChange={setIntakeOpen}
-        inspection={ins}
-        po={po ?? null}
-        onCreated={refresh}
-      />
+      <Card>
+        <CardContent className="p-3 grid grid-cols-3 gap-3 text-xs">
+          <div><div className="text-[10px] text-muted-foreground">تاريخ البدء</div><div>{fmtDate(ins.started_at)}</div></div>
+          <div><div className="text-[10px] text-muted-foreground">انتهى في</div><div>{fmtDate(ins.completed_at)}</div></div>
+          <div><div className="text-[10px] text-muted-foreground">اعتماد</div><div>{fmtDate(ins.approved_at)}</div></div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-0">
+          <div className="px-3 py-2 border-b border-border flex items-center justify-between">
+            <div className="font-semibold text-sm">نتائج الفحص</div>
+            {canDecide && (
+              <Button size="sm" variant="outline" onClick={() => bulkPass.mutate()} disabled={bulkPass.isPending}>
+                اعتماد الكل كناجح
+              </Button>
+            )}
+          </div>
+          <table className="erp-table">
+            <thead>
+              <tr><th>#</th><th>VIN</th><th>النتيجة</th><th>مركبة المخزون</th><th>إجراءات</th></tr>
+            </thead>
+            <tbody>
+              {lines.length === 0 && (
+                <tr><td colSpan={5} className="text-center text-muted-foreground py-6 text-xs">لا توجد بنود</td></tr>
+              )}
+              {lines.map(l => (
+                <tr key={l.id}>
+                  <td className="num text-xs">{l.line_no}</td>
+                  <td className="font-mono text-[11px]" dir="ltr">{l.vin}</td>
+                  <td>
+                    <Badge className={INS_RESULT_TONE[l.result]}>{INS_RESULT_LABEL[l.result]}</Badge>
+                  </td>
+                  <td className="text-xs">
+                    {l.vehicle_id ? (
+                      <span className="inline-flex items-center gap-1 text-success">
+                        <CheckCircle2 className="h-3 w-3" />
+                        <span className="font-mono text-[10px]">{l.vehicle_id.slice(0, 8)}</span>
+                      </span>
+                    ) : <span className="text-muted-foreground">—</span>}
+                  </td>
+                  <td>
+                    {canDecide && (
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-success"
+                          onClick={() => lineMut.mutate({ lineId: l.id, result: "passed" })}>
+                          <ShieldCheck className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive"
+                          onClick={() => lineMut.mutate({ lineId: l.id, result: "rejected" })}>
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
+
+      {canDecide && (
+        <Card>
+          <CardContent className="p-3 space-y-2">
+            <div className="text-sm font-semibold">قرار الفحص</div>
+            <div className="flex gap-2 items-start">
+              <Button onClick={() => approve.mutate()} disabled={approve.isPending || passed === 0}
+                className="flex-1">
+                <ShieldCheck className="h-4 w-4 ml-1" /> اعتماد وإنشاء {passed} مركبة
+              </Button>
+              <div className="flex-1 space-y-1">
+                <Textarea placeholder="سبب الرفض (اختياري)" rows={1}
+                  value={rejectReason} onChange={e => setRejectReason(e.target.value)} className="text-xs" />
+                <Button variant="destructive" onClick={() => reject.mutate()} disabled={reject.isPending} className="w-full">
+                  <X className="h-4 w-4 ml-1" /> رفض الفحص
+                </Button>
+              </div>
+            </div>
+            {passed === 0 && (
+              <div className="text-[11px] text-warning">حدد بنوداً ناجحة قبل الاعتماد لإنشاء سجلات المركبات</div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function Kpi({ label, value, tone }: { label: string; value: number; tone: "primary" | "success" | "destructive" | "warning" | "info" }) {
+  const c = tone === "success" ? "text-success" : tone === "warning" ? "text-warning"
+    : tone === "destructive" ? "text-destructive" : tone === "info" ? "text-info" : "text-primary";
+  return (
+    <div className="border border-border bg-card rounded-lg p-2.5">
+      <div className="text-[10px] text-muted-foreground mb-0.5">{label}</div>
+      <div className={`text-xl font-bold num ${c}`}>{value}</div>
     </div>
   );
 }

@@ -449,6 +449,163 @@ export type Database = {
         }
         Relationships: []
       }
+      goods_receipt_lines: {
+        Row: {
+          allocation_line_id: string | null
+          brand: string
+          color: string | null
+          condition: Database["public"]["Enums"]["grn_line_condition"]
+          engine_no: string | null
+          grn_id: string
+          id: string
+          line_no: number
+          model: string
+          notes: string | null
+          unit_cost: number
+          vin: string
+          year: number | null
+        }
+        Insert: {
+          allocation_line_id?: string | null
+          brand: string
+          color?: string | null
+          condition?: Database["public"]["Enums"]["grn_line_condition"]
+          engine_no?: string | null
+          grn_id: string
+          id?: string
+          line_no: number
+          model: string
+          notes?: string | null
+          unit_cost?: number
+          vin: string
+          year?: number | null
+        }
+        Update: {
+          allocation_line_id?: string | null
+          brand?: string
+          color?: string | null
+          condition?: Database["public"]["Enums"]["grn_line_condition"]
+          engine_no?: string | null
+          grn_id?: string
+          id?: string
+          line_no?: number
+          model?: string
+          notes?: string | null
+          unit_cost?: number
+          vin?: string
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goods_receipt_lines_allocation_line_id_fkey"
+            columns: ["allocation_line_id"]
+            isOneToOne: false
+            referencedRelation: "allocation_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_receipt_lines_grn_id_fkey"
+            columns: ["grn_id"]
+            isOneToOne: false
+            referencedRelation: "goods_receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_receipt_lines_grn_id_fkey"
+            columns: ["grn_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_grn_without_inspection"
+            referencedColumns: ["grn_id"]
+          },
+        ]
+      }
+      goods_receipts: {
+        Row: {
+          allocation_id: string
+          created_at: string
+          created_by: string | null
+          grn_no: string
+          id: string
+          notes: string | null
+          po_id: string
+          received_at: string
+          receiver_id: string | null
+          shipment_id: string
+          status: Database["public"]["Enums"]["grn_status"]
+          supplier_id: string
+          updated_at: string
+          warehouse: string | null
+        }
+        Insert: {
+          allocation_id: string
+          created_at?: string
+          created_by?: string | null
+          grn_no: string
+          id?: string
+          notes?: string | null
+          po_id: string
+          received_at?: string
+          receiver_id?: string | null
+          shipment_id: string
+          status?: Database["public"]["Enums"]["grn_status"]
+          supplier_id: string
+          updated_at?: string
+          warehouse?: string | null
+        }
+        Update: {
+          allocation_id?: string
+          created_at?: string
+          created_by?: string | null
+          grn_no?: string
+          id?: string
+          notes?: string | null
+          po_id?: string
+          received_at?: string
+          receiver_id?: string | null
+          shipment_id?: string
+          status?: Database["public"]["Enums"]["grn_status"]
+          supplier_id?: string
+          updated_at?: string
+          warehouse?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goods_receipts_allocation_id_fkey"
+            columns: ["allocation_id"]
+            isOneToOne: false
+            referencedRelation: "allocations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_receipts_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_receipts_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "shipments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_receipts_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_receipts_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_ap_vendor_balances"
+            referencedColumns: ["supplier_id"]
+          },
+        ]
+      }
       goods_return_requests: {
         Row: {
           approved_at: string | null
@@ -518,6 +675,176 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_gov_cn_missing_cogs_reversal"
             referencedColumns: ["credit_note_id"]
+          },
+        ]
+      }
+      inspection_lines: {
+        Row: {
+          condition: string | null
+          grn_line_id: string
+          id: string
+          inspection_id: string
+          line_no: number
+          remarks: string | null
+          result: Database["public"]["Enums"]["inspection_line_result"]
+          vehicle_id: string | null
+          vin: string
+        }
+        Insert: {
+          condition?: string | null
+          grn_line_id: string
+          id?: string
+          inspection_id: string
+          line_no: number
+          remarks?: string | null
+          result?: Database["public"]["Enums"]["inspection_line_result"]
+          vehicle_id?: string | null
+          vin: string
+        }
+        Update: {
+          condition?: string | null
+          grn_line_id?: string
+          id?: string
+          inspection_id?: string
+          line_no?: number
+          remarks?: string | null
+          result?: Database["public"]["Enums"]["inspection_line_result"]
+          vehicle_id?: string | null
+          vin?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_lines_grn_line_id_fkey"
+            columns: ["grn_line_id"]
+            isOneToOne: false
+            referencedRelation: "goods_receipt_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_lines_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "inspections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_inventory_without_purchase_cost"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_sold_vehicles_without_cogs"
+            referencedColumns: ["vehicle_id"]
+          },
+          {
+            foreignKeyName: "inspection_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_vehicle_missing_procurement_chain"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_vehicles_missing_acquired_at"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_vehicles_missing_cost"
+            referencedColumns: ["vehicle_id"]
+          },
+          {
+            foreignKeyName: "inspection_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_vehicles_negative_days_in_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_vehicles_sold_missing_sold_at"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inspections: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          grn_id: string
+          id: string
+          insp_no: string
+          inspector_id: string | null
+          notes: string | null
+          started_at: string
+          status: Database["public"]["Enums"]["inspection_status"]
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          grn_id: string
+          id?: string
+          insp_no: string
+          inspector_id?: string | null
+          notes?: string | null
+          started_at?: string
+          status?: Database["public"]["Enums"]["inspection_status"]
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          grn_id?: string
+          id?: string
+          insp_no?: string
+          inspector_id?: string | null
+          notes?: string | null
+          started_at?: string
+          status?: Database["public"]["Enums"]["inspection_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspections_grn_id_fkey"
+            columns: ["grn_id"]
+            isOneToOne: false
+            referencedRelation: "goods_receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspections_grn_id_fkey"
+            columns: ["grn_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_grn_without_inspection"
+            referencedColumns: ["grn_id"]
           },
         ]
       }
@@ -906,6 +1233,13 @@ export type Database = {
             foreignKeyName: "purchase_invoice_lines_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
+            referencedRelation: "v_gov_vehicle_missing_procurement_chain"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_invoice_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
             referencedRelation: "v_gov_vehicles_missing_acquired_at"
             referencedColumns: ["id"]
           },
@@ -1240,6 +1574,117 @@ export type Database = {
         }
         Relationships: []
       }
+      receiving_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          grn_id: string | null
+          id: string
+          inspection_id: string | null
+          payload: Json | null
+          user_id: string | null
+          vehicle_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          grn_id?: string | null
+          id?: string
+          inspection_id?: string | null
+          payload?: Json | null
+          user_id?: string | null
+          vehicle_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          grn_id?: string | null
+          id?: string
+          inspection_id?: string | null
+          payload?: Json | null
+          user_id?: string | null
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receiving_events_grn_id_fkey"
+            columns: ["grn_id"]
+            isOneToOne: false
+            referencedRelation: "goods_receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receiving_events_grn_id_fkey"
+            columns: ["grn_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_grn_without_inspection"
+            referencedColumns: ["grn_id"]
+          },
+          {
+            foreignKeyName: "receiving_events_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "inspections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receiving_events_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_inventory_without_purchase_cost"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receiving_events_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_sold_vehicles_without_cogs"
+            referencedColumns: ["vehicle_id"]
+          },
+          {
+            foreignKeyName: "receiving_events_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_vehicle_missing_procurement_chain"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receiving_events_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_vehicles_missing_acquired_at"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receiving_events_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_vehicles_missing_cost"
+            referencedColumns: ["vehicle_id"]
+          },
+          {
+            foreignKeyName: "receiving_events_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_vehicles_negative_days_in_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receiving_events_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_vehicles_sold_missing_sold_at"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receiving_events_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           created_at: string
@@ -1322,6 +1767,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_gov_sold_vehicles_without_cogs"
             referencedColumns: ["vehicle_id"]
+          },
+          {
+            foreignKeyName: "sales_order_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_vehicle_missing_procurement_chain"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "sales_order_lines_vehicle_id_fkey"
@@ -1662,65 +2114,130 @@ export type Database = {
       vehicles: {
         Row: {
           acquired_at: string | null
+          allocation_id: string | null
           brand: string
           code: string
           color: string | null
           cost_price: number
           created_at: string
           created_by: string | null
+          grn_id: string | null
           id: string
+          inspection_id: string | null
           mileage: number | null
           model: string
           name: string
           notes: string | null
           sale_price: number
+          shipment_id: string | null
           sold_at: string | null
           status: Database["public"]["Enums"]["vehicle_status"]
+          supplier_id: string | null
           updated_at: string
           vin: string | null
           year: number
         }
         Insert: {
           acquired_at?: string | null
+          allocation_id?: string | null
           brand: string
           code: string
           color?: string | null
           cost_price?: number
           created_at?: string
           created_by?: string | null
+          grn_id?: string | null
           id?: string
+          inspection_id?: string | null
           mileage?: number | null
           model: string
           name: string
           notes?: string | null
           sale_price?: number
+          shipment_id?: string | null
           sold_at?: string | null
           status?: Database["public"]["Enums"]["vehicle_status"]
+          supplier_id?: string | null
           updated_at?: string
           vin?: string | null
           year: number
         }
         Update: {
           acquired_at?: string | null
+          allocation_id?: string | null
           brand?: string
           code?: string
           color?: string | null
           cost_price?: number
           created_at?: string
           created_by?: string | null
+          grn_id?: string | null
           id?: string
+          inspection_id?: string | null
           mileage?: number | null
           model?: string
           name?: string
           notes?: string | null
           sale_price?: number
+          shipment_id?: string | null
           sold_at?: string | null
           status?: Database["public"]["Enums"]["vehicle_status"]
+          supplier_id?: string | null
           updated_at?: string
           vin?: string | null
           year?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_allocation_id_fkey"
+            columns: ["allocation_id"]
+            isOneToOne: false
+            referencedRelation: "allocations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_grn_id_fkey"
+            columns: ["grn_id"]
+            isOneToOne: false
+            referencedRelation: "goods_receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_grn_id_fkey"
+            columns: ["grn_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_grn_without_inspection"
+            referencedColumns: ["grn_id"]
+          },
+          {
+            foreignKeyName: "vehicles_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "inspections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "shipments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_ap_vendor_balances"
+            referencedColumns: ["supplier_id"]
+          },
+        ]
       }
     }
     Views: {
@@ -1810,6 +2327,75 @@ export type Database = {
           vehicle_status: string | null
         }
         Relationships: []
+      }
+      v_gov_grn_without_inspection: {
+        Row: {
+          allocation_id: string | null
+          grn_id: string | null
+          grn_no: string | null
+          po_id: string | null
+          received_at: string | null
+          shipment_id: string | null
+          status: Database["public"]["Enums"]["grn_status"] | null
+        }
+        Insert: {
+          allocation_id?: string | null
+          grn_id?: string | null
+          grn_no?: string | null
+          po_id?: string | null
+          received_at?: string | null
+          shipment_id?: string | null
+          status?: Database["public"]["Enums"]["grn_status"] | null
+        }
+        Update: {
+          allocation_id?: string | null
+          grn_id?: string | null
+          grn_no?: string | null
+          po_id?: string | null
+          received_at?: string | null
+          shipment_id?: string | null
+          status?: Database["public"]["Enums"]["grn_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goods_receipts_allocation_id_fkey"
+            columns: ["allocation_id"]
+            isOneToOne: false
+            referencedRelation: "allocations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_receipts_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_receipts_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_gov_inspection_without_vehicle: {
+        Row: {
+          insp_no: string | null
+          inspection_id: string | null
+          inspection_line_id: string | null
+          vin: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_lines_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "inspections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_gov_inventory_without_purchase_cost: {
         Row: {
@@ -1976,6 +2562,89 @@ export type Database = {
           },
         ]
       }
+      v_gov_vehicle_missing_procurement_chain: {
+        Row: {
+          allocation_id: string | null
+          code: string | null
+          grn_id: string | null
+          id: string | null
+          inspection_id: string | null
+          shipment_id: string | null
+          supplier_id: string | null
+          vin: string | null
+        }
+        Insert: {
+          allocation_id?: string | null
+          code?: string | null
+          grn_id?: string | null
+          id?: string | null
+          inspection_id?: string | null
+          shipment_id?: string | null
+          supplier_id?: string | null
+          vin?: string | null
+        }
+        Update: {
+          allocation_id?: string | null
+          code?: string | null
+          grn_id?: string | null
+          id?: string | null
+          inspection_id?: string | null
+          shipment_id?: string | null
+          supplier_id?: string | null
+          vin?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_allocation_id_fkey"
+            columns: ["allocation_id"]
+            isOneToOne: false
+            referencedRelation: "allocations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_grn_id_fkey"
+            columns: ["grn_id"]
+            isOneToOne: false
+            referencedRelation: "goods_receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_grn_id_fkey"
+            columns: ["grn_id"]
+            isOneToOne: false
+            referencedRelation: "v_gov_grn_without_inspection"
+            referencedColumns: ["grn_id"]
+          },
+          {
+            foreignKeyName: "vehicles_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "inspections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "shipments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_ap_vendor_balances"
+            referencedColumns: ["supplier_id"]
+          },
+        ]
+      }
       v_gov_vehicles_missing_acquired_at: {
         Row: {
           brand: string | null
@@ -2118,6 +2787,7 @@ export type Database = {
         }[]
       }
       approve_goods_return: { Args: { p_request_id: string }; Returns: string }
+      approve_inspection: { Args: { p_inspection_id: string }; Returns: number }
       can_manage_customer_finance: {
         Args: { _user_id: string }
         Returns: boolean
@@ -2163,6 +2833,10 @@ export type Database = {
       post_supplier_payment_journal: {
         Args: { p_payment_id: string }
         Returns: string
+      }
+      reject_inspection: {
+        Args: { p_inspection_id: string; p_reason?: string }
+        Returns: undefined
       }
       user_department: { Args: { _user_id: string }; Returns: string }
     }
@@ -2211,6 +2885,15 @@ export type Database = {
         | "purchasing"
         | "sales"
         | "crm"
+      grn_line_condition: "ok" | "damaged" | "missing" | "wrong_item"
+      grn_status: "draft" | "received" | "inspected" | "closed" | "cancelled"
+      inspection_line_result: "pending" | "passed" | "rejected"
+      inspection_status:
+        | "pending"
+        | "in_progress"
+        | "approved"
+        | "rejected"
+        | "cancelled"
       invoice_status:
         | "draft"
         | "posted"
@@ -2432,6 +3115,16 @@ export const Constants = {
         "purchasing",
         "sales",
         "crm",
+      ],
+      grn_line_condition: ["ok", "damaged", "missing", "wrong_item"],
+      grn_status: ["draft", "received", "inspected", "closed", "cancelled"],
+      inspection_line_result: ["pending", "passed", "rejected"],
+      inspection_status: [
+        "pending",
+        "in_progress",
+        "approved",
+        "rejected",
+        "cancelled",
       ],
       invoice_status: [
         "draft",
