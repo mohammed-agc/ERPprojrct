@@ -97,8 +97,9 @@ export const inventoryIntegration = {
     });
   },
 
-  /** Called when VehicleIntakeDialog finishes inserting vehicles into Supabase.
-   *  Pushes mirrored records into the inventory engine + receive/intake movements.
+  /** Legacy mirror used by older non-DB flows to push intake movements
+   *  into the in-memory inventory engine. The authoritative vehicle
+   *  intake now happens server-side via `approve_inspection`.
    */
   onVehicleIntake(input: {
     po: PurchaseOrder;
