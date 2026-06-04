@@ -33,6 +33,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { VehiclePLCard } from "@/components/erp/VehiclePLCard";
 
 const MEDIA_BUCKET = "vehicle-media";
 
@@ -383,6 +384,9 @@ export default function VehicleDetail() {
               <PriceCell label="الهامش" value={Number(vehicle.sale_price) - Number(vehicle.cost_price)} />
             </div>
           </Card>
+
+          <VehiclePLCard vehicleId={vehicle.id} status={vehicle.status} acquiredAt={meta.procurement?.received_at ?? vehicle.created_at} />
+
 
           {/* Photos */}
           <Card className="p-4">

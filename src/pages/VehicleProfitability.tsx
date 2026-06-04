@@ -38,7 +38,22 @@ interface VehicleRow {
   landed_cost: number;
   profit: number;
   margin: number;
+  acquired_at: string | null;
+  sold_at: string | null;
+  days_in_stock: number | null;
+  cogs_posted: boolean;
+  flags: string[];
 }
+
+type SortKey = "profit_desc" | "profit_asc" | "margin_desc" | "margin_asc" | "stock_desc";
+
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: "profit_desc", label: "أعلى ربح" },
+  { value: "profit_asc",  label: "أقل ربح" },
+  { value: "margin_desc", label: "أعلى هامش %" },
+  { value: "margin_asc",  label: "أقل هامش %" },
+  { value: "stock_desc",  label: "أطول مدة في المخزون" },
+];
 
 const DEPT_OPTIONS: { value: DeptCode | "all"; label: string }[] = [
   { value: "all", label: "كل الأقسام" },
@@ -53,11 +68,14 @@ const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 const firstOfYear = new Date(today.getFullYear(), 0, 1);
 
 const exportCsv = (rows: VehicleRow[]) => {
-  const header = ["الكود", "VIN", "الماركة", "الموديل", "السنة", "الحالة", "الإيراد", "خصم/إرجاع", "صافي الإيراد", "التكلفة الكلية", "صافي الربح", "هامش %"];
+  const header = ["الكود","VIN","الماركة","الموديل","السنة","الحالة","تاريخ الاستلام","تاريخ البيع","أيام في المخزون","الإيراد","خصم/إرجاع","صافي الإيراد","التكلفة الكلية","صافي الربح","هامش %","COGS","ملاحظات الحوكمة"];
   const lines = rows.map(r => [
     r.code, r.vin ?? "", r.brand, r.model, r.year, r.status,
+    r.acquired_at ?? "", r.sold_at ?? "", r.days_in_stock ?? "",
     r.revenue, r.credited, r.net_revenue, r.landed_cost, r.profit, r.margin.toFixed(2),
-  ].join(","));
+    r.cogs_posted ? "مرحّل" : "غير مرحّل",
+    r.flags.join(" | "),
+  ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(","));
   const blob = new Blob(["\ufeff" + [header.join(","), ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -81,6 +99,7 @@ export default function VehicleProfitability() {
   const [dept, setDept] = useState<DeptCode | "all">("all");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "sold" | "available">("all");
+  const [sortKey, setSortKey] = useState<SortKey>("profit_desc");
 
   const [rows, setRows] = useState<VehicleRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,8 +124,8 @@ export default function VehicleProfitability() {
         .gte("credit_note.cn_date", from)
         .lte("credit_note.cn_date", to);
 
-      // 3) vehicles for lookup
-      let vq = supabase.from("vehicles").select("id, code, name, brand, model, year, vin, status").limit(500);
+      // 3) vehicles for lookup (incl. created_at for days-in-stock baseline)
+      let vq = supabase.from("vehicles").select("id, code, name, brand, model, year, vin, status, created_at").limit(500);
       if (statusFilter !== "all") vq = vq.eq("status", statusFilter as any);
       if (search.trim()) {
         const s = `%${search.trim()}%`;
@@ -130,35 +149,61 @@ export default function VehicleProfitability() {
       }
 
       const vehicles = (vRes.data ?? []).filter(v =>
-        // keep vehicles that have activity OR (no filters limit them) — if filters active, keep only those with revenue
         revMap.has(v.id) || crMap.has(v.id) || (dept === "all" && !search && statusFilter === "all")
       );
 
-      // 4) landed cost in parallel (cap to displayed)
-      const costEntries = await Promise.all(
+      // 4) landed cost + sold_at + COGS posted, in parallel
+      const enriched = await Promise.all(
         vehicles.map(async v => {
-          const { data, error } = await supabase.rpc("compute_vehicle_landed_cost" as any, { p_vehicle_id: v.id });
-          if (error) return [v.id, 0] as const;
-          const row = Array.isArray(data) ? data[0] : data;
-          return [v.id, Number((row as any)?.landed_cost || 0)] as const;
+          const [{ data: cd }, { data: inv }] = await Promise.all([
+            supabase.rpc("compute_vehicle_landed_cost" as any, { p_vehicle_id: v.id }),
+            supabase
+              .from("sales_order_lines")
+              .select("order:sales_orders(invoices(invoice_date, cogs_journal_entry_id))")
+              .eq("vehicle_id", v.id)
+              .limit(20),
+          ]);
+          const row = Array.isArray(cd) ? cd[0] : cd;
+          let sold_at: string | null = null;
+          let cogs_posted = false;
+          for (const l of (inv ?? []) as any[]) {
+            for (const i of l.order?.invoices ?? []) {
+              if (i?.invoice_date && (!sold_at || i.invoice_date < sold_at)) sold_at = i.invoice_date;
+              if (i?.cogs_journal_entry_id) cogs_posted = true;
+            }
+          }
+          return { id: v.id, landed: Number((row as any)?.landed_cost || 0), sold_at, cogs_posted };
         }),
       );
-      const costMap = new Map(costEntries);
+      const enrichMap = new Map(enriched.map(e => [e.id, e]));
 
+      const todayIso = isoDate(new Date());
       const result: VehicleRow[] = vehicles.map(v => {
+        const e = enrichMap.get(v.id)!;
         const revenue = revMap.get(v.id) ?? 0;
         const credited = crMap.get(v.id) ?? 0;
         const net_revenue = revenue - credited;
-        const landed_cost = costMap.get(v.id) ?? 0;
+        const landed_cost = e.landed;
         const profit = net_revenue - landed_cost;
         const margin = net_revenue > 0 ? (profit / net_revenue) * 100 : 0;
+        const acquired_at = (v as any).created_at ? (v as any).created_at.slice(0, 10) : null;
+        const endIso = e.sold_at ?? todayIso;
+        const days_in_stock = acquired_at
+          ? Math.max(0, Math.floor((+new Date(endIso) - +new Date(acquired_at)) / 86400000))
+          : null;
+        const flags: string[] = [];
+        if (profit < 0) flags.push("ربح سالب");
+        if (landed_cost === 0) flags.push("تكلفة مفقودة");
+        if (v.status === "sold" && revenue === 0) flags.push("إيراد مفقود");
+        if (v.status === "sold" && !e.cogs_posted) flags.push("COGS مفقود");
+        if (v.status === "sold" && !e.sold_at) flags.push("مطابقة مخزون مفقودة");
         return {
           id: v.id, code: v.code, name: v.name, brand: v.brand, model: v.model, year: v.year, vin: v.vin, status: v.status,
           revenue, credited, net_revenue, landed_cost, profit, margin,
+          acquired_at, sold_at: e.sold_at, days_in_stock, cogs_posted: e.cogs_posted, flags,
         };
       });
 
-      result.sort((a, b) => b.profit - a.profit);
       setRows(result);
     } catch (e: any) {
       toast({ title: "تعذّر تحميل البيانات", description: e?.message ?? "خطأ غير معروف", variant: "destructive" });
@@ -170,12 +215,25 @@ export default function VehicleProfitability() {
 
   useEffect(() => { fetchData(); /* eslint-disable-line react-hooks/exhaustive-deps */ }, []);
 
+  const sortedRows = useMemo(() => {
+    const arr = [...rows];
+    switch (sortKey) {
+      case "profit_desc": arr.sort((a, b) => b.profit - a.profit); break;
+      case "profit_asc":  arr.sort((a, b) => a.profit - b.profit); break;
+      case "margin_desc": arr.sort((a, b) => b.margin - a.margin); break;
+      case "margin_asc":  arr.sort((a, b) => a.margin - b.margin); break;
+      case "stock_desc":  arr.sort((a, b) => (b.days_in_stock ?? 0) - (a.days_in_stock ?? 0)); break;
+    }
+    return arr;
+  }, [rows, sortKey]);
+
   const totals = useMemo(() => rows.reduce((a, r) => ({
     revenue: a.revenue + r.net_revenue,
     cost: a.cost + r.landed_cost,
     profit: a.profit + r.profit,
     units: a.units + (r.net_revenue > 0 ? 1 : 0),
-  }), { revenue: 0, cost: 0, profit: 0, units: 0 }), [rows]);
+    flagged: a.flagged + (r.flags.length > 0 ? 1 : 0),
+  }), { revenue: 0, cost: 0, profit: 0, units: 0, flagged: 0 }), [rows]);
   const totalMargin = totals.revenue > 0 ? (totals.profit / totals.revenue) * 100 : 0;
 
   return (
@@ -190,7 +248,7 @@ export default function VehicleProfitability() {
               <RefreshCw className={`h-3.5 w-3.5 ml-1 ${loading ? "animate-spin" : ""}`} />
               تحديث
             </Button>
-            <Button size="sm" variant="outline" onClick={() => exportCsv(rows)} disabled={!rows.length}>
+            <Button size="sm" variant="outline" onClick={() => exportCsv(sortedRows)} disabled={!rows.length}>
               <Download className="h-3.5 w-3.5 ml-1" /> CSV
             </Button>
           </div>
@@ -240,18 +298,30 @@ export default function VehicleProfitability() {
             />
           </div>
         </div>
-        <div className="md:col-span-6 flex justify-end">
+        <div className="md:col-span-4 flex items-end gap-2">
+          <div className="space-y-1 flex-1 max-w-xs">
+            <Label className="text-xs">الترتيب</Label>
+            <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+              <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="md:col-span-2 flex items-end justify-end">
           <Button size="sm" onClick={fetchData} disabled={loading}>تطبيق الفلاتر</Button>
         </div>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-3">
         <KPI label="عدد المركبات" value={String(totals.units)} />
         <KPI label="صافي الإيراد" value={fmtCompact(totals.revenue)} tone="good" />
         <KPI label="إجمالي التكلفة" value={fmtCompact(totals.cost)} />
         <KPI label="صافي الربح" value={fmtCompact(totals.profit)} tone={totals.profit >= 0 ? "good" : "bad"} />
         <KPI label={`متوسط الهامش (${totalMargin.toFixed(1)}%)`} value={`${totalMargin.toFixed(1)}%`} tone={totalMargin >= 0 ? "good" : "bad"} />
+        <KPI label="مركبات بمؤشرات حوكمة" value={String(totals.flagged)} tone={totals.flagged > 0 ? "bad" : "good"} />
       </div>
 
       {/* Table */}
@@ -262,18 +332,20 @@ export default function VehicleProfitability() {
               <th className="text-right p-2">المركبة</th>
               <th className="text-right p-2">VIN</th>
               <th className="text-right p-2">الحالة</th>
+              <th className="text-right p-2">أيام في المخزون</th>
               <th className="text-left p-2">صافي الإيراد</th>
               <th className="text-left p-2">التكلفة الكلية</th>
               <th className="text-left p-2">صافي الربح</th>
               <th className="text-right p-2 w-32">الهامش</th>
+              <th className="text-right p-2">الحوكمة</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="text-center text-muted-foreground py-8">جارٍ التحميل…</td></tr>
-            ) : !rows.length ? (
-              <EmptyState inTable colSpan={7} icon={<Car className="h-7 w-7" />} title="لا توجد بيانات" description="لا توجد مركبات تطابق الفلاتر المختارة." />
-            ) : rows.map(r => (
+              <tr><td colSpan={9} className="text-center text-muted-foreground py-8">جارٍ التحميل…</td></tr>
+            ) : !sortedRows.length ? (
+              <EmptyState inTable colSpan={9} icon={<Car className="h-7 w-7" />} title="لا توجد بيانات" description="لا توجد مركبات تطابق الفلاتر المختارة." />
+            ) : sortedRows.map(r => (
               <tr key={r.id} className="border-t hover:bg-muted/30">
                 <td className="p-2">
                   <div className="font-medium">{r.brand} {r.model} {r.year}</div>
@@ -284,6 +356,10 @@ export default function VehicleProfitability() {
                   <Badge variant={r.status === "sold" ? "default" : "secondary"} className="text-[10px]">
                     {r.status === "sold" ? "مباعة" : r.status === "available" ? "متوفّرة" : r.status}
                   </Badge>
+                </td>
+                <td className="p-2 text-right tabular-nums text-xs">
+                  {r.days_in_stock !== null ? `${r.days_in_stock} يوم` : "—"}
+                  {r.sold_at && <div className="text-[10px] text-muted-foreground">بيع: {r.sold_at}</div>}
                 </td>
                 <td className="p-2 text-left tabular-nums">
                   {fmtSAR(r.net_revenue)}
@@ -303,6 +379,17 @@ export default function VehicleProfitability() {
                       ? <TrendingUp className="h-3 w-3 text-success" />
                       : <TrendingDown className="h-3 w-3 text-destructive" />}
                   </div>
+                </td>
+                <td className="p-2">
+                  {r.flags.length === 0 ? (
+                    <Badge variant="outline" className="text-[10px] border-success/40 text-success">سليم</Badge>
+                  ) : (
+                    <div className="flex flex-wrap gap-1 justify-end max-w-[180px]">
+                      {r.flags.map((f, i) => (
+                        <Badge key={i} variant="outline" className="text-[10px] border-destructive/40 text-destructive bg-destructive/5">{f}</Badge>
+                      ))}
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
