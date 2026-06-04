@@ -83,4 +83,47 @@ export const salesVehicleStatus = {
       .in("id", ids)
       .neq("status", "delivered");
   },
+
+  /**
+   * Release vehicles linked to a credit note back to `available` stock.
+   *
+   * Business rules:
+   *  - reserved / sold  → available (silent revert; goods were not handed over)
+   *  - delivered        → NOT reverted; an explicit goods-return workflow is required.
+   *
+   * Returns { released, blockedDelivered } so callers can surface a follow-up
+   * action for delivered units that need a physical return before re-entering stock.
+   */
+  async releaseForCreditNote(
+    creditNoteId: string,
+  ): Promise<{ released: string[]; blockedDelivered: string[] }> {
+    const { data: lns } = await supabase
+      .from("credit_note_lines")
+      .select("vehicle_id")
+      .eq("credit_note_id", creditNoteId);
+    const ids = (lns ?? [])
+      .map((r: any) => r.vehicle_id)
+      .filter((v: string | null): v is string => !!v);
+    if (!ids.length) return { released: [], blockedDelivered: [] };
+
+    const { data: vs } = await supabase
+      .from("vehicles")
+      .select("id, vin, status")
+      .in("id", ids);
+
+    const releasable = (vs ?? [])
+      .filter((v: any) => v.status !== "delivered")
+      .map((v: any) => v.id);
+    const blockedDelivered = (vs ?? [])
+      .filter((v: any) => v.status === "delivered")
+      .map((v: any) => v.vin || v.id);
+
+    if (releasable.length) {
+      await supabase
+        .from("vehicles")
+        .update({ status: "available" as any })
+        .in("id", releasable);
+    }
+    return { released: releasable, blockedDelivered };
+  },
 };
