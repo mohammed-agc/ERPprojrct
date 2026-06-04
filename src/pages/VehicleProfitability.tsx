@@ -395,6 +395,7 @@ export default function VehicleProfitability() {
               <th className="text-right p-2">أيام في المخزون</th>
               <th className="text-left p-2">صافي الإيراد</th>
               <th className="text-left p-2">التكلفة الكلية</th>
+              <th className="text-right p-2">COGS</th>
               <th className="text-left p-2">صافي الربح</th>
               <th className="text-right p-2 w-32">الهامش</th>
               <th className="text-right p-2">الحوكمة</th>
@@ -402,9 +403,9 @@ export default function VehicleProfitability() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={9} className="text-center text-muted-foreground py-8">جارٍ التحميل…</td></tr>
+              <tr><td colSpan={10} className="text-center text-muted-foreground py-8">جارٍ التحميل…</td></tr>
             ) : !sortedRows.length ? (
-              <EmptyState inTable colSpan={9} icon={<Car className="h-7 w-7" />} title="لا توجد بيانات" description="لا توجد مركبات تطابق الفلاتر المختارة." />
+              <EmptyState inTable colSpan={10} icon={<Car className="h-7 w-7" />} title="لا توجد بيانات" description="لا توجد مركبات تطابق الفلاتر المختارة." />
             ) : sortedRows.map(r => (
               <tr key={r.id} className="border-t hover:bg-muted/30">
                 <td className="p-2">
