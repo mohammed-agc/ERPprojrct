@@ -1,34 +1,64 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { FileText, ShieldCheck } from "lucide-react";
+import { FileText } from "lucide-react";
 import {
-  allocationService, ALC_STATUS_LABEL, ALC_STATUS_TONE,
-  ALC_VSTATUS_LABEL, ALC_VSTATUS_TONE,
-} from "@/services/erp/allocations";
-import { purchasingService, fmtDate } from "@/services/erp/purchasing";
+  getAllocation, confirmationForAllocation, setAllocationStatus,
+  ALC_STATUS_LABEL, ALC_STATUS_TONE, ALC_VSTATUS_LABEL, ALC_VSTATUS_TONE, fmtDate,
+} from "@/services/erp/allocationsDb";
+import { getPurchaseOrder, listActiveSuppliers } from "@/services/erp/purchasingDb";
 import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
-import { AllocationConfirmationDialog } from "@/components/erp/AllocationConfirmationDialog";
-import { useRole } from "@/services/erp/erpRoles";
+import { AllocationDbConfirmationDialog } from "@/components/erp/AllocationDbConfirmationDialog";
 
 export default function AllocationDetail() {
   const { id = "" } = useParams();
-  const [tick, setTick] = useState(0);
+  const qc = useQueryClient();
   const [confOpen, setConfOpen] = useState(false);
-  const refresh = () => setTick(t => t + 1);
-  const [activeRole] = useRole();
 
-  const alloc = useMemo(() => allocationService.get(id), [id, tick]);
-  if (!alloc) return <div className="p-6 text-sm text-muted-foreground">التخصيص غير موجود</div>;
+  const { data, isLoading } = useQuery({
+    queryKey: ["allocation", id],
+    queryFn: () => getAllocation(id),
+    enabled: !!id,
+  });
+  const { data: cc } = useQuery({
+    queryKey: ["allocation-conf", id],
+    queryFn: () => confirmationForAllocation(id),
+    enabled: !!id,
+  });
+  const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers-active"], queryFn: listActiveSuppliers });
+  const { data: poData } = useQuery({
+    queryKey: ["po-detail", data?.header.po_id],
+    queryFn: () => getPurchaseOrder(data!.header.po_id),
+    enabled: !!data?.header.po_id,
+  });
 
-  const supplier = purchasingService.getSupplier(alloc.supplier_id);
-  const po = purchasingService.getPO(alloc.po_id);
-  const cc = allocationService.confirmationFor(alloc.id);
+  if (isLoading) return <div className="p-6 text-sm text-muted-foreground">جارٍ التحميل…</div>;
+  if (!data) return <div className="p-6 text-sm text-muted-foreground">التخصيص غير موجود</div>;
 
-  const onConfirm = () => { allocationService.confirmAllocation(alloc.id); toast.success("تم التأكيد"); refresh(); };
+  const alloc = data.header;
+  const lines = data.lines;
+  const supplier = suppliers.find(s => s.id === alloc.supplier_id);
+  const po = poData?.header;
+
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: ["allocation", id] });
+    qc.invalidateQueries({ queryKey: ["allocation-conf", id] });
+    qc.invalidateQueries({ queryKey: ["allocations"] });
+  };
+
+  const onConfirm = async () => {
+    try {
+      await setAllocationStatus(alloc.id, "confirmed");
+      toast.success("تم التأكيد");
+      refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "فشل التحديث");
+    }
+  };
 
   const responsibleRole =
     alloc.status === "draft" ? "purchasing_officer" :
@@ -41,17 +71,18 @@ export default function AllocationDetail() {
   return (
     <div className="space-y-3">
       <PageHeader
-        title={`تخصيص ${alloc.code}`}
-        subtitle={`${supplier?.name ?? "—"} · ${alloc.lines.length} مركبة`}
+        title={`تخصيص ${alloc.alloc_no}`}
+        subtitle={`${supplier?.name ?? "—"} · ${lines.length} مركبة`}
         actions={
-          <div className="flex gap-2">
-            {po && <Button variant="outline" size="sm" asChild><Link to={`/purchasing/orders`}><FileText className="h-4 w-4 ml-1" />{po.code}</Link></Button>}
-          </div>
+          po ? (
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/purchasing/orders/${po.id}`}><FileText className="h-4 w-4 ml-1" />{po.po_no}</Link>
+            </Button>
+          ) : undefined
         }
       />
-      <AllocationConfirmationDialog open={confOpen} onOpenChange={setConfOpen} allocationId={alloc.id} onCreated={refresh} />
+      <AllocationDbConfirmationDialog open={confOpen} onOpenChange={setConfOpen} allocationId={alloc.id} onCreated={refresh} />
 
-      {/* Supplier + PO header banner */}
       {supplier && (
         <div className="border border-primary/30 bg-primary/5 rounded-md p-3 grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
           <div>
@@ -62,22 +93,22 @@ export default function AllocationDetail() {
           <div>
             <div className="text-[10px] text-muted-foreground">أمر الشراء</div>
             {po
-              ? <Link to={`/purchasing/orders/${po.id}`} className="font-mono font-semibold text-primary hover:underline">{po.code}</Link>
+              ? <Link to={`/purchasing/orders/${po.id}`} className="font-mono font-semibold text-primary hover:underline">{po.po_no}</Link>
               : <div>—</div>}
             <div className="text-[10px] text-muted-foreground">{po ? fmtDate(po.created_at) : "—"}</div>
           </div>
           <div>
-            <div className="text-[10px] text-muted-foreground">الفرع الوجهة</div>
-            <div>{po?.branch_destination ?? "—"}</div>
+            <div className="text-[10px] text-muted-foreground">التسليم المتوقع</div>
+            <div>{fmtDate(po?.expected_delivery)}</div>
           </div>
           <div>
             <div className="text-[10px] text-muted-foreground">عدد المركبات</div>
-            <div className="num font-bold">{alloc.lines.length}</div>
+            <div className="num font-bold">{lines.length}</div>
           </div>
           <div>
             <div className="text-[10px] text-muted-foreground">إجمالي تقديري</div>
             <div className="num font-bold">
-              {alloc.lines.reduce((s, l) => s + (l.cost ?? 0), 0).toLocaleString("ar-SA")} ر.س
+              {lines.reduce((s, l) => s + (Number(l.unit_cost) || 0), 0).toLocaleString("ar-SA")} ر.س
             </div>
           </div>
         </div>
@@ -102,16 +133,16 @@ export default function AllocationDetail() {
                 </tr>
               </thead>
               <tbody>
-                {alloc.lines.map((l, idx) => (
+                {lines.map((l, idx) => (
                   <tr key={l.id}>
                     <td className="text-xs num">{idx + 1}</td>
-                    <td className="text-xs font-semibold">{(l.manufacturer || l.brand)} {l.model}</td>
+                    <td className="text-xs font-semibold">{l.manufacturer || l.brand} {l.model}</td>
                     <td className="text-xs">{l.trim || "—"}</td>
-                    <td className="text-xs num">{l.year}</td>
-                    <td className="text-xs">{l.color}</td>
+                    <td className="text-xs num">{l.year ?? "—"}</td>
+                    <td className="text-xs">{l.color ?? "—"}</td>
                     <td className="font-mono text-[11px]">{l.vin}</td>
                     <td className="font-mono text-[11px]">{l.engine_no}</td>
-                    <td className="text-xs num">{l.cost ? l.cost.toLocaleString("ar-SA") : "—"}</td>
+                    <td className="text-xs num">{l.unit_cost ? Number(l.unit_cost).toLocaleString("ar-SA") : "—"}</td>
                     <td><Badge className={ALC_VSTATUS_TONE[l.status]}>{ALC_VSTATUS_LABEL[l.status]}</Badge></td>
                   </tr>
                 ))}
@@ -123,12 +154,12 @@ export default function AllocationDetail() {
             <div className="bg-card border border-border rounded-lg p-3 text-xs">
               <div className="flex items-center justify-between mb-2">
                 <div className="font-semibold text-sm">وثيقة تأكيد التخصيص</div>
-                <Link to={`/purchasing/allocation-confirmations/${cc.id}`} className="font-mono text-primary hover:underline">{cc.code}</Link>
+                <Link to={`/purchasing/allocation-confirmations/${cc.id}`} className="font-mono text-primary hover:underline">{cc.conf_no}</Link>
               </div>
               <div className="grid grid-cols-3 gap-2 text-[11px]">
                 <div><span className="text-muted-foreground">تاريخ التخصيص:</span> {fmtDate(cc.allocation_date)}</div>
                 <div><span className="text-muted-foreground">عدد المركبات:</span> {cc.vehicle_count}</div>
-                <div><span className="text-muted-foreground">الفاتورة:</span> {cc.invoice_id ? "مرتبطة" : "—"}</div>
+                <div><span className="text-muted-foreground">الفاتورة:</span> {cc.purchase_invoice_id ? "مرتبطة" : "—"}</div>
               </div>
               {cc.notes && <div className="mt-2 text-[11px] text-muted-foreground">{cc.notes}</div>}
             </div>
@@ -139,9 +170,7 @@ export default function AllocationDetail() {
           status={ALC_STATUS_LABEL[alloc.status]}
           statusTone={ALC_STATUS_TONE[alloc.status]}
           responsibleRole={responsibleRole}
-          previous={po ? { kind: "po", id: po.id, code: po.code } : undefined}
-          audit={alloc.audit}
-          approvals={alloc.approvals}
+          previous={po ? { kind: "po", id: po.id, code: po.po_no } : undefined}
           nextActions={[
             ...(alloc.status === "draft" ? [{ label: "تأكيد التخصيص", onClick: onConfirm, role: "purchasing_officer" as const }] : []),
             ...(alloc.status === "confirmed" && !cc ? [{ label: "إصدار وثيقة التأكيد", onClick: () => setConfOpen(true), role: "purchasing_officer" as const }] : []),
@@ -151,4 +180,3 @@ export default function AllocationDetail() {
     </div>
   );
 }
-

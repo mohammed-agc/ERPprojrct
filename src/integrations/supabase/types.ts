@@ -55,6 +55,163 @@ export type Database = {
           },
         ]
       }
+      allocation_confirmations: {
+        Row: {
+          allocation_date: string
+          allocation_id: string
+          conf_no: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          po_id: string
+          purchase_invoice_id: string | null
+          supplier_id: string
+          vehicle_count: number
+          vin_list: Json
+        }
+        Insert: {
+          allocation_date?: string
+          allocation_id: string
+          conf_no: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          po_id: string
+          purchase_invoice_id?: string | null
+          supplier_id: string
+          vehicle_count?: number
+          vin_list?: Json
+        }
+        Update: {
+          allocation_date?: string
+          allocation_id?: string
+          conf_no?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          po_id?: string
+          purchase_invoice_id?: string | null
+          supplier_id?: string
+          vehicle_count?: number
+          vin_list?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "allocation_confirmations_allocation_id_fkey"
+            columns: ["allocation_id"]
+            isOneToOne: false
+            referencedRelation: "allocations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      allocation_lines: {
+        Row: {
+          allocation_id: string
+          brand: string
+          color: string | null
+          engine_no: string
+          id: string
+          line_no: number
+          manufacturer: string | null
+          model: string
+          po_line_id: string | null
+          status: Database["public"]["Enums"]["allocation_line_status"]
+          trim: string | null
+          unit_cost: number
+          vat_pct: number
+          vehicle_id: string | null
+          vin: string
+          year: number | null
+        }
+        Insert: {
+          allocation_id: string
+          brand: string
+          color?: string | null
+          engine_no: string
+          id?: string
+          line_no: number
+          manufacturer?: string | null
+          model: string
+          po_line_id?: string | null
+          status?: Database["public"]["Enums"]["allocation_line_status"]
+          trim?: string | null
+          unit_cost?: number
+          vat_pct?: number
+          vehicle_id?: string | null
+          vin: string
+          year?: number | null
+        }
+        Update: {
+          allocation_id?: string
+          brand?: string
+          color?: string | null
+          engine_no?: string
+          id?: string
+          line_no?: number
+          manufacturer?: string | null
+          model?: string
+          po_line_id?: string | null
+          status?: Database["public"]["Enums"]["allocation_line_status"]
+          trim?: string | null
+          unit_cost?: number
+          vat_pct?: number
+          vehicle_id?: string | null
+          vin?: string
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "allocation_lines_allocation_id_fkey"
+            columns: ["allocation_id"]
+            isOneToOne: false
+            referencedRelation: "allocations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      allocations: {
+        Row: {
+          alloc_no: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          po_id: string
+          purchase_invoice_id: string | null
+          status: Database["public"]["Enums"]["allocation_status"]
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          alloc_no: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          po_id: string
+          purchase_invoice_id?: string | null
+          status?: Database["public"]["Enums"]["allocation_status"]
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          alloc_no?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          po_id?: string
+          purchase_invoice_id?: string | null
+          status?: Database["public"]["Enums"]["allocation_status"]
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string
@@ -1259,6 +1416,60 @@ export type Database = {
           },
         ]
       }
+      shipments: {
+        Row: {
+          allocation_id: string | null
+          carrier: string
+          created_at: string
+          created_by: string | null
+          customs_status: Database["public"]["Enums"]["customs_clearance_status"]
+          destination: string | null
+          eta: string | null
+          id: string
+          notes: string | null
+          origin: string | null
+          po_id: string
+          reference: string | null
+          shipment_no: string
+          status: Database["public"]["Enums"]["shipment_status"]
+          updated_at: string
+        }
+        Insert: {
+          allocation_id?: string | null
+          carrier?: string
+          created_at?: string
+          created_by?: string | null
+          customs_status?: Database["public"]["Enums"]["customs_clearance_status"]
+          destination?: string | null
+          eta?: string | null
+          id?: string
+          notes?: string | null
+          origin?: string | null
+          po_id: string
+          reference?: string | null
+          shipment_no: string
+          status?: Database["public"]["Enums"]["shipment_status"]
+          updated_at?: string
+        }
+        Update: {
+          allocation_id?: string | null
+          carrier?: string
+          created_at?: string
+          created_by?: string | null
+          customs_status?: Database["public"]["Enums"]["customs_clearance_status"]
+          destination?: string | null
+          eta?: string | null
+          id?: string
+          notes?: string | null
+          origin?: string | null
+          po_id?: string
+          reference?: string | null
+          shipment_no?: string
+          status?: Database["public"]["Enums"]["shipment_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       supplier_payments: {
         Row: {
           amount: number
@@ -1957,6 +2168,22 @@ export type Database = {
     }
     Enums: {
       account_type: "asset" | "liability" | "equity" | "revenue" | "expense"
+      allocation_line_status:
+        | "pending"
+        | "confirmed"
+        | "in_transit"
+        | "received"
+        | "inspected"
+        | "stocked"
+        | "cancelled"
+      allocation_status:
+        | "draft"
+        | "confirmed"
+        | "invoiced"
+        | "in_transit"
+        | "received"
+        | "closed"
+        | "cancelled"
       app_role:
         | "admin"
         | "manager"
@@ -1974,6 +2201,7 @@ export type Database = {
         | "workshop_manager"
         | "spare_parts_manager"
       cn_type: "cancellation" | "return" | "price_adjustment" | "discount"
+      customs_clearance_status: "not_started" | "in_progress" | "cleared"
       department_code:
         | "vehicles"
         | "spare_parts"
@@ -2010,6 +2238,14 @@ export type Database = {
         | "approved"
         | "rejected"
         | "converted"
+        | "cancelled"
+      shipment_status:
+        | "preparing"
+        | "shipped"
+        | "in_transit"
+        | "at_customs"
+        | "cleared"
+        | "arrived"
         | "cancelled"
       vehicle_cost_type:
         | "freight"
@@ -2150,6 +2386,24 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["asset", "liability", "equity", "revenue", "expense"],
+      allocation_line_status: [
+        "pending",
+        "confirmed",
+        "in_transit",
+        "received",
+        "inspected",
+        "stocked",
+        "cancelled",
+      ],
+      allocation_status: [
+        "draft",
+        "confirmed",
+        "invoiced",
+        "in_transit",
+        "received",
+        "closed",
+        "cancelled",
+      ],
       app_role: [
         "admin",
         "manager",
@@ -2168,6 +2422,7 @@ export const Constants = {
         "spare_parts_manager",
       ],
       cn_type: ["cancellation", "return", "price_adjustment", "discount"],
+      customs_clearance_status: ["not_started", "in_progress", "cleared"],
       department_code: [
         "vehicles",
         "spare_parts",
@@ -2208,6 +2463,15 @@ export const Constants = {
         "approved",
         "rejected",
         "converted",
+        "cancelled",
+      ],
+      shipment_status: [
+        "preparing",
+        "shipped",
+        "in_transit",
+        "at_customs",
+        "cleared",
+        "arrived",
         "cancelled",
       ],
       vehicle_cost_type: [
