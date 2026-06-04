@@ -385,6 +385,9 @@ export default function VehicleDetail() {
             </div>
           </Card>
 
+          <VehiclePLCard vehicleId={vehicle.id} status={vehicle.status} acquiredAt={meta.procurement?.received_at ?? vehicle.created_at} />
+
+
           {/* Photos */}
           <Card className="p-4">
             <div className="flex items-center justify-between mb-3">
