@@ -14,11 +14,49 @@ const fmt = (n: number) =>
 
 /** GL impact rows for a sales credit note (mirror of sales invoice, reversed). */
 type GlRow = { account: string; debit: number; credit: number };
-const buildGlImpact = (subtotal: number, vat: number, total: number): GlRow[] => [
-  { account: "4100 — مرتجعات المبيعات", debit: Number(subtotal.toFixed(2)), credit: 0 },
-  { account: "2310 — ضريبة القيمة المضافة (مخرجات)", debit: Number(vat.toFixed(2)), credit: 0 },
-  { account: "1200 — الذمم المدينة (العملاء)", debit: 0, credit: Number(total.toFixed(2)) },
-];
+
+const ACC_RETURNS = "4100 — مرتجعات المبيعات";
+const ACC_VAT = "2310 — ضريبة القيمة المضافة (مخرجات)";
+const ACC_AR = "1200 — الذمم المدينة (العملاء)";
+
+/** Per-line GL contributions (used for the detailed pre-post journal preview). */
+type GlLineRow = {
+  line_no: number;
+  description: string;
+  subtotal: number;
+  vat: number;
+  total: number;
+};
+
+const buildGlLineRows = (
+  lines: Array<{ description: string; quantity: number; unit_price: number; vat_pct: number; _selected?: boolean }>
+): GlLineRow[] =>
+  lines
+    .filter(l => l._selected !== false && l.quantity > 0 && l.unit_price > 0)
+    .map((l, i) => {
+      const subtotal = Number((l.quantity * l.unit_price).toFixed(2));
+      const vat = Number((subtotal * (l.vat_pct / 100)).toFixed(2));
+      return {
+        line_no: i + 1,
+        description: l.description || `بند ${i + 1}`,
+        subtotal,
+        vat,
+        total: Number((subtotal + vat).toFixed(2)),
+      };
+    });
+
+/** Aggregate per-line contributions into per-account debit/credit totals. */
+const aggregateGl = (rows: GlLineRow[]): GlRow[] => {
+  const subtotal = rows.reduce((s, r) => s + r.subtotal, 0);
+  const vat = rows.reduce((s, r) => s + r.vat, 0);
+  const total = rows.reduce((s, r) => s + r.total, 0);
+  return [
+    { account: ACC_RETURNS, debit: Number(subtotal.toFixed(2)), credit: 0 },
+    { account: ACC_VAT, debit: Number(vat.toFixed(2)), credit: 0 },
+    { account: ACC_AR, debit: 0, credit: Number(total.toFixed(2)) },
+  ];
+};
+
 
 
 interface CnLine {
