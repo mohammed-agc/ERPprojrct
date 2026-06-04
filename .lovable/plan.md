@@ -1,51 +1,80 @@
-# Phase 12 — AP UI Wiring
 
-Wire the **accounting-side** Accounts Payable surface to the authoritative Supabase tables shipped in Phase 11 (`suppliers`, `purchase_invoices`, `purchase_invoice_lines`, `supplier_payments`). Purchasing-workflow pages that depend on PR/PO/Allocation/GRN are intentionally **out of scope** — they belong to Phase 13.
+# Phase 13 — Purchasing Spine Persistence (Supabase-authoritative)
 
-## In scope
+Scope confirmed: start clean, no LS migration, no backward compatibility, no import wizard. All purchasing data flows through Supabase exclusively. `purchasingService` (LS) and `allocationService` (LS) will be retired and replaced by Supabase-backed services.
 
-### Service layer — `src/services/erp/accounting.ts`
-1. Replace stub `listPayables()` with a Supabase-backed implementation:
-   - Read `suppliers` + `purchase_invoices` (where `status <> 'cancelled'`) + `supplier_payments`.
-   - Compute per-vendor: bill count, total payable, paid amount, remaining, overdue, aging buckets (current / 0-30 / 31-60 / 61-90 / 90+).
-   - Aging uses `due_date` when present, else `invoice_date + 30`.
-2. Replace stub `vendorStatement(vendorId, from?, to?)`:
-   - Combine invoices (credit) and supplier payments (debit) into a chronological ledger with running balance.
-3. Update `financialKpis.payables` to use the sum of `listPayables().remaining_balance` (instead of hard-coded `0`).
+The chain to persist:
 
-### New DB read helpers — `src/services/erp/accounting.ts`
-4. Add `listPurchaseInvoices(filters?)` and `getPurchaseInvoice(id)` (with lines + supplier + payments) using Supabase. These are pure read helpers — no PO/Allocation joins, since those tables don't exist yet.
+```
+PR → PO → Allocation → GRN (Receiving) → Inspection → Purchase Invoice → Supplier Payment
+```
+
+The last two (Purchase Invoice + Supplier Payment) are already authoritative from Phase 11/12. This phase brings the first five online.
+
+## Why split Phase 13 into sub-turns
+
+The current LS spine is ~2,700 lines of service code and ~18 pages (~3,200 lines). Doing it in one push violates the "small blast radius" principle the user already chose. I propose three sub-turns under the Phase 13 umbrella, each fully shippable and verifiable:
+
+### Phase 13a — Schema + PR/PO persistence (this turn)
+- **Migration**: create `purchase_requests`, `purchase_request_lines`, `purchase_orders`, `purchase_order_lines`. Enums for status. Auto-numbering via sequences. GRANTs + RLS (vehicles dept + accounting + managers can write; all auth can read). `updated_at` triggers.
+- **Service**: new `src/services/erp/purchasingDb.ts` with `listPRs / getPR / createPR / submitPR / approvePR / rejectPR / convertPRtoPO / listPOs / getPO / createPO / sendPO / acknowledgePO / cancelPO`.
+- **Pages rewritten**: `PurchaseRequests.tsx`, `PurchaseRequestDetail.tsx`, `PurchaseOrders.tsx`, `PurchaseOrderDetail.tsx`. They call the new DB service only.
+- **LS removal**: delete PR/PO methods from `purchasingService`. Any other page still importing them is rewired to call `purchasingDb` or temporarily disabled with a clear placeholder if it belongs to a later sub-turn.
+
+### Phase 13b — Allocation + Shipments
+- Migration for `allocations`, `allocation_lines`, `shipments` + RLS/GRANTs.
+- New `allocationsDb.ts` + `shipmentsDb.ts`.
+- Rewrite `Allocations.tsx`, `AllocationDetail.tsx`, `AllocationConfirmations.tsx`, `AllocationConfirmationDetail.tsx`, `Shipments.tsx`.
+- Retire `allocationService` (LS) and shipment methods from `purchasingService`.
+
+### Phase 13c — GRN (Receiving) + Inspection + auto-create vehicles + close
+- Migration for `goods_receipts`, `goods_receipt_lines`, `inspections`, `inspection_lines`.
+- On GRN post: insert `vehicles` rows (status='available', cost_price from PO line) tied back to the GRN line so the existing purchase-invoice flow can attach them.
+- Rewrite `Receiving.tsx`, `ReceivingWorkbench.tsx`, `Inspection.tsx`, `InspectionDetail.tsx`, `PurchasingDashboard.tsx`.
+- Delete `src/services/erp/purchasing.ts` LS internals (keep only pure helpers — labels, tones, fmt). Delete `src/services/erp/allocations.ts` LS internals.
+- Final verification: end-to-end PR → PO → Allocation → GRN → Inspection → PINV → Supplier Payment with a real auth user.
+
+`SupplierCredit.tsx` and `SupplierIncentives.tsx` are out of Phase 13 scope (deferred — they are not on the spine).
+
+## This turn (Phase 13a) — detailed work
+
+### Migration
+```text
+purchase_requests(id, pr_no, request_date, requested_by, department_code, status, notes, total_estimated, created_*, updated_*)
+purchase_request_lines(id, pr_id, line_no, brand, model, year, color, quantity, estimated_unit_cost, notes)
+purchase_orders(id, po_no, pr_id, supplier_id, order_date, expected_delivery, status, subtotal, vat_amount, total, notes, created_*, updated_*)
+purchase_order_lines(id, po_id, pr_line_id, line_no, brand, model, year, color, quantity, unit_cost, vat_pct, line_total)
+```
+- Enums: `pr_status` (`draft|submitted|approved|rejected|converted|cancelled`), `po_status` (`draft|sent|acknowledged|partially_received|received|cancelled`).
+- GRANTs: `SELECT` to authenticated (line tables too); write for managers/admin and vehicles+accounting depts; full to service_role.
+- RLS mirrors existing `purchase_invoices` policy pattern.
+- Auto-numbering: simple `pr_no = 'PR-' || lpad(nextval('seq_pr')::text, 6, '0')` set in BEFORE INSERT trigger if `pr_no` is null.
+
+### Service (`purchasingDb.ts`)
+Pure Supabase calls. No LS. Each mutator returns the freshly read row. State transitions are server-enforced via a trigger that rejects invalid status moves.
 
 ### Pages
-5. **`src/pages/accounting/PurchaseInvoicesRegistry.tsx`** — rewrite:
-   - Source data via the new `accounting.listPurchaseInvoices()`.
-   - Drop PO/Allocation columns (no DB source). Keep: invoice no, supplier, issue date, due date, subtotal, VAT, total, paid, remaining, status, JE link badge.
-   - Link row → existing `/purchasing/invoices/:id` is *not* rewired (Phase 13 owns that page); instead link to a new lightweight detail view `/accounting/purchase-invoices/:id` that reads from DB.
-6. **`src/pages/accounting/PurchaseInvoiceAccountingDetail.tsx`** — new minimal read-only page:
-   - Header: code, supplier, dates, totals, status, JE link.
-   - Lines table (from `purchase_invoice_lines`).
-   - Payments table (from `supplier_payments`).
-   - Links to underlying GL journal entries (`journal_entries` by `source_type='purchase_invoice'`/`'supplier_payment'`).
-7. **`src/pages/AccountsPayable.tsx`** — already calls `accounting.listPayables()`; extend table to render the aging buckets columns now that data is real.
-8. Register the new route in `src/App.tsx`.
+Rewritten as thin React Query consumers of `purchasingDb`. Behavior preserved (list, filter, create, view, action buttons). RTL/Arabic strings preserved.
+
+### LS cleanup this turn
+- Remove `createPR/listPRs/...` and PO methods from `purchasingService`.
+- If `Allocations.tsx`/`Shipments.tsx`/`Receiving*.tsx` still import retired PR/PO helpers, swap to `purchasingDb` reads. They keep their own LS internals until 13b/13c.
 
 ### Verification
-- Insert a test supplier + purchase invoice + line + payment via `supabase--insert`, refresh `/accounts-payable` and `/accounting/purchase-invoices`, confirm the vendor balance, aging, and JE links resolve. Clean up the test data after.
+- Insert a PR via UI → confirm row in `purchase_requests`.
+- Convert to PO → confirm `purchase_orders` row with FK to PR.
+- Send PO → status transitions allowed; invalid transitions rejected.
+- Read-only check that `PurchaseInvoices` (accounting side, Phase 12) still resolves.
 
-## Explicitly out of scope (deferred to Phase 13)
-- `src/pages/purchasing/PurchaseInvoices.tsx`
-- `src/pages/purchasing/PurchaseInvoiceDetail.tsx`
-- `src/components/erp/PurchaseInvoiceCreateDialog.tsx`
-- Any LS-backed `purchasingService` method (`listPOs`, `listSuppliers` LS-side, `recordPurchasePayment`, `recordMixedPurchasePayment`, etc.)
-- Supplier credit / mixed-payment flows (require Phase 13 supplier credit schema)
-- GRN / Inspection / Receiving pages
+## Deliverable at end of each sub-turn
+- Updated ERP Readiness %
+- Updated Production Readiness %
+- Remaining LS-backed pages (named list)
+- Remaining critical findings
 
-## Explicitly out of scope (deferred to Phase 14)
-- Tightening RLS on `payments` / `audit_log` / line tables (audit flagged in the prior review)
-- Hardening any new write surfaces — existing Phase 11 RLS on AP tables is already department-scoped and stays as-is.
+## Out of scope (entire Phase 13)
+- Phase 14 security hardening (RLS tightening on `payments`, `audit_log`, line tables).
+- `SupplierCredit` / `SupplierIncentives` pages.
+- Any analytics, dashboards, or new modules.
 
-## Technical notes
-- No new migrations. All needed tables, triggers, and grants shipped in Phase 11.
-- No changes to `purchasingService` (LS) — Phase 13 will retire it.
-- No new components beyond the single read-only detail page.
-- All new Supabase reads scope to `authenticated` and rely on existing RLS.
+## Approve to proceed with Phase 13a this turn.
