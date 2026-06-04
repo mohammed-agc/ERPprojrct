@@ -104,6 +104,7 @@ export type Database = {
           quantity: number
           unit_price: number
           vat_pct: number
+          vehicle_id: string | null
         }
         Insert: {
           credit_note_id: string
@@ -114,6 +115,7 @@ export type Database = {
           quantity?: number
           unit_price?: number
           vat_pct?: number
+          vehicle_id?: string | null
         }
         Update: {
           credit_note_id?: string
@@ -124,6 +126,7 @@ export type Database = {
           quantity?: number
           unit_price?: number
           vat_pct?: number
+          vehicle_id?: string | null
         }
         Relationships: [
           {
@@ -144,6 +147,7 @@ export type Database = {
           customer_id: string
           id: string
           invoice_id: string
+          journal_entry_id: string | null
           notes: string | null
           reason: string
           status: string
@@ -160,6 +164,7 @@ export type Database = {
           customer_id: string
           id?: string
           invoice_id: string
+          journal_entry_id?: string | null
           notes?: string | null
           reason?: string
           status?: string
@@ -176,6 +181,7 @@ export type Database = {
           customer_id?: string
           id?: string
           invoice_id?: string
+          journal_entry_id?: string | null
           notes?: string | null
           reason?: string
           status?: string
@@ -803,6 +809,7 @@ export type Database = {
         Returns: boolean
       }
       is_manager_or_admin: { Args: { _user_id: string }; Returns: boolean }
+      post_credit_note_journal: { Args: { p_cn_id: string }; Returns: string }
       user_department: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {

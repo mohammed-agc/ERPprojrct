@@ -69,6 +69,10 @@ interface CnLine {
   _maxQty?: number;
   /** Maximum unit price allowed for this line (= original invoice line unit_price). */
   _maxUnit?: number;
+  /** Vehicle this line is reversing — drives inventory release on post. */
+  vehicle_id?: string | null;
+  /** Human-readable VIN/code for display only. */
+  vehicle_label?: string | null;
 }
 
 interface Props {
@@ -82,7 +86,14 @@ interface Props {
     credited_amount: number;
     paid_amount: number;
   };
-  invoiceLines: Array<{ description: string; quantity: number; unit_price: number; vat_pct: number }>;
+  invoiceLines: Array<{
+    description: string;
+    quantity: number;
+    unit_price: number;
+    vat_pct: number;
+    vehicle_id?: string | null;
+    vehicle_label?: string | null;
+  }>;
   onCreated: (cnId: string) => void;
 }
 
@@ -101,6 +112,9 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
     match: boolean;
     invoiceCreditedAfter: number;
     invoiceStatusAfter: string;
+    journalEntryId: string | null;
+    inventoryReleased: number;
+    blockedDelivered: string[];
   } | null>(null);
 
 
@@ -180,13 +194,13 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
         vat: Number(totals.vat.toFixed(2)),
         total: Number(totals.total.toFixed(2)),
       };
-      const cnId = await creditNotesService.issueFromLines({
+      const { cnId, journalEntryId, inventory } = await creditNotesService.issueFromLines({
         invoiceId: invoice.id,
         customerId: invoice.customer_id,
         reason,
         notes,
-        lines: active.map(({ description, quantity, unit_price, vat_pct }) => ({
-          description, quantity, unit_price, vat_pct,
+        lines: active.map(({ description, quantity, unit_price, vat_pct, vehicle_id }) => ({
+          description, quantity, unit_price, vat_pct, vehicle_id: vehicle_id ?? null,
         })),
       });
 
@@ -210,9 +224,12 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
         match,
         invoiceCreditedAfter: Number(invRow?.credited_amount ?? 0),
         invoiceStatusAfter: String(invRow?.status ?? "—"),
+        journalEntryId,
+        inventoryReleased: inventory.released.length,
+        blockedDelivered: inventory.blockedDelivered,
       });
       setStep("verified");
-      if (match) toast.success("تم النشر وتطابق التحقق المحاسبي");
+      if (match) toast.success("تم النشر مع قيد محاسبي وتحديث المخزون");
       else toast.error("تم النشر لكن النتيجة لا تطابق المعاينة");
     } catch (e: any) {
       toast.error(e.message ?? "فشل إصدار الإشعار الدائن");
@@ -296,6 +313,9 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
                     </td>
                     <td>
                       <Input className="h-7" value={l.description} onChange={e => update(i, { description: e.target.value })} />
+                      {l.vehicle_label && (
+                        <div className="text-[10px] text-primary mt-0.5">🚗 VIN: <span className="font-mono">{l.vehicle_label}</span></div>
+                      )}
                       {err && <div className="text-[10px] text-destructive mt-0.5">{err}</div>}
                     </td>
                     <td>
@@ -514,8 +534,24 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
             </table>
           </div>
 
-          <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3 mb-2">
+          <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3 mb-2 space-y-1">
             <div>الفاتورة بعد النشر — رصيد العكس: <b className="num">{fmt(verify.invoiceCreditedAfter)}</b> · الحالة: <b>{verify.invoiceStatusAfter}</b></div>
+            <div>
+              قيد محاسبي:{" "}
+              {verify.journalEntryId ? (
+                <span className="font-mono text-foreground">JE {verify.journalEntryId.slice(0, 8)}…</span>
+              ) : (
+                <span className="text-destructive">لم يُنشأ</span>
+              )}
+              {" · "}
+              مركبات أُعيدت للمخزون: <b className="text-foreground">{verify.inventoryReleased}</b>
+            </div>
+            {verify.blockedDelivered.length > 0 && (
+              <div className="text-amber-600 dark:text-amber-400">
+                ⚠ مركبات مُسلَّمة لم تُعَد للمخزون تلقائياً (يلزم بدء سير عمل إرجاع بضاعة):{" "}
+                <span className="font-mono">{verify.blockedDelivered.join("، ")}</span>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
