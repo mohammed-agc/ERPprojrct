@@ -159,12 +159,18 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) 
           <Wallet className="h-4 w-4 text-primary" /> الربح والخسارة (P&L)
         </div>
         <div className="flex items-center gap-1.5 text-[11px]">
-          {pl.net_profit >= 0
-            ? <TrendingUp className="h-3.5 w-3.5 text-success" />
-            : <TrendingDown className="h-3.5 w-3.5 text-destructive" />}
-          <span className={`font-semibold tabular-nums ${pl.net_profit >= 0 ? "text-success" : "text-destructive"}`}>
-            {fmtSAR(pl.net_profit)}
-          </span>
+          {hasSalesActivity ? (
+            <>
+              {pl.net_profit >= 0
+                ? <TrendingUp className="h-3.5 w-3.5 text-success" />
+                : <TrendingDown className="h-3.5 w-3.5 text-destructive" />}
+              <span className={`font-semibold tabular-nums ${pl.net_profit >= 0 ? "text-success" : "text-destructive"}`}>
+                {fmtSAR(pl.net_profit)}
+              </span>
+            </>
+          ) : (
+            <span className="text-muted-foreground">لم تُبع بعد</span>
+          )}
         </div>
       </div>
 
