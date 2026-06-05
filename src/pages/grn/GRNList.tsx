@@ -29,6 +29,10 @@ export default function GRNList() {
   const [open, setOpen] = useState(false);
 
   const { data: grns = [] } = useQuery({ queryKey: ["grns"], queryFn: listGRNs });
+  const refs = useDocRefs({
+    shipmentIds: grns.map(g => g.shipment_id),
+    allocationIds: grns.map(g => g.allocation_id),
+  });
 
   const filtered = useMemo(() => grns.filter(g => {
     if (status !== "all" && g.status !== status) return false;
