@@ -37,16 +37,19 @@ export const INS_RESULT_TONE: Record<InspectionResult, string> = {
   rejected: "bg-destructive/10 text-destructive border-destructive/30",
 };
 
+export type GrnSource = "shipment" | "allocation";
+
 export interface GrnRow {
   id: string;
   grn_no: string;
-  shipment_id: string;
+  shipment_id: string | null;
   allocation_id: string;
   po_id: string;
   supplier_id: string;
   received_at: string;
   warehouse: string | null;
   receiver_id: string | null;
+  source: GrnSource;
   status: GrnStatus;
   notes: string | null;
   created_by: string | null;
