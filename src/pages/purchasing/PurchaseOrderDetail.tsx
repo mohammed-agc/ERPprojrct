@@ -66,7 +66,7 @@ export default function PurchaseOrderDetail() {
               <div><div className="text-[10px] text-muted-foreground">الفرعي</div><div className="num">{fmtSAR(Number(po.subtotal))}</div></div>
               <div><div className="text-[10px] text-muted-foreground">الضريبة</div><div className="num">{fmtSAR(Number(po.vat_amount))}</div></div>
               <div><div className="text-[10px] text-muted-foreground">طلب الشراء</div>
-                <div>{po.pr_id ? <Link to={`/purchasing/requests/${po.pr_id}`} className="text-primary hover:underline">عرض</Link> : "—"}</div>
+                <div>{po.pr_id ? <Link to={`/purchasing/requests/${po.pr_id}`} className="text-primary hover:underline font-mono">{linkedPR?.header.pr_no ?? "..."}</Link> : "—"}</div>
               </div>
             </div>
             {po.notes && (
