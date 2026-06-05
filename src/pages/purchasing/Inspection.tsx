@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, FileSearch, Info } from "lucide-react";
 import { listInspections, INS_LABEL, INS_TONE, fmtDate } from "@/services/erp/receivingDb";
+import { useDocRefs, refLabel } from "@/hooks/useDocRefs";
 
 export default function Inspection() {
   const nav = useNavigate();
