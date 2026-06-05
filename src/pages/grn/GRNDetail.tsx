@@ -11,6 +11,7 @@ import {
   getGRN, inspectionForGRN, createInspectionFromGRN,
   GRN_LABEL, GRN_TONE, fmtDate,
 } from "@/services/erp/receivingDb";
+import { useDocRefs, refLabel } from "@/hooks/useDocRefs";
 
 export default function GRNDetail() {
   const { id = "" } = useParams();
