@@ -75,14 +75,15 @@ export default function PurchaseOrderDetail() {
             <div className="px-3 py-2 border-b border-border font-semibold text-xs">البنود</div>
             <table className="erp-table text-xs">
               <thead>
-                <tr><th>#</th><th>الماركة</th><th>الموديل</th><th>السنة</th><th>اللون</th><th>الكمية</th><th>سعر الوحدة</th><th>VAT%</th><th>الإجمالي</th></tr>
+                <tr><th>#</th><th>الصانع</th><th>الموديل</th><th>الفئة</th><th>السنة</th><th>اللون</th><th>الكمية</th><th>سعر الوحدة</th><th>VAT%</th><th>الإجمالي</th></tr>
               </thead>
               <tbody>
                 {lines.map(l => (
                   <tr key={l.id}>
                     <td>{l.line_no}</td>
-                    <td>{l.brand}</td>
+                    <td>{(l as any).manufacturer ?? l.brand}</td>
                     <td>{l.model}</td>
+                    <td>{(l as any).trim ?? "—"}</td>
                     <td>{l.year ?? "—"}</td>
                     <td>{l.color ?? "—"}</td>
                     <td className="num">{Number(l.quantity)}</td>
