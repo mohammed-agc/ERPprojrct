@@ -61,9 +61,9 @@ export default function GRNDetail() {
           <div className="flex items-center gap-2 text-xs">
             <Badge className={GRN_TONE[g.status]}>{GRN_LABEL[g.status]}</Badge>
             <span className="text-muted-foreground">الشحنة:</span>
-            <span className="font-mono">{g.shipment_id.slice(0, 8)}</span>
+            <span className="font-mono">{g.shipment_id ? g.shipment_id.slice(0, 8) : "—"}</span>
             <span className="text-muted-foreground">· التخصيص:</span>
-            <span className="font-mono">{g.allocation_id.slice(0, 8)}</span>
+            <span className="font-mono">{g.allocation_id ? g.allocation_id.slice(0, 8) : "—"}</span>
           </div>
         }
         actions={
