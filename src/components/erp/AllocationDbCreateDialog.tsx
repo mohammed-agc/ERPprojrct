@@ -251,7 +251,7 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
             </div>
           )}
 
-
+          {grouped.map(([lineId, units]) => {
             const u0 = units[0];
             const lineTotal = u0.unit_cost * units.length;
             return (
