@@ -66,7 +66,7 @@ export default function Inspection() {
                     <FileSearch className="h-3 w-3 text-muted-foreground" />{i.insp_no}
                   </div>
                 </td>
-                <td className="font-mono text-[11px] text-muted-foreground">{i.grn_id.slice(0, 8)}</td>
+                <td className="font-mono text-[11px] text-muted-foreground">{i.grn_id ? i.grn_id.slice(0, 8) : "—"}</td>
                 <td className="text-xs">{fmtDate(i.started_at)}</td>
                 <td className="text-xs">{fmtDate(i.completed_at)}</td>
                 <td><Badge className={INS_TONE[i.status]}>{INS_LABEL[i.status]}</Badge></td>
