@@ -86,6 +86,23 @@ export default function AllocationDetail() {
         }
       />
       <AllocationDbConfirmationDialog open={confOpen} onOpenChange={setConfOpen} allocationId={alloc.id} onCreated={refresh} />
+      <GRNDbCreateDialog open={grnOpen} onOpenChange={setGrnOpen} defaultAllocationId={alloc.id} onCreated={(grnId) => { refresh(); navigate(`/grn/${grnId}`); }} />
+
+      <div className="border border-border rounded-md p-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs bg-muted/20">
+        <div>
+          <div className="text-[10px] text-muted-foreground">المستودع المستهدف</div>
+          <div className="font-semibold">{alloc.target_warehouse || "—"}</div>
+        </div>
+        <div>
+          <div className="text-[10px] text-muted-foreground">طريقة الاستلام</div>
+          <div className="font-semibold">{alloc.receiving_method ? RECV_METHOD_LABEL[alloc.receiving_method] : "—"}</div>
+        </div>
+        <div>
+          <div className="text-[10px] text-muted-foreground">المستلِم المسؤول</div>
+          <div className="font-semibold">{employees.find(e => e.id === alloc.receiver_id)?.full_name || "—"}</div>
+        </div>
+      </div>
+
 
       {supplier && (
         <div className="border border-primary/30 bg-primary/5 rounded-md p-3 grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
