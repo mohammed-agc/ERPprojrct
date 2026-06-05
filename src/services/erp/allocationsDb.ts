@@ -355,6 +355,14 @@ export async function createPurchaseInvoiceFromAllocation(input: {
   const activeLines = alloc.lines.filter(l => l.status !== "cancelled");
   if (!activeLines.length) throw new Error("لا توجد بنود فعّالة في التخصيص");
 
+  // Governance: every allocation line MUST be linked to a vehicle (post-inspection)
+  // before a purchase invoice can be issued. This prevents orphan PIs that have
+  // no inventory provenance and cannot be posted to GL.
+  const missingVehicle = activeLines.filter(l => !l.vehicle_id);
+  if (missingVehicle.length > 0) {
+    throw new Error("لا يمكن إنشاء فاتورة شراء قبل استلام المركبة واعتماد الفحص");
+  }
+
   const vatPct = Number(input.vat_pct ?? 15);
   const subtotal = activeLines.reduce((s, l) => s + (Number(l.unit_cost) || 0), 0);
   const vatAmount = +(subtotal * vatPct / 100).toFixed(2);
@@ -370,7 +378,7 @@ export async function createPurchaseInvoiceFromAllocation(input: {
       supplier_id: alloc.header.supplier_id,
       supplier_invoice_ref: input.supplier_invoice_ref ?? null,
       invoice_date: new Date().toISOString().slice(0, 10),
-      status: "issued",
+      status: "draft",
       subtotal,
       vat_amount: vatAmount,
       total,
@@ -398,6 +406,13 @@ export async function createPurchaseInvoiceFromAllocation(input: {
     .update({ purchase_invoice_id: inv.id, status: "invoiced" as AllocationStatus })
     .eq("id", input.allocation_id);
   if (e3) throw e3;
+
+  // Auto-post to GL (Inventory / Input-VAT / AP journal + vehicle landed cost).
+  // Mirrors Sales Invoice behavior: PI issuance = GL recognition.
+  const { error: e4 } = await supabase.rpc("post_purchase_invoice_journal", {
+    p_invoice_id: inv.id,
+  });
+  if (e4) throw new Error(`تم إنشاء الفاتورة ${inv.invoice_no} لكن تعذّر ترحيلها محاسبياً: ${e4.message}`);
 
   return { id: inv.id, invoice_no: inv.invoice_no };
 }
