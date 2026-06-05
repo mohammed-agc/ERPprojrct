@@ -133,15 +133,24 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) 
       ? { tone: "warning",     label: "⚠ قيد COGS مفقود" }
       : { tone: "warning",     label: "—" };
 
-  // Governance flags
-  const flags: { ok: boolean; label: string }[] = [
-    { ok: pl.net_profit >= 0, label: "ربحية موجبة" },
-    { ok: pl.landed_cost > 0, label: "التكلفة مسجّلة" },
-    { ok: status === "available" || pl.revenue > 0, label: status === "sold" ? "الإيراد مسجّل" : "—" },
-    { ok: !pl.has_invoice || pl.cogs_posted, label: "قيد COGS مرحّل" },
-    { ok: status !== "sold" || pl.cogs_posted, label: "المخزون مُخفَّض" },
-    { ok: pl.inventory_reconciled, label: "مطابقة المخزون" },
-  ].filter(f => f.label !== "—");
+  // Governance flags — pre-sale vehicles only carry cost/inventory presence checks.
+  // Revenue / COGS / profitability indicators only apply after a sales document exists.
+  const isSold = status === "sold";
+  const hasSalesActivity = isSold || pl.has_invoice || pl.revenue > 0;
+
+  const flags: { ok: boolean; label: string }[] = hasSalesActivity
+    ? [
+        { ok: pl.net_profit >= 0, label: pl.net_profit >= 0 ? "ربحية موجبة" : "ربحية سالبة" },
+        { ok: pl.landed_cost > 0, label: "التكلفة مسجّلة" },
+        { ok: pl.revenue > 0, label: "الإيراد مسجّل" },
+        { ok: !pl.has_invoice || pl.cogs_posted, label: "قيد COGS مرحّل" },
+        { ok: !isSold || pl.cogs_posted, label: "المخزون مُخفَّض" },
+        { ok: pl.inventory_reconciled, label: "مطابقة المخزون" },
+      ]
+    : [
+        { ok: pl.landed_cost > 0, label: "التكلفة مسجّلة" },
+        { ok: true, label: "لم تُبع بعد — الربحية قيد الانتظار" },
+      ];
 
   return (
     <Card className="p-4">
@@ -150,12 +159,18 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) 
           <Wallet className="h-4 w-4 text-primary" /> الربح والخسارة (P&L)
         </div>
         <div className="flex items-center gap-1.5 text-[11px]">
-          {pl.net_profit >= 0
-            ? <TrendingUp className="h-3.5 w-3.5 text-success" />
-            : <TrendingDown className="h-3.5 w-3.5 text-destructive" />}
-          <span className={`font-semibold tabular-nums ${pl.net_profit >= 0 ? "text-success" : "text-destructive"}`}>
-            {fmtSAR(pl.net_profit)}
-          </span>
+          {hasSalesActivity ? (
+            <>
+              {pl.net_profit >= 0
+                ? <TrendingUp className="h-3.5 w-3.5 text-success" />
+                : <TrendingDown className="h-3.5 w-3.5 text-destructive" />}
+              <span className={`font-semibold tabular-nums ${pl.net_profit >= 0 ? "text-success" : "text-destructive"}`}>
+                {fmtSAR(pl.net_profit)}
+              </span>
+            </>
+          ) : (
+            <span className="text-muted-foreground">لم تُبع بعد</span>
+          )}
         </div>
       </div>
 
