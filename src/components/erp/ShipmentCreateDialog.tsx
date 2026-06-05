@@ -65,8 +65,8 @@ export function ShipmentCreateDialog({ open, onOpenChange, onCreated }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent dir="rtl" className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>شحنة جديدة</DialogTitle>
-          <DialogDescription className="text-xs">شحنة قيد التجهيز مرتبطة بأمر شراء.</DialogDescription>
+          <DialogTitle>سجل نقل / تسليم جديد</DialogTitle>
+          <DialogDescription className="text-xs">اختياري — وثيقة نقل لأمر الشراء (ناقل، BL، وصول). الاستلام يمكن أن يتم مباشرة من التخصيص.</DialogDescription>
         </DialogHeader>
         <div className="space-y-2 text-xs">
           <div>
