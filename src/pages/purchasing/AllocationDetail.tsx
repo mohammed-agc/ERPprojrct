@@ -33,6 +33,7 @@ export default function AllocationDetail() {
     enabled: !!id,
   });
   const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers-active"], queryFn: listActiveSuppliers });
+  const { data: employees = [] } = useQuery({ queryKey: ["employees"], queryFn: listEmployees });
   const { data: poData } = useQuery({
     queryKey: ["po-detail", data?.header.po_id],
     queryFn: () => getPurchaseOrder(data!.header.po_id),
