@@ -59,13 +59,17 @@ export default function PurchaseRequestDetail() {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-border">
               <div><div className="text-[10px] text-muted-foreground">التاريخ</div><div>{fmtDate(pr.request_date)}</div></div>
+              <div><div className="text-[10px] text-muted-foreground">الطالب</div><div>{pr.requester_name ?? "—"}</div></div>
+              <div><div className="text-[10px] text-muted-foreground">الفرع</div><div>{pr.branch ?? "—"}</div></div>
+              <div><div className="text-[10px] text-muted-foreground">الأولوية</div><div>{pr.urgency ?? "normal"}</div></div>
               <div><div className="text-[10px] text-muted-foreground">عدد البنود</div><div>{lines.length}</div></div>
               <div><div className="text-[10px] text-muted-foreground">إجمالي تقديري</div><div className="font-bold">{fmtSAR(Number(pr.total_estimated))}</div></div>
+              <div><div className="text-[10px] text-muted-foreground">المورد المقترح</div><div>{pr.suggested_supplier_id ? "محدد" : "—"}</div></div>
               <div><div className="text-[10px] text-muted-foreground">آخر تحديث</div><div>{fmtDate(pr.updated_at)}</div></div>
             </div>
             {pr.notes && (
               <div>
-                <div className="text-[10px] text-muted-foreground mb-1">ملاحظات</div>
+                <div className="text-[10px] text-muted-foreground mb-1">مبرر الطلب / ملاحظات</div>
                 <div className="bg-muted/30 rounded p-2">{pr.notes}</div>
               </div>
             )}
@@ -81,14 +85,15 @@ export default function PurchaseRequestDetail() {
             <div className="px-3 py-2 border-b border-border font-semibold text-xs">البنود</div>
             <table className="erp-table text-xs">
               <thead>
-                <tr><th>#</th><th>الماركة</th><th>الموديل</th><th>السنة</th><th>اللون</th><th>الكمية</th><th>سعر تقديري</th><th>الإجمالي</th></tr>
+                <tr><th>#</th><th>الصانع</th><th>الموديل</th><th>الفئة</th><th>السنة</th><th>اللون</th><th>الكمية</th><th>سعر تقديري</th><th>الإجمالي</th></tr>
               </thead>
               <tbody>
                 {lines.map(l => (
                   <tr key={l.id}>
                     <td>{l.line_no}</td>
-                    <td>{l.brand}</td>
+                    <td>{l.manufacturer ?? l.brand}</td>
                     <td>{l.model}</td>
+                    <td>{l.trim ?? "—"}</td>
                     <td>{l.year ?? "—"}</td>
                     <td>{l.color ?? "—"}</td>
                     <td className="num">{Number(l.quantity)}</td>
@@ -99,6 +104,7 @@ export default function PurchaseRequestDetail() {
               </tbody>
             </table>
           </div>
+
         </div>
 
         <div className="space-y-2">

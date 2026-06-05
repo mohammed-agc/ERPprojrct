@@ -1376,10 +1376,12 @@ export type Database = {
           id: string
           line_no: number
           line_total: number
+          manufacturer: string | null
           model: string
           po_id: string
           pr_line_id: string | null
           quantity: number
+          trim: string | null
           unit_cost: number
           vat_pct: number
           year: number | null
@@ -1390,10 +1392,12 @@ export type Database = {
           id?: string
           line_no: number
           line_total?: number
+          manufacturer?: string | null
           model: string
           po_id: string
           pr_line_id?: string | null
           quantity?: number
+          trim?: string | null
           unit_cost?: number
           vat_pct?: number
           year?: number | null
@@ -1404,10 +1408,12 @@ export type Database = {
           id?: string
           line_no?: number
           line_total?: number
+          manufacturer?: string | null
           model?: string
           po_id?: string
           pr_line_id?: string | null
           quantity?: number
+          trim?: string | null
           unit_cost?: number
           vat_pct?: number
           year?: number | null
@@ -1501,10 +1507,12 @@ export type Database = {
           estimated_unit_cost: number
           id: string
           line_no: number
+          manufacturer: string | null
           model: string
           notes: string | null
           pr_id: string
           quantity: number
+          trim: string | null
           year: number | null
         }
         Insert: {
@@ -1513,10 +1521,12 @@ export type Database = {
           estimated_unit_cost?: number
           id?: string
           line_no: number
+          manufacturer?: string | null
           model: string
           notes?: string | null
           pr_id: string
           quantity?: number
+          trim?: string | null
           year?: number | null
         }
         Update: {
@@ -1525,10 +1535,12 @@ export type Database = {
           estimated_unit_cost?: number
           id?: string
           line_no?: number
+          manufacturer?: string | null
           model?: string
           notes?: string | null
           pr_id?: string
           quantity?: number
+          trim?: string | null
           year?: number | null
         }
         Relationships: [
@@ -1545,6 +1557,7 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
+          branch: string | null
           created_at: string
           created_by: string | null
           department_code: Database["public"]["Enums"]["department_code"]
@@ -1554,13 +1567,17 @@ export type Database = {
           rejected_reason: string | null
           request_date: string
           requested_by: string | null
+          requester_name: string | null
           status: Database["public"]["Enums"]["pr_status"]
+          suggested_supplier_id: string | null
           total_estimated: number
           updated_at: string
+          urgency: string
         }
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
+          branch?: string | null
           created_at?: string
           created_by?: string | null
           department_code?: Database["public"]["Enums"]["department_code"]
@@ -1570,13 +1587,17 @@ export type Database = {
           rejected_reason?: string | null
           request_date?: string
           requested_by?: string | null
+          requester_name?: string | null
           status?: Database["public"]["Enums"]["pr_status"]
+          suggested_supplier_id?: string | null
           total_estimated?: number
           updated_at?: string
+          urgency?: string
         }
         Update: {
           approved_at?: string | null
           approved_by?: string | null
+          branch?: string | null
           created_at?: string
           created_by?: string | null
           department_code?: Database["public"]["Enums"]["department_code"]
@@ -1586,11 +1607,29 @@ export type Database = {
           rejected_reason?: string | null
           request_date?: string
           requested_by?: string | null
+          requester_name?: string | null
           status?: Database["public"]["Enums"]["pr_status"]
+          suggested_supplier_id?: string | null
           total_estimated?: number
           updated_at?: string
+          urgency?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "purchase_requests_suggested_supplier_id_fkey"
+            columns: ["suggested_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_requests_suggested_supplier_id_fkey"
+            columns: ["suggested_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_ap_vendor_balances"
+            referencedColumns: ["supplier_id"]
+          },
+        ]
       }
       receiving_events: {
         Row: {

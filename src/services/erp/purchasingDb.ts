@@ -42,7 +42,9 @@ export const PO_STATUS_TONE: Record<POStatus, string> = {
 
 export interface PRLineInput {
   brand: string;
+  manufacturer?: string | null;
   model: string;
+  trim?: string | null;
   year?: number | null;
   color?: string | null;
   quantity: number;
@@ -53,7 +55,9 @@ export interface PRLineInput {
 export interface POLineInput {
   pr_line_id?: string | null;
   brand: string;
+  manufacturer?: string | null;
   model: string;
+  trim?: string | null;
   year?: number | null;
   color?: string | null;
   quantity: number;
@@ -66,6 +70,10 @@ export interface PRRow {
   pr_no: string;
   request_date: string;
   requested_by: string | null;
+  requester_name: string | null;
+  branch: string | null;
+  urgency: string;
+  suggested_supplier_id: string | null;
   department_code: string;
   status: PRStatus;
   notes: string | null;
@@ -82,7 +90,9 @@ export interface PRLineRow {
   pr_id: string;
   line_no: number;
   brand: string;
+  manufacturer: string | null;
   model: string;
+  trim: string | null;
   year: number | null;
   color: string | null;
   quantity: number;
@@ -114,7 +124,9 @@ export interface POLineRow {
   pr_line_id: string | null;
   line_no: number;
   brand: string;
+  manufacturer: string | null;
   model: string;
+  trim: string | null;
   year: number | null;
   color: string | null;
   quantity: number;
@@ -161,12 +173,21 @@ export async function getPurchaseRequest(id: string): Promise<{ header: PRRow; l
 export async function createPurchaseRequest(input: {
   notes?: string;
   department_code?: string;
+  requester_name?: string | null;
+  branch?: string | null;
+  urgency?: string | null;
+  suggested_supplier_id?: string | null;
   lines: PRLineInput[];
   submit?: boolean;
 }): Promise<PRRow> {
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id ?? null;
   const total_estimated = sumPR(input.lines);
+
+  // Resolve "contact:UUID" virtual supplier ids to a real suppliers row
+  const suggested = input.suggested_supplier_id
+    ? await resolveSupplierSelection(input.suggested_supplier_id)
+    : null;
 
   const { data: header, error: e1 } = await supabase
     .from("purchase_requests")
@@ -178,7 +199,11 @@ export async function createPurchaseRequest(input: {
       status: (input.submit ? "submitted" : "draft") as any,
       notes: input.notes ?? null,
       total_estimated,
-    })
+      requester_name: input.requester_name ?? null,
+      branch: input.branch ?? null,
+      urgency: input.urgency ?? "normal",
+      suggested_supplier_id: suggested,
+    } as any)
     .select("*")
     .single();
   if (e1) throw e1;
@@ -188,7 +213,9 @@ export async function createPurchaseRequest(input: {
       pr_id: header.id,
       line_no: i + 1,
       brand: l.brand,
+      manufacturer: l.manufacturer ?? l.brand,
       model: l.model,
+      trim: l.trim ?? null,
       year: l.year ?? null,
       color: l.color ?? null,
       quantity: l.quantity,
@@ -249,6 +276,8 @@ export async function createPurchaseOrder(input: {
 }): Promise<PORow> {
   if (!input.supplier_id) throw new Error("المورد مطلوب");
   if (!input.lines.length) throw new Error("يجب إضافة بند واحد على الأقل");
+  const resolvedSupplier = await resolveSupplierSelection(input.supplier_id);
+  if (!resolvedSupplier) throw new Error("تعذّر تحديد المورد");
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id ?? null;
   const totals = sumPO(input.lines);
@@ -258,7 +287,7 @@ export async function createPurchaseOrder(input: {
     .insert({
       po_no: "",
       pr_id: input.pr_id ?? null,
-      supplier_id: input.supplier_id,
+      supplier_id: resolvedSupplier,
       expected_delivery: input.expected_delivery ?? null,
       notes: input.notes ?? null,
       status: "draft" as any,
@@ -276,7 +305,9 @@ export async function createPurchaseOrder(input: {
     pr_line_id: l.pr_line_id ?? null,
     line_no: i + 1,
     brand: l.brand,
+    manufacturer: l.manufacturer ?? l.brand,
     model: l.model,
+    trim: l.trim ?? null,
     year: l.year ?? null,
     color: l.color ?? null,
     quantity: l.quantity,
@@ -317,7 +348,9 @@ export async function convertPRtoPO(pr_id: string, supplier_id: string, expected
     lines: pr.lines.map(l => ({
       pr_line_id: l.id,
       brand: l.brand,
+      manufacturer: l.manufacturer ?? l.brand,
       model: l.model,
+      trim: l.trim ?? null,
       year: l.year,
       color: l.color,
       quantity: Number(l.quantity),
@@ -329,24 +362,116 @@ export async function convertPRtoPO(pr_id: string, supplier_id: string, expected
   return po;
 }
 
-// ============= SUPPLIERS (read-through) =============
+// ============= SUPPLIERS (read-through + contact-vendor bridge) =============
+//
+// Pre-Phase-13 selectors fed suppliers from BOTH the `suppliers` master table
+// AND vendor-tagged contacts (customers with ContactMeta.roles ⊇ ['vendor']).
+// We keep that behavior here so users always see vendor contacts in the
+// selector even before a real supplier row exists, then auto-upsert into
+// `suppliers` the moment one is chosen on a PR/PO.
 export interface SupplierRow {
-  id: string;
+  id: string;                // "<uuid>" for real supplier, "contact:<uuid>" for unprovisioned vendor contact
   code: string;
   name: string;
   vat_number: string | null;
   phone: string | null;
   email: string | null;
   is_active: boolean;
+  source: "supplier" | "contact";
 }
+
+const CONTACT_PREFIX = "contact:";
+
+function isContactSelection(value: string): boolean {
+  return value.startsWith(CONTACT_PREFIX);
+}
+
 export async function listActiveSuppliers(): Promise<SupplierRow[]> {
-  const { data, error } = await supabase
-    .from("suppliers")
-    .select("id,code,name,vat_number,phone,email,is_active")
-    .eq("is_active", true)
-    .order("name");
+  const [{ data: sup, error: e1 }, { data: cust, error: e2 }] = await Promise.all([
+    supabase.from("suppliers")
+      .select("id,code,name,vat_number,phone,email,is_active")
+      .eq("is_active", true)
+      .order("name"),
+    supabase.from("customers")
+      .select("id,code,name,vat_number,phone,email,is_active,notes")
+      .eq("is_active", true)
+      .order("name")
+      .limit(1000),
+  ]);
+  if (e1) throw e1;
+  if (e2) throw e2;
+
+  const out: SupplierRow[] = (sup ?? []).map((s: any) => ({
+    id: s.id, code: s.code, name: s.name,
+    vat_number: s.vat_number, phone: s.phone, email: s.email,
+    is_active: s.is_active, source: "supplier",
+  }));
+  const realCodes = new Set(out.map(s => s.code));
+
+  // Parse vendor-tagged customers and surface only those not already promoted
+  const { parseContactMeta } = await import("@/lib/contactMeta");
+  for (const c of cust ?? []) {
+    const { meta } = parseContactMeta((c as any).notes);
+    if (!meta.roles?.includes("vendor")) continue;
+    // If the contact already has a supplier_link_id and that supplier is in our list, skip
+    if (meta.supplier_link_id && out.some(s => s.id === meta.supplier_link_id)) continue;
+    // Suggest a stable code; skip if collides with a real supplier code
+    const code = (c as any).code || `CN-${(c as any).id.slice(0, 6)}`;
+    if (realCodes.has(code)) continue;
+    out.push({
+      id: `${CONTACT_PREFIX}${(c as any).id}`,
+      code,
+      name: (c as any).name,
+      vat_number: (c as any).vat_number ?? null,
+      phone: (c as any).phone ?? null,
+      email: (c as any).email ?? null,
+      is_active: true,
+      source: "contact",
+    });
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name, "ar"));
+}
+
+/**
+ * Resolve a selector value into a real `suppliers.id`. When the user picked
+ * a vendor-tagged contact, upsert a supplier row from the contact and return
+ * the new supplier id (idempotent on supplier code).
+ */
+export async function resolveSupplierSelection(value: string): Promise<string | null> {
+  if (!value) return null;
+  if (!isContactSelection(value)) return value;
+  const contactId = value.slice(CONTACT_PREFIX.length);
+  const { data: c, error } = await supabase
+    .from("customers")
+    .select("id,code,name,vat_number,phone,email,address,notes")
+    .eq("id", contactId)
+    .maybeSingle();
   if (error) throw error;
-  return (data ?? []) as SupplierRow[];
+  if (!c) throw new Error("جهة الاتصال غير موجودة");
+
+  const code = (c as any).code || `CN-${(c as any).id.slice(0, 6)}`;
+  // Idempotent: look for existing supplier with same code first
+  const { data: existing } = await supabase
+    .from("suppliers").select("id").eq("code", code).maybeSingle();
+  if (existing) return (existing as any).id;
+
+  const { data: auth } = await supabase.auth.getUser();
+  const { data: ins, error: ie } = await supabase
+    .from("suppliers")
+    .insert({
+      code,
+      name: (c as any).name,
+      vat_number: (c as any).vat_number ?? null,
+      phone: (c as any).phone ?? null,
+      email: (c as any).email ?? null,
+      address: (c as any).address ?? null,
+      is_active: true,
+      created_by: auth.user?.id ?? null,
+    } as any)
+    .select("id")
+    .single();
+  if (ie) throw ie;
+  return (ins as any).id;
 }
 
 export const fmtSAR = (n: number) =>
