@@ -1,18 +1,19 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { FileText } from "lucide-react";
+import { FileText, PackageCheck } from "lucide-react";
 import {
-  getAllocation, confirmationForAllocation, setAllocationStatus,
-  ALC_STATUS_LABEL, ALC_STATUS_TONE, ALC_VSTATUS_LABEL, ALC_VSTATUS_TONE, fmtDate,
+  getAllocation, confirmationForAllocation, setAllocationStatus, listEmployees,
+  ALC_STATUS_LABEL, ALC_STATUS_TONE, ALC_VSTATUS_LABEL, ALC_VSTATUS_TONE, RECV_METHOD_LABEL, fmtDate,
 } from "@/services/erp/allocationsDb";
 import { getPurchaseOrder, listActiveSuppliers } from "@/services/erp/purchasingDb";
 import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
 import { AllocationDbConfirmationDialog } from "@/components/erp/AllocationDbConfirmationDialog";
+import { GRNDbCreateDialog } from "@/components/erp/GRNDbCreateDialog";
 
 export default function AllocationDetail() {
   const { id = "" } = useParams();
