@@ -80,7 +80,7 @@ export default function InspectionDetail() {
           <div className="flex items-center gap-2 text-xs">
             <Badge className={INS_TONE[ins.status]}>{INS_LABEL[ins.status]}</Badge>
             <span className="text-muted-foreground">GRN:</span>
-            <Link to={`/grn/${ins.grn_id}`} className="text-primary font-mono hover:underline">{ins.grn_id.slice(0, 8)}</Link>
+            <Link to={`/grn/${ins.grn_id}`} className="text-primary font-mono hover:underline">{ins.grn_id ? ins.grn_id.slice(0, 8) : "—"}</Link>
           </div>
         }
       />
