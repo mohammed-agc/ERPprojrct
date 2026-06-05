@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Send, ShieldCheck } from "lucide-react";
 import {
-  getPurchaseOrder, setPurchaseOrderStatus, listActiveSuppliers,
+  getPurchaseOrder, getPurchaseRequest, setPurchaseOrderStatus, listActiveSuppliers,
   PO_STATUS_LABEL, PO_STATUS_TONE, fmtSAR, fmtDate, type POStatus,
 } from "@/services/erp/purchasingDb";
 
@@ -18,6 +18,12 @@ export default function PurchaseOrderDetail() {
     queryKey: ["po", id],
     queryFn: () => getPurchaseOrder(id),
     enabled: !!id,
+  });
+  const prId = data?.header.pr_id ?? null;
+  const { data: linkedPR } = useQuery({
+    queryKey: ["po-linked-pr", prId],
+    queryFn: () => getPurchaseRequest(prId!),
+    enabled: !!prId,
   });
   const { data: suppliers = [] } = useQuery({ queryKey: ["active-suppliers"], queryFn: listActiveSuppliers });
 
