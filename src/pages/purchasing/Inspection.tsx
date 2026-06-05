@@ -12,6 +12,7 @@ export default function Inspection() {
   const nav = useNavigate();
   const [q, setQ] = useState("");
   const { data: items = [] } = useQuery({ queryKey: ["inspections"], queryFn: listInspections });
+  const refs = useDocRefs({ grnIds: items.map(i => i.grn_id) });
 
   const filtered = useMemo(() => items.filter(i => {
     const v = q.trim().toLowerCase();
