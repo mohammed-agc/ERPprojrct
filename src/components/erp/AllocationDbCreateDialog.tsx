@@ -245,9 +245,13 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
             </div>
           )}
 
+          {po && hiddenLineCount > 0 && (
+            <div className="border border-warning/40 bg-warning/10 text-warning rounded-md p-2 text-[11px]">
+              تم إخفاء {hiddenLineCount} بند مخصَّص مسبقاً في تخصيص آخر فعَّال (لا يمكن تخصيصه مرتين).
+            </div>
+          )}
 
 
-          {grouped.map(([lineId, units]) => {
             const u0 = units[0];
             const lineTotal = u0.unit_cost * units.length;
             return (
