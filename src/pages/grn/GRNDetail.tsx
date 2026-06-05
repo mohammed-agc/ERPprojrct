@@ -61,9 +61,9 @@ export default function GRNDetail() {
           <div className="flex items-center gap-2 text-xs">
             <Badge className={GRN_TONE[g.status]}>{GRN_LABEL[g.status]}</Badge>
             <span className="text-muted-foreground">الشحنة:</span>
-            <span className="font-mono">{g.shipment_id.slice(0, 8)}</span>
+            <span className="font-mono">{g.shipment_id ? g.shipment_id.slice(0, 8) : "—"}</span>
             <span className="text-muted-foreground">· التخصيص:</span>
-            <span className="font-mono">{g.allocation_id.slice(0, 8)}</span>
+            <span className="font-mono">{g.allocation_id ? g.allocation_id.slice(0, 8) : "—"}</span>
           </div>
         }
         actions={
@@ -92,8 +92,8 @@ export default function GRNDetail() {
         <CardContent className="p-3 grid grid-cols-4 gap-3 text-xs">
           <div><div className="text-[10px] text-muted-foreground">المستودع</div><div>{g.warehouse ?? "—"}</div></div>
           <div><div className="text-[10px] text-muted-foreground">تاريخ الاستلام</div><div>{fmtDate(g.received_at)}</div></div>
-          <div><div className="text-[10px] text-muted-foreground">المورد</div><div className="font-mono text-[11px]">{g.supplier_id.slice(0, 8)}</div></div>
-          <div><div className="text-[10px] text-muted-foreground">أمر الشراء</div><div className="font-mono text-[11px]">{g.po_id.slice(0, 8)}</div></div>
+          <div><div className="text-[10px] text-muted-foreground">المورد</div><div className="font-mono text-[11px]">{g.supplier_id ? g.supplier_id.slice(0, 8) : "—"}</div></div>
+          <div><div className="text-[10px] text-muted-foreground">أمر الشراء</div><div className="font-mono text-[11px]">{g.po_id ? g.po_id.slice(0, 8) : "—"}</div></div>
         </CardContent>
       </Card>
 

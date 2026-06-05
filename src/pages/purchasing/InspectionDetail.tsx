@@ -80,7 +80,7 @@ export default function InspectionDetail() {
           <div className="flex items-center gap-2 text-xs">
             <Badge className={INS_TONE[ins.status]}>{INS_LABEL[ins.status]}</Badge>
             <span className="text-muted-foreground">GRN:</span>
-            <Link to={`/grn/${ins.grn_id}`} className="text-primary font-mono hover:underline">{ins.grn_id.slice(0, 8)}</Link>
+            <Link to={`/grn/${ins.grn_id}`} className="text-primary font-mono hover:underline">{ins.grn_id ? ins.grn_id.slice(0, 8) : "—"}</Link>
           </div>
         }
       />
@@ -130,7 +130,7 @@ export default function InspectionDetail() {
                     {l.vehicle_id ? (
                       <span className="inline-flex items-center gap-1 text-success">
                         <CheckCircle2 className="h-3 w-3" />
-                        <span className="font-mono text-[10px]">{l.vehicle_id.slice(0, 8)}</span>
+                        <span className="font-mono text-[10px]">{l.vehicle_id ? l.vehicle_id.slice(0, 8) : "—"}</span>
                       </span>
                     ) : <span className="text-muted-foreground">—</span>}
                   </td>
