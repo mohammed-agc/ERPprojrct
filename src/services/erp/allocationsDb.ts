@@ -151,6 +151,9 @@ export async function createAllocation(input: {
   po_id: string;
   supplier_id: string;
   notes?: string;
+  target_warehouse?: string | null;
+  receiving_method?: ReceivingMethod | null;
+  receiver_id?: string | null;
   lines: AllocationLineInput[];
   confirm?: boolean;
 }): Promise<AllocationRow> {
@@ -178,6 +181,9 @@ export async function createAllocation(input: {
       supplier_id: input.supplier_id,
       status: "draft" as AllocationStatus,
       notes: input.notes ?? null,
+      target_warehouse: input.target_warehouse ?? null,
+      receiving_method: input.receiving_method ?? null,
+      receiver_id: input.receiver_id ?? null,
       created_by: uid,
     })
     .select("*").single();
@@ -207,6 +213,17 @@ export async function createAllocation(input: {
     return { ...(header as AllocationRow), status: "confirmed" };
   }
   return header as AllocationRow;
+}
+
+export async function updateAllocationReceiving(id: string, patch: {
+  target_warehouse?: string | null;
+  receiving_method?: ReceivingMethod | null;
+  receiver_id?: string | null;
+}): Promise<AllocationRow> {
+  const { data, error } = await supabase
+    .from("allocations").update(patch).eq("id", id).select("*").single();
+  if (error) throw error;
+  return data as AllocationRow;
 }
 
 export async function setAllocationStatus(id: string, status: AllocationStatus): Promise<AllocationRow> {
