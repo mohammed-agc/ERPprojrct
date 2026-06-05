@@ -11,7 +11,7 @@ import {
   listPurchaseOrders, getPurchaseOrder, listActiveSuppliers, fmtSAR, fmtDate,
   type PORow, type POLineRow,
 } from "@/services/erp/purchasingDb";
-import { createAllocation, type AllocationLineInput } from "@/services/erp/allocationsDb";
+import { createAllocation, listEmployees, RECV_METHOD_LABEL, type AllocationLineInput, type ReceivingMethod } from "@/services/erp/allocationsDb";
 
 interface Props {
   open: boolean;
@@ -63,9 +63,13 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
   const [poId, setPoId] = useState(defaultPoId ?? "");
   const [rows, setRows] = useState<UnitRow[]>([]);
   const [saving, setSaving] = useState(false);
+  const [targetWarehouse, setTargetWarehouse] = useState<string>("WH-A");
+  const [receivingMethod, setReceivingMethod] = useState<ReceivingMethod>("rep_pickup");
+  const [receiverId, setReceiverId] = useState<string>("__none");
 
   const { data: pos = [] } = useQuery({ queryKey: ["pos-eligible"], queryFn: listPurchaseOrders, enabled: open });
   const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers-active"], queryFn: listActiveSuppliers, enabled: open });
+  const { data: employees = [] } = useQuery({ queryKey: ["employees"], queryFn: listEmployees, enabled: open });
   const eligible = useMemo(
     () => pos.filter(p => ["acknowledged", "partially_received"].includes(p.status)),
     [pos],
@@ -115,6 +119,9 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
       const res = await createAllocation({
         po_id: po.id,
         supplier_id: po.supplier_id,
+        target_warehouse: targetWarehouse || null,
+        receiving_method: receivingMethod,
+        receiver_id: receiverId !== "__none" ? receiverId : null,
         lines,
         confirm,
       });
@@ -189,6 +196,43 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
               </div>
             </div>
           )}
+
+          {po && (
+            <div className="border border-border rounded-md p-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div>
+                <Label className="text-xs">المستودع المستهدف</Label>
+                <Select value={targetWarehouse} onValueChange={setTargetWarehouse}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="WH-A">المستودع أ</SelectItem>
+                    <SelectItem value="WH-B">المستودع ب</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">طريقة الاستلام</Label>
+                <Select value={receivingMethod} onValueChange={(v) => setReceivingMethod(v as ReceivingMethod)}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="rep_pickup">{RECV_METHOD_LABEL.rep_pickup}</SelectItem>
+                    <SelectItem value="supplier_delivery">{RECV_METHOD_LABEL.supplier_delivery}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">المستلِم المسؤول</Label>
+                <Select value={receiverId} onValueChange={setReceiverId}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">— غير محدد —</SelectItem>
+                    {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+
 
           {grouped.map(([lineId, units]) => {
             const u0 = units[0];

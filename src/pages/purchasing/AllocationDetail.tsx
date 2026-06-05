@@ -1,23 +1,26 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { FileText } from "lucide-react";
+import { FileText, PackageCheck } from "lucide-react";
 import {
-  getAllocation, confirmationForAllocation, setAllocationStatus,
-  ALC_STATUS_LABEL, ALC_STATUS_TONE, ALC_VSTATUS_LABEL, ALC_VSTATUS_TONE, fmtDate,
+  getAllocation, confirmationForAllocation, setAllocationStatus, listEmployees,
+  ALC_STATUS_LABEL, ALC_STATUS_TONE, ALC_VSTATUS_LABEL, ALC_VSTATUS_TONE, RECV_METHOD_LABEL, fmtDate,
 } from "@/services/erp/allocationsDb";
 import { getPurchaseOrder, listActiveSuppliers } from "@/services/erp/purchasingDb";
 import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
 import { AllocationDbConfirmationDialog } from "@/components/erp/AllocationDbConfirmationDialog";
+import { GRNDbCreateDialog } from "@/components/erp/GRNDbCreateDialog";
 
 export default function AllocationDetail() {
   const { id = "" } = useParams();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [confOpen, setConfOpen] = useState(false);
+  const [grnOpen, setGrnOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["allocation", id],
@@ -30,6 +33,7 @@ export default function AllocationDetail() {
     enabled: !!id,
   });
   const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers-active"], queryFn: listActiveSuppliers });
+  const { data: employees = [] } = useQuery({ queryKey: ["employees"], queryFn: listEmployees });
   const { data: poData } = useQuery({
     queryKey: ["po-detail", data?.header.po_id],
     queryFn: () => getPurchaseOrder(data!.header.po_id),
@@ -82,6 +86,23 @@ export default function AllocationDetail() {
         }
       />
       <AllocationDbConfirmationDialog open={confOpen} onOpenChange={setConfOpen} allocationId={alloc.id} onCreated={refresh} />
+      <GRNDbCreateDialog open={grnOpen} onOpenChange={setGrnOpen} defaultAllocationId={alloc.id} onCreated={(grnId) => { refresh(); navigate(`/grn/${grnId}`); }} />
+
+      <div className="border border-border rounded-md p-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs bg-muted/20">
+        <div>
+          <div className="text-[10px] text-muted-foreground">المستودع المستهدف</div>
+          <div className="font-semibold">{alloc.target_warehouse || "—"}</div>
+        </div>
+        <div>
+          <div className="text-[10px] text-muted-foreground">طريقة الاستلام</div>
+          <div className="font-semibold">{alloc.receiving_method ? RECV_METHOD_LABEL[alloc.receiving_method] : "—"}</div>
+        </div>
+        <div>
+          <div className="text-[10px] text-muted-foreground">المستلِم المسؤول</div>
+          <div className="font-semibold">{employees.find(e => e.id === alloc.receiver_id)?.full_name || "—"}</div>
+        </div>
+      </div>
+
 
       {supplier && (
         <div className="border border-primary/30 bg-primary/5 rounded-md p-3 grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
@@ -174,6 +195,7 @@ export default function AllocationDetail() {
           nextActions={[
             ...(alloc.status === "draft" ? [{ label: "تأكيد التخصيص", onClick: onConfirm, role: "purchasing_officer" as const }] : []),
             ...(alloc.status === "confirmed" && !cc ? [{ label: "إصدار وثيقة التأكيد", onClick: () => setConfOpen(true), role: "purchasing_officer" as const }] : []),
+            ...(["confirmed", "invoiced", "in_transit"].includes(alloc.status) ? [{ label: "استلام مباشر (GRN)", onClick: () => setGrnOpen(true), role: "receiving" as const }] : []),
           ]}
         />
       </div>

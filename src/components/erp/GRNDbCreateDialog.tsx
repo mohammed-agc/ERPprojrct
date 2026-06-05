@@ -1,63 +1,76 @@
 import { useEffect, useMemo, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { createGRNFromShipment } from "@/services/erp/receivingDb";
+import { createGRNFromShipment, createGRNFromAllocation } from "@/services/erp/receivingDb";
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   defaultShipmentId?: string | null;
+  defaultAllocationId?: string | null;
   onCreated?: (grnId: string) => void;
 }
 
+type Source = "allocation" | "shipment";
 interface ShipOpt { id: string; shipment_no: string; allocation_id: string | null }
+interface AllocOpt { id: string; alloc_no: string; target_warehouse: string | null }
 interface ALine {
   id: string; vin: string; brand: string; model: string;
-  color: string | null; year: number | null; allocation_id: string;
+  color: string | null; year: number | null;
   already: boolean;
 }
 
-export function GRNDbCreateDialog({ open, onOpenChange, defaultShipmentId, onCreated }: Props) {
+export function GRNDbCreateDialog({ open, onOpenChange, defaultShipmentId, defaultAllocationId, onCreated }: Props) {
+  const [source, setSource] = useState<Source>(defaultShipmentId ? "shipment" : "allocation");
   const [shipments, setShipments] = useState<ShipOpt[]>([]);
+  const [allocations, setAllocations] = useState<AllocOpt[]>([]);
   const [shipmentId, setShipmentId] = useState<string>("");
+  const [allocationId, setAllocationId] = useState<string>("");
   const [lines, setLines] = useState<ALine[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [warehouse, setWarehouse] = useState("المستودع الرئيسي");
+  const [warehouse, setWarehouse] = useState("WH-A");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     (async () => {
-      const { data } = await supabase
-        .from("shipments")
-        .select("id, shipment_no, allocation_id, status")
-        .in("status", ["arrived", "cleared", "in_transit", "at_customs", "shipped"])
-        .order("created_at", { ascending: false });
-      const opts = (data ?? []).filter(s => s.allocation_id) as ShipOpt[];
-      setShipments(opts);
-      const initial = defaultShipmentId ?? opts[0]?.id ?? "";
-      setShipmentId(initial);
+      const [shipRes, allocRes] = await Promise.all([
+        supabase.from("shipments")
+          .select("id, shipment_no, allocation_id, status")
+          .in("status", ["arrived", "cleared", "in_transit", "at_customs", "shipped"])
+          .order("created_at", { ascending: false }),
+        supabase.from("allocations")
+          .select("id, alloc_no, target_warehouse, status")
+          .in("status", ["confirmed", "invoiced", "in_transit"])
+          .order("created_at", { ascending: false }),
+      ]);
+      setShipments(((shipRes.data ?? []) as ShipOpt[]).filter(s => s.allocation_id));
+      setAllocations((allocRes.data ?? []) as AllocOpt[]);
+      if (defaultShipmentId) { setSource("shipment"); setShipmentId(defaultShipmentId); }
+      else if (defaultAllocationId) { setSource("allocation"); setAllocationId(defaultAllocationId); }
     })();
-  }, [open, defaultShipmentId]);
+  }, [open, defaultShipmentId, defaultAllocationId]);
+
+  const activeAllocId = useMemo(() => {
+    if (source === "allocation") return allocationId;
+    return shipments.find(s => s.id === shipmentId)?.allocation_id ?? "";
+  }, [source, allocationId, shipmentId, shipments]);
 
   useEffect(() => {
-    if (!shipmentId) { setLines([]); setSelected(new Set()); return; }
+    if (!activeAllocId) { setLines([]); setSelected(new Set()); return; }
     (async () => {
-      const ship = shipments.find(s => s.id === shipmentId);
-      if (!ship?.allocation_id) return;
       const { data: aLines } = await supabase
         .from("allocation_lines")
-        .select("id, vin, brand, model, color, year, allocation_id")
-        .eq("allocation_id", ship.allocation_id)
-        .order("line_no");
+        .select("id, vin, brand, model, color, year")
+        .eq("allocation_id", activeAllocId).order("line_no");
       const ids = (aLines ?? []).map(l => l.id);
       const { data: already } = await supabase
         .from("goods_receipt_lines").select("allocation_line_id").in("allocation_line_id", ids);
@@ -65,20 +78,22 @@ export function GRNDbCreateDialog({ open, onOpenChange, defaultShipmentId, onCre
       const out: ALine[] = (aLines ?? []).map(l => ({ ...l, already: set.has(l.id) } as ALine));
       setLines(out);
       setSelected(new Set(out.filter(l => !l.already).map(l => l.id)));
+      // Pre-fill warehouse from allocation target if available
+      if (source === "allocation") {
+        const a = allocations.find(x => x.id === activeAllocId);
+        if (a?.target_warehouse) setWarehouse(a.target_warehouse);
+      }
     })();
-  }, [shipmentId, shipments]);
-
-  const eligible = useMemo(() => lines.filter(l => !l.already), [lines]);
+  }, [activeAllocId, source, allocations]);
 
   const submit = async () => {
-    if (!shipmentId) { toast.error("اختر الشحنة"); return; }
     const line_ids = Array.from(selected);
     if (line_ids.length === 0) { toast.error("اختر بنوداً للاستلام"); return; }
     setBusy(true);
     try {
-      const grn = await createGRNFromShipment({
-        shipment_id: shipmentId, warehouse, notes: notes || undefined, line_ids,
-      });
+      const grn = source === "shipment"
+        ? await createGRNFromShipment({ shipment_id: shipmentId, warehouse, notes: notes || undefined, line_ids })
+        : await createGRNFromAllocation({ allocation_id: allocationId, warehouse, notes: notes || undefined, line_ids });
       toast.success(`تم إنشاء ${grn.grn_no}`);
       onCreated?.(grn.id);
       onOpenChange(false);
@@ -93,34 +108,64 @@ export function GRNDbCreateDialog({ open, onOpenChange, defaultShipmentId, onCre
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl" dir="rtl">
-        <DialogHeader><DialogTitle>إنشاء مذكرة استلام (GRN)</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>إنشاء مذكرة استلام (GRN)</DialogTitle>
+          <DialogDescription className="text-xs">
+            استلم مباشرة من التخصيص، أو من سجل نقل/تسليم إن وُجد.
+          </DialogDescription>
+        </DialogHeader>
         <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-          <div>
-            <Label className="text-xs">الشحنة</Label>
-            <Select value={shipmentId} onValueChange={setShipmentId}>
-              <SelectTrigger className="h-9"><SelectValue placeholder="اختر شحنة" /></SelectTrigger>
-              <SelectContent>
-                {shipments.length === 0 && <div className="p-2 text-xs text-muted-foreground">لا توجد شحنات مؤهلة</div>}
-                {shipments.map(s => <SelectItem key={s.id} value={s.id}>{s.shipment_no}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
+          <RadioGroup value={source} onValueChange={(v) => setSource(v as Source)} className="grid grid-cols-2 gap-2">
+            <label className="flex items-center gap-2 border border-border rounded p-2 cursor-pointer text-xs">
+              <RadioGroupItem value="allocation" />
+              <span>من التخصيص مباشرة</span>
+            </label>
+            <label className="flex items-center gap-2 border border-border rounded p-2 cursor-pointer text-xs">
+              <RadioGroupItem value="shipment" />
+              <span>من سجل نقل/تسليم</span>
+            </label>
+          </RadioGroup>
+
+          {source === "shipment" ? (
+            <div>
+              <Label className="text-xs">سجل النقل/التسليم</Label>
+              <Select value={shipmentId} onValueChange={setShipmentId}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="اختر سجلاً" /></SelectTrigger>
+                <SelectContent>
+                  {shipments.length === 0 && <div className="p-2 text-xs text-muted-foreground">لا توجد سجلات مؤهلة</div>}
+                  {shipments.map(s => <SelectItem key={s.id} value={s.id}>{s.shipment_no}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <div>
+              <Label className="text-xs">التخصيص</Label>
+              <Select value={allocationId} onValueChange={setAllocationId}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="اختر تخصيصاً" /></SelectTrigger>
+                <SelectContent>
+                  {allocations.length === 0 && <div className="p-2 text-xs text-muted-foreground">لا توجد تخصيصات مؤكدة</div>}
+                  {allocations.map(a => <SelectItem key={a.id} value={a.id}>{a.alloc_no}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label className="text-xs">المستودع</Label>
-              <Input className="h-9" value={warehouse} onChange={e => setWarehouse(e.target.value)} />
+              <Select value={warehouse} onValueChange={setWarehouse}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="WH-A">المستودع أ</SelectItem>
+                  <SelectItem value="WH-B">المستودع ب</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label className="text-xs">ملاحظات</Label>
               <Input className="h-9" value={notes} onChange={e => setNotes(e.target.value)} />
             </div>
           </div>
-
-          {eligible.length === 0 && lines.length > 0 && (
-            <div className="text-xs text-warning bg-warning/5 border border-warning/30 rounded p-2">
-              جميع بنود هذه الشحنة سبق استلامها
-            </div>
-          )}
 
           <div className="border border-border rounded overflow-hidden">
             <table className="erp-table text-xs">
@@ -159,7 +204,9 @@ export function GRNDbCreateDialog({ open, onOpenChange, defaultShipmentId, onCre
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
-          <Button onClick={submit} disabled={busy || selected.size === 0}>إنشاء المذكرة</Button>
+          <Button onClick={submit} disabled={busy || selected.size === 0 || (source === "shipment" ? !shipmentId : !allocationId)}>
+            إنشاء المذكرة
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

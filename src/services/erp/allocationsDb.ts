@@ -45,6 +45,13 @@ export const ALC_VSTATUS_TONE: Record<AllocationLineStatus, string> = {
   cancelled: "bg-destructive/10 text-destructive border border-destructive/30",
 };
 
+export type ReceivingMethod = "rep_pickup" | "supplier_delivery";
+
+export const RECV_METHOD_LABEL: Record<ReceivingMethod, string> = {
+  rep_pickup: "استلام بواسطة مندوب الشركة",
+  supplier_delivery: "تسليم من المورد إلى المستودع",
+};
+
 export interface AllocationRow {
   id: string;
   alloc_no: string;
@@ -53,9 +60,21 @@ export interface AllocationRow {
   status: AllocationStatus;
   notes: string | null;
   purchase_invoice_id: string | null;
+  target_warehouse: string | null;
+  receiving_method: ReceivingMethod | null;
+  receiver_id: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface EmployeeOption { id: string; full_name: string; }
+
+export async function listEmployees(): Promise<EmployeeOption[]> {
+  const { data, error } = await supabase
+    .from("profiles").select("id, full_name").order("full_name");
+  if (error) throw error;
+  return (data ?? []) as EmployeeOption[];
 }
 
 export interface AllocationLineRow {
@@ -132,6 +151,9 @@ export async function createAllocation(input: {
   po_id: string;
   supplier_id: string;
   notes?: string;
+  target_warehouse?: string | null;
+  receiving_method?: ReceivingMethod | null;
+  receiver_id?: string | null;
   lines: AllocationLineInput[];
   confirm?: boolean;
 }): Promise<AllocationRow> {
@@ -159,6 +181,9 @@ export async function createAllocation(input: {
       supplier_id: input.supplier_id,
       status: "draft" as AllocationStatus,
       notes: input.notes ?? null,
+      target_warehouse: input.target_warehouse ?? null,
+      receiving_method: input.receiving_method ?? null,
+      receiver_id: input.receiver_id ?? null,
       created_by: uid,
     })
     .select("*").single();
@@ -188,6 +213,17 @@ export async function createAllocation(input: {
     return { ...(header as AllocationRow), status: "confirmed" };
   }
   return header as AllocationRow;
+}
+
+export async function updateAllocationReceiving(id: string, patch: {
+  target_warehouse?: string | null;
+  receiving_method?: ReceivingMethod | null;
+  receiver_id?: string | null;
+}): Promise<AllocationRow> {
+  const { data, error } = await supabase
+    .from("allocations").update(patch).eq("id", id).select("*").single();
+  if (error) throw error;
+  return data as AllocationRow;
 }
 
 export async function setAllocationStatus(id: string, status: AllocationStatus): Promise<AllocationRow> {

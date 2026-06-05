@@ -37,16 +37,19 @@ export const INS_RESULT_TONE: Record<InspectionResult, string> = {
   rejected: "bg-destructive/10 text-destructive border-destructive/30",
 };
 
+export type GrnSource = "shipment" | "allocation";
+
 export interface GrnRow {
   id: string;
   grn_no: string;
-  shipment_id: string;
+  shipment_id: string | null;
   allocation_id: string;
   po_id: string;
   supplier_id: string;
   received_at: string;
   warehouse: string | null;
   receiver_id: string | null;
+  source: GrnSource;
   status: GrnStatus;
   notes: string | null;
   created_by: string | null;
@@ -195,6 +198,83 @@ export async function createGRNFromShipment(input: {
   await supabase.from("receiving_events").insert({
     event_type: "grn_created", grn_id: header.id, user_id: uid,
     payload: { lines: fresh.length, shipment_id: shp.id },
+  });
+
+  return header as GrnRow;
+}
+
+/**
+ * Phase 16A — Create GRN directly from an allocation (no shipment record needed).
+ * Used when a representative picks up vehicles or the supplier delivers directly
+ * without a separate transport/delivery document.
+ */
+export async function createGRNFromAllocation(input: {
+  allocation_id: string;
+  warehouse?: string;
+  notes?: string;
+  line_ids?: string[];
+}): Promise<GrnRow> {
+  const { data: alloc, error: eA } = await supabase
+    .from("allocations")
+    .select("id, po_id, supplier_id, target_warehouse")
+    .eq("id", input.allocation_id).single();
+  if (eA) throw eA;
+
+  const { data: aLines, error: eAL } = await supabase
+    .from("allocation_lines").select("*")
+    .eq("allocation_id", input.allocation_id).order("line_no");
+  if (eAL) throw eAL;
+
+  const wanted = input.line_ids?.length
+    ? (aLines ?? []).filter(l => input.line_ids!.includes(l.id))
+    : (aLines ?? []);
+  if (wanted.length === 0) throw new Error("لا توجد بنود مخصصة لاستلامها");
+
+  const { data: existing } = await supabase
+    .from("goods_receipt_lines").select("allocation_line_id")
+    .in("allocation_line_id", wanted.map(w => w.id));
+  const already = new Set((existing ?? []).map(r => r.allocation_line_id));
+  const fresh = wanted.filter(w => !already.has(w.id));
+  if (fresh.length === 0) throw new Error("جميع البنود المحددة تم استلامها مسبقاً");
+
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id ?? null;
+
+  const { data: header, error: eH } = await supabase
+    .from("goods_receipts")
+    .insert({
+      grn_no: "",
+      shipment_id: null,
+      allocation_id: alloc.id,
+      po_id: alloc.po_id,
+      supplier_id: alloc.supplier_id,
+      warehouse: input.warehouse ?? alloc.target_warehouse ?? null,
+      notes: input.notes ?? null,
+      source: "allocation",
+      status: "received" as GrnStatus,
+      created_by: uid,
+    })
+    .select("*").single();
+  if (eH) throw eH;
+
+  const payload = fresh.map((l, i) => ({
+    grn_id: header.id,
+    allocation_line_id: l.id,
+    line_no: i + 1,
+    vin: l.vin, brand: l.brand, model: l.model, year: l.year, color: l.color,
+    engine_no: l.engine_no, unit_cost: l.unit_cost,
+    condition: "ok" as GrnLineCondition,
+  }));
+  const { error: eL } = await supabase.from("goods_receipt_lines").insert(payload);
+  if (eL) throw eL;
+
+  await supabase.from("allocation_lines")
+    .update({ status: "received" })
+    .in("id", fresh.map(f => f.id));
+
+  await supabase.from("receiving_events").insert({
+    event_type: "grn_created_from_allocation", grn_id: header.id, user_id: uid,
+    payload: { lines: fresh.length, allocation_id: alloc.id },
   });
 
   return header as GrnRow;
