@@ -67,6 +67,10 @@ export default function InspectionDetail() {
   }
 
   const { header: ins, lines } = q.data;
+  const refs = useDocRefs({
+    grnIds: [ins.grn_id],
+    vehicleIds: lines.map(l => l.vehicle_id),
+  });
   const passed = lines.filter(l => l.result === "passed").length;
   const rejected = lines.filter(l => l.result === "rejected").length;
   const pending = lines.filter(l => l.result === "pending").length;
