@@ -276,6 +276,8 @@ export async function createPurchaseOrder(input: {
 }): Promise<PORow> {
   if (!input.supplier_id) throw new Error("المورد مطلوب");
   if (!input.lines.length) throw new Error("يجب إضافة بند واحد على الأقل");
+  const resolvedSupplier = await resolveSupplierSelection(input.supplier_id);
+  if (!resolvedSupplier) throw new Error("تعذّر تحديد المورد");
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id ?? null;
   const totals = sumPO(input.lines);
@@ -285,7 +287,7 @@ export async function createPurchaseOrder(input: {
     .insert({
       po_no: "",
       pr_id: input.pr_id ?? null,
-      supplier_id: input.supplier_id,
+      supplier_id: resolvedSupplier,
       expected_delivery: input.expected_delivery ?? null,
       notes: input.notes ?? null,
       status: "draft" as any,
@@ -303,7 +305,9 @@ export async function createPurchaseOrder(input: {
     pr_line_id: l.pr_line_id ?? null,
     line_no: i + 1,
     brand: l.brand,
+    manufacturer: l.manufacturer ?? l.brand,
     model: l.model,
+    trim: l.trim ?? null,
     year: l.year ?? null,
     color: l.color ?? null,
     quantity: l.quantity,
@@ -344,7 +348,9 @@ export async function convertPRtoPO(pr_id: string, supplier_id: string, expected
     lines: pr.lines.map(l => ({
       pr_line_id: l.id,
       brand: l.brand,
+      manufacturer: l.manufacturer ?? l.brand,
       model: l.model,
+      trim: l.trim ?? null,
       year: l.year,
       color: l.color,
       quantity: Number(l.quantity),
