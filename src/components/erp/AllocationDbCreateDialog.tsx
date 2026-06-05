@@ -81,6 +81,12 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
     enabled: open && !!poId,
   });
 
+  const { data: allocatedPoLineIds = new Set<string>() } = useQuery({
+    queryKey: ["allocated-po-lines"],
+    queryFn: listActiveAllocatedPoLineIds,
+    enabled: open,
+  });
+
   const po: PORow | undefined = poData?.header;
   const supplier = useMemo(() => suppliers.find(s => s.id === po?.supplier_id), [suppliers, po]);
 
@@ -90,9 +96,16 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
   }, [open, defaultPoId, eligible]);
 
   useEffect(() => {
-    if (poData?.lines) setRows(expandLines(poData.lines));
-    else setRows([]);
-  }, [poData]);
+    if (poData?.lines) {
+      const remaining = poData.lines.filter(l => !allocatedPoLineIds.has(l.id));
+      setRows(expandLines(remaining));
+    } else {
+      setRows([]);
+    }
+  }, [poData, allocatedPoLineIds]);
+
+  const hiddenLineCount = (poData?.lines?.length ?? 0) - (poData?.lines?.filter(l => !allocatedPoLineIds.has(l.id)).length ?? 0);
+
 
   const update = (key: string, patch: Partial<UnitRow>) =>
     setRows(prev => prev.map(r => (r.key === key ? { ...r, ...patch } : r)));
