@@ -195,6 +195,7 @@ export default function AllocationDetail() {
           nextActions={[
             ...(alloc.status === "draft" ? [{ label: "تأكيد التخصيص", onClick: onConfirm, role: "purchasing_officer" as const }] : []),
             ...(alloc.status === "confirmed" && !cc ? [{ label: "إصدار وثيقة التأكيد", onClick: () => setConfOpen(true), role: "purchasing_officer" as const }] : []),
+            ...(["confirmed", "invoiced", "in_transit"].includes(alloc.status) ? [{ label: "استلام مباشر (GRN)", onClick: () => setGrnOpen(true), role: "receiving" as const }] : []),
           ]}
         />
       </div>
