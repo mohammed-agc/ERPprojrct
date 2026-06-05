@@ -53,6 +53,12 @@ export default function GRNDetail() {
   );
 
   const { header: g, lines } = data;
+  const refs = useDocRefs({
+    supplierIds: [g.supplier_id],
+    poIds: [g.po_id],
+    allocationIds: [g.allocation_id],
+    shipmentIds: [g.shipment_id],
+  });
 
   return (
     <div>
