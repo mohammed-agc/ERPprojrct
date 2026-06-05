@@ -10,6 +10,7 @@ import { Search, Plus, PackageCheck } from "lucide-react";
 import {
   listGRNs, GRN_LABEL, GRN_TONE, fmtDate, type GrnStatus,
 } from "@/services/erp/receivingDb";
+import { useDocRefs, refLabel } from "@/hooks/useDocRefs";
 import { GRNDbCreateDialog } from "@/components/erp/GRNDbCreateDialog";
 
 const STATUSES: { v: GrnStatus | "all"; label: string }[] = [
