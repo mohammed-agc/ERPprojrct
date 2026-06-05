@@ -14,6 +14,7 @@ import {
   INS_LABEL, INS_TONE, INS_RESULT_LABEL, INS_RESULT_TONE, fmtDate,
   type InspectionResult,
 } from "@/services/erp/receivingDb";
+import { useDocRefs, refLabel } from "@/hooks/useDocRefs";
 
 export default function InspectionDetail() {
   const { id = "" } = useParams();
