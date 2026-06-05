@@ -173,12 +173,21 @@ export async function getPurchaseRequest(id: string): Promise<{ header: PRRow; l
 export async function createPurchaseRequest(input: {
   notes?: string;
   department_code?: string;
+  requester_name?: string | null;
+  branch?: string | null;
+  urgency?: string | null;
+  suggested_supplier_id?: string | null;
   lines: PRLineInput[];
   submit?: boolean;
 }): Promise<PRRow> {
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id ?? null;
   const total_estimated = sumPR(input.lines);
+
+  // Resolve "contact:UUID" virtual supplier ids to a real suppliers row
+  const suggested = input.suggested_supplier_id
+    ? await resolveSupplierSelection(input.suggested_supplier_id)
+    : null;
 
   const { data: header, error: e1 } = await supabase
     .from("purchase_requests")
@@ -190,7 +199,11 @@ export async function createPurchaseRequest(input: {
       status: (input.submit ? "submitted" : "draft") as any,
       notes: input.notes ?? null,
       total_estimated,
-    })
+      requester_name: input.requester_name ?? null,
+      branch: input.branch ?? null,
+      urgency: input.urgency ?? "normal",
+      suggested_supplier_id: suggested,
+    } as any)
     .select("*")
     .single();
   if (e1) throw e1;
@@ -200,7 +213,9 @@ export async function createPurchaseRequest(input: {
       pr_id: header.id,
       line_no: i + 1,
       brand: l.brand,
+      manufacturer: l.manufacturer ?? l.brand,
       model: l.model,
+      trim: l.trim ?? null,
       year: l.year ?? null,
       color: l.color ?? null,
       quantity: l.quantity,
