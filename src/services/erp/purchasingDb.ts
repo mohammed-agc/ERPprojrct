@@ -42,7 +42,9 @@ export const PO_STATUS_TONE: Record<POStatus, string> = {
 
 export interface PRLineInput {
   brand: string;
+  manufacturer?: string | null;
   model: string;
+  trim?: string | null;
   year?: number | null;
   color?: string | null;
   quantity: number;
@@ -53,7 +55,9 @@ export interface PRLineInput {
 export interface POLineInput {
   pr_line_id?: string | null;
   brand: string;
+  manufacturer?: string | null;
   model: string;
+  trim?: string | null;
   year?: number | null;
   color?: string | null;
   quantity: number;
