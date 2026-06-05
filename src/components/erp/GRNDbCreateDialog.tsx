@@ -99,7 +99,10 @@ export function GRNDbCreateDialog({ open, onOpenChange, defaultShipmentId, defau
       onOpenChange(false);
       setNotes("");
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "تعذر الإنشاء");
+      const err = e as { message?: string; details?: string; hint?: string; code?: string };
+      const msg = err?.message || err?.details || err?.hint || "تعذر الإنشاء";
+      toast.error(msg, { description: err?.code ? `code: ${err.code}` : undefined });
+      console.error("[GRN create]", e);
     } finally {
       setBusy(false);
     }
