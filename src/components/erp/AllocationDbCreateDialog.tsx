@@ -11,7 +11,7 @@ import {
   listPurchaseOrders, getPurchaseOrder, listActiveSuppliers, fmtSAR, fmtDate,
   type PORow, type POLineRow,
 } from "@/services/erp/purchasingDb";
-import { createAllocation, listEmployees, RECV_METHOD_LABEL, type AllocationLineInput, type ReceivingMethod } from "@/services/erp/allocationsDb";
+import { createAllocation, listEmployees, listActiveAllocatedPoLineIds, RECV_METHOD_LABEL, type AllocationLineInput, type ReceivingMethod } from "@/services/erp/allocationsDb";
 
 interface Props {
   open: boolean;
