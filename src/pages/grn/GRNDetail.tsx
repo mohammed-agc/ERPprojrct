@@ -105,7 +105,7 @@ export default function GRNDetail() {
           <div>
             <div className="text-[10px] text-muted-foreground">أمر الشراء</div>
             {g.po_id ? (
-              <Link to={`/purchasing/po/${g.po_id}`} className="text-primary text-xs font-mono hover:underline">{refLabel(refs.po, g.po_id)}</Link>
+              <Link to={`/purchasing/orders/${g.po_id}`} className="text-primary text-xs font-mono hover:underline">{refLabel(refs.po, g.po_id)}</Link>
             ) : <div className="text-xs">—</div>}
           </div>
         </CardContent>
