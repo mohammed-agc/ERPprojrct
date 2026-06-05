@@ -20,6 +20,10 @@ export default function Receiving() {
   const { data: grns = [], isLoading } = useQuery({
     queryKey: ["grns"], queryFn: listGRNs,
   });
+  const refs = useDocRefs({
+    shipmentIds: grns.map(g => g.shipment_id),
+    allocationIds: grns.map(g => g.allocation_id),
+  });
 
   const filtered = grns.filter((g: GrnRow) => {
     const v = q.trim().toLowerCase();
