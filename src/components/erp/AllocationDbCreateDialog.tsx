@@ -119,6 +119,9 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
       const res = await createAllocation({
         po_id: po.id,
         supplier_id: po.supplier_id,
+        target_warehouse: targetWarehouse || null,
+        receiving_method: receivingMethod,
+        receiver_id: receiverId !== "__none" ? receiverId : null,
         lines,
         confirm,
       });
