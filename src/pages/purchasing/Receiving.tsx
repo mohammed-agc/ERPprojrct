@@ -9,6 +9,7 @@ import { Search, Plus, PackageCheck } from "lucide-react";
 import {
   listGRNs, GRN_LABEL, GRN_TONE, fmtDate, type GrnRow,
 } from "@/services/erp/receivingDb";
+import { useDocRefs, refLabel } from "@/hooks/useDocRefs";
 import { GRNDbCreateDialog } from "@/components/erp/GRNDbCreateDialog";
 
 export default function Receiving() {
