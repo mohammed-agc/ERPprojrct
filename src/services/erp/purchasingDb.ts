@@ -124,7 +124,9 @@ export interface POLineRow {
   pr_line_id: string | null;
   line_no: number;
   brand: string;
+  manufacturer: string | null;
   model: string;
+  trim: string | null;
   year: number | null;
   color: string | null;
   quantity: number;
