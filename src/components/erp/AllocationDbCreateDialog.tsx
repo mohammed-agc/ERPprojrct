@@ -197,6 +197,43 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
             </div>
           )}
 
+          {po && (
+            <div className="border border-border rounded-md p-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div>
+                <Label className="text-xs">المستودع المستهدف</Label>
+                <Select value={targetWarehouse} onValueChange={setTargetWarehouse}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="WH-A">المستودع أ</SelectItem>
+                    <SelectItem value="WH-B">المستودع ب</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">طريقة الاستلام</Label>
+                <Select value={receivingMethod} onValueChange={(v) => setReceivingMethod(v as ReceivingMethod)}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="rep_pickup">{RECV_METHOD_LABEL.rep_pickup}</SelectItem>
+                    <SelectItem value="supplier_delivery">{RECV_METHOD_LABEL.supplier_delivery}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">المستلِم المسؤول</Label>
+                <Select value={receiverId} onValueChange={setReceiverId}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">— غير محدد —</SelectItem>
+                    {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+
+
           {grouped.map(([lineId, units]) => {
             const u0 = units[0];
             const lineTotal = u0.unit_cost * units.length;
