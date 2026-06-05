@@ -2823,6 +2823,7 @@ export type Database = {
         Returns: boolean
       }
       is_manager_or_admin: { Args: { _user_id: string }; Returns: boolean }
+      next_payment_no: { Args: never; Returns: string }
       post_credit_note_journal: { Args: { p_cn_id: string }; Returns: string }
       post_invoice_journal: { Args: { p_invoice_id: string }; Returns: string }
       post_payment_journal: { Args: { p_payment_id: string }; Returns: string }
