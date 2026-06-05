@@ -18,7 +18,9 @@ import { GRNDbCreateDialog } from "@/components/erp/GRNDbCreateDialog";
 export default function AllocationDetail() {
   const { id = "" } = useParams();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [confOpen, setConfOpen] = useState(false);
+  const [grnOpen, setGrnOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["allocation", id],
