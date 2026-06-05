@@ -2385,6 +2385,18 @@ export type Database = {
         }
         Relationships: []
       }
+      v_gov_duplicate_po_line_allocations: {
+        Row: {
+          active_allocation_count: number | null
+          allocation_ids: string[] | null
+          allocation_nos: string[] | null
+          first_allocated_at: string | null
+          last_allocated_at: string | null
+          po_line_id: string | null
+          vins: string[] | null
+        }
+        Relationships: []
+      }
       v_gov_grn_without_inspection: {
         Row: {
           allocation_id: string | null
