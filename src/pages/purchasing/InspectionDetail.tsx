@@ -135,7 +135,7 @@ export default function InspectionDetail() {
                     {l.vehicle_id ? (
                       <span className="inline-flex items-center gap-1 text-success">
                         <CheckCircle2 className="h-3 w-3" />
-                        <span className="font-mono text-[10px]">{l.vehicle_id ? l.vehicle_id.slice(0, 8) : "—"}</span>
+                        <span className="font-mono text-[10px]">{refLabel(refs.vehicle, l.vehicle_id)}</span>
                       </span>
                     ) : <span className="text-muted-foreground">—</span>}
                   </td>
