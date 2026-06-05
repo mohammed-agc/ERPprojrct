@@ -63,9 +63,13 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
   const [poId, setPoId] = useState(defaultPoId ?? "");
   const [rows, setRows] = useState<UnitRow[]>([]);
   const [saving, setSaving] = useState(false);
+  const [targetWarehouse, setTargetWarehouse] = useState<string>("WH-A");
+  const [receivingMethod, setReceivingMethod] = useState<ReceivingMethod>("rep_pickup");
+  const [receiverId, setReceiverId] = useState<string>("__none");
 
   const { data: pos = [] } = useQuery({ queryKey: ["pos-eligible"], queryFn: listPurchaseOrders, enabled: open });
   const { data: suppliers = [] } = useQuery({ queryKey: ["suppliers-active"], queryFn: listActiveSuppliers, enabled: open });
+  const { data: employees = [] } = useQuery({ queryKey: ["employees"], queryFn: listEmployees, enabled: open });
   const eligible = useMemo(
     () => pos.filter(p => ["acknowledged", "partially_received"].includes(p.status)),
     [pos],
