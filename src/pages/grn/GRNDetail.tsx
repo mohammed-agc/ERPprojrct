@@ -11,6 +11,7 @@ import {
   getGRN, inspectionForGRN, createInspectionFromGRN,
   GRN_LABEL, GRN_TONE, fmtDate,
 } from "@/services/erp/receivingDb";
+import { useDocRefs, refLabel } from "@/hooks/useDocRefs";
 
 export default function GRNDetail() {
   const { id = "" } = useParams();
@@ -52,6 +53,12 @@ export default function GRNDetail() {
   );
 
   const { header: g, lines } = data;
+  const refs = useDocRefs({
+    supplierIds: [g.supplier_id],
+    poIds: [g.po_id],
+    allocationIds: [g.allocation_id],
+    shipmentIds: [g.shipment_id],
+  });
 
   return (
     <div>
@@ -61,9 +68,11 @@ export default function GRNDetail() {
           <div className="flex items-center gap-2 text-xs">
             <Badge className={GRN_TONE[g.status]}>{GRN_LABEL[g.status]}</Badge>
             <span className="text-muted-foreground">الشحنة:</span>
-            <span className="font-mono">{g.shipment_id ? g.shipment_id.slice(0, 8) : "—"}</span>
+            <span className="font-mono">{refLabel(refs.shipment, g.shipment_id)}</span>
             <span className="text-muted-foreground">· التخصيص:</span>
-            <span className="font-mono">{g.allocation_id ? g.allocation_id.slice(0, 8) : "—"}</span>
+            {g.allocation_id ? (
+              <Link to={`/purchasing/allocations/${g.allocation_id}`} className="text-primary font-mono hover:underline">{refLabel(refs.allocation, g.allocation_id)}</Link>
+            ) : <span className="font-mono">—</span>}
           </div>
         }
         actions={
@@ -92,8 +101,13 @@ export default function GRNDetail() {
         <CardContent className="p-3 grid grid-cols-4 gap-3 text-xs">
           <div><div className="text-[10px] text-muted-foreground">المستودع</div><div>{g.warehouse ?? "—"}</div></div>
           <div><div className="text-[10px] text-muted-foreground">تاريخ الاستلام</div><div>{fmtDate(g.received_at)}</div></div>
-          <div><div className="text-[10px] text-muted-foreground">المورد</div><div className="font-mono text-[11px]">{g.supplier_id ? g.supplier_id.slice(0, 8) : "—"}</div></div>
-          <div><div className="text-[10px] text-muted-foreground">أمر الشراء</div><div className="font-mono text-[11px]">{g.po_id ? g.po_id.slice(0, 8) : "—"}</div></div>
+          <div><div className="text-[10px] text-muted-foreground">المورد</div><div className="text-xs font-semibold">{refLabel(refs.supplier, g.supplier_id)}</div></div>
+          <div>
+            <div className="text-[10px] text-muted-foreground">أمر الشراء</div>
+            {g.po_id ? (
+              <Link to={`/purchasing/orders/${g.po_id}`} className="text-primary text-xs font-mono hover:underline">{refLabel(refs.po, g.po_id)}</Link>
+            ) : <div className="text-xs">—</div>}
+          </div>
         </CardContent>
       </Card>
 

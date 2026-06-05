@@ -14,6 +14,7 @@ import {
   INS_LABEL, INS_TONE, INS_RESULT_LABEL, INS_RESULT_TONE, fmtDate,
   type InspectionResult,
 } from "@/services/erp/receivingDb";
+import { useDocRefs, refLabel } from "@/hooks/useDocRefs";
 
 export default function InspectionDetail() {
   const { id = "" } = useParams();
@@ -66,6 +67,10 @@ export default function InspectionDetail() {
   }
 
   const { header: ins, lines } = q.data;
+  const refs = useDocRefs({
+    grnIds: [ins.grn_id],
+    vehicleIds: lines.map(l => l.vehicle_id),
+  });
   const passed = lines.filter(l => l.result === "passed").length;
   const rejected = lines.filter(l => l.result === "rejected").length;
   const pending = lines.filter(l => l.result === "pending").length;
@@ -80,7 +85,7 @@ export default function InspectionDetail() {
           <div className="flex items-center gap-2 text-xs">
             <Badge className={INS_TONE[ins.status]}>{INS_LABEL[ins.status]}</Badge>
             <span className="text-muted-foreground">GRN:</span>
-            <Link to={`/grn/${ins.grn_id}`} className="text-primary font-mono hover:underline">{ins.grn_id ? ins.grn_id.slice(0, 8) : "—"}</Link>
+            <Link to={`/grn/${ins.grn_id}`} className="text-primary font-mono hover:underline">{refLabel(refs.grn, ins.grn_id)}</Link>
           </div>
         }
       />
@@ -130,7 +135,7 @@ export default function InspectionDetail() {
                     {l.vehicle_id ? (
                       <span className="inline-flex items-center gap-1 text-success">
                         <CheckCircle2 className="h-3 w-3" />
-                        <span className="font-mono text-[10px]">{l.vehicle_id ? l.vehicle_id.slice(0, 8) : "—"}</span>
+                        <span className="font-mono text-[10px]">{refLabel(refs.vehicle, l.vehicle_id)}</span>
                       </span>
                     ) : <span className="text-muted-foreground">—</span>}
                   </td>

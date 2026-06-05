@@ -9,6 +9,7 @@ import { Search, Plus, PackageCheck } from "lucide-react";
 import {
   listGRNs, GRN_LABEL, GRN_TONE, fmtDate, type GrnRow,
 } from "@/services/erp/receivingDb";
+import { useDocRefs, refLabel } from "@/hooks/useDocRefs";
 import { GRNDbCreateDialog } from "@/components/erp/GRNDbCreateDialog";
 
 export default function Receiving() {
@@ -18,6 +19,10 @@ export default function Receiving() {
 
   const { data: grns = [], isLoading } = useQuery({
     queryKey: ["grns"], queryFn: listGRNs,
+  });
+  const refs = useDocRefs({
+    shipmentIds: grns.map(g => g.shipment_id),
+    allocationIds: grns.map(g => g.allocation_id),
   });
 
   const filtered = grns.filter((g: GrnRow) => {
@@ -78,8 +83,8 @@ export default function Receiving() {
                     <PackageCheck className="h-3 w-3 text-muted-foreground" />{g.grn_no}
                   </Link>
                 </td>
-                <td className="font-mono text-[11px] text-muted-foreground">{g.shipment_id ? g.shipment_id.slice(0, 8) : "—"}</td>
-                <td className="font-mono text-[11px] text-muted-foreground">{g.allocation_id ? g.allocation_id.slice(0, 8) : "—"}</td>
+                <td className="font-mono text-[11px] text-muted-foreground">{refLabel(refs.shipment, g.shipment_id)}</td>
+                <td className="font-mono text-[11px] text-muted-foreground">{refLabel(refs.allocation, g.allocation_id)}</td>
                 <td className="text-xs">{fmtDate(g.received_at)}</td>
                 <td className="text-xs">{g.warehouse ?? "—"}</td>
                 <td><Badge className={GRN_TONE[g.status]}>{GRN_LABEL[g.status]}</Badge></td>

@@ -6,11 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, FileSearch, Info } from "lucide-react";
 import { listInspections, INS_LABEL, INS_TONE, fmtDate } from "@/services/erp/receivingDb";
+import { useDocRefs, refLabel } from "@/hooks/useDocRefs";
 
 export default function Inspection() {
   const nav = useNavigate();
   const [q, setQ] = useState("");
   const { data: items = [] } = useQuery({ queryKey: ["inspections"], queryFn: listInspections });
+  const refs = useDocRefs({ grnIds: items.map(i => i.grn_id) });
 
   const filtered = useMemo(() => items.filter(i => {
     const v = q.trim().toLowerCase();
@@ -66,7 +68,7 @@ export default function Inspection() {
                     <FileSearch className="h-3 w-3 text-muted-foreground" />{i.insp_no}
                   </div>
                 </td>
-                <td className="font-mono text-[11px] text-muted-foreground">{i.grn_id ? i.grn_id.slice(0, 8) : "—"}</td>
+                <td className="font-mono text-[11px] text-muted-foreground">{refLabel(refs.grn, i.grn_id)}</td>
                 <td className="text-xs">{fmtDate(i.started_at)}</td>
                 <td className="text-xs">{fmtDate(i.completed_at)}</td>
                 <td><Badge className={INS_TONE[i.status]}>{INS_LABEL[i.status]}</Badge></td>
