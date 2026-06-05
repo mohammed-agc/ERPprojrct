@@ -362,24 +362,116 @@ export async function convertPRtoPO(pr_id: string, supplier_id: string, expected
   return po;
 }
 
-// ============= SUPPLIERS (read-through) =============
+// ============= SUPPLIERS (read-through + contact-vendor bridge) =============
+//
+// Pre-Phase-13 selectors fed suppliers from BOTH the `suppliers` master table
+// AND vendor-tagged contacts (customers with ContactMeta.roles ⊇ ['vendor']).
+// We keep that behavior here so users always see vendor contacts in the
+// selector even before a real supplier row exists, then auto-upsert into
+// `suppliers` the moment one is chosen on a PR/PO.
 export interface SupplierRow {
-  id: string;
+  id: string;                // "<uuid>" for real supplier, "contact:<uuid>" for unprovisioned vendor contact
   code: string;
   name: string;
   vat_number: string | null;
   phone: string | null;
   email: string | null;
   is_active: boolean;
+  source: "supplier" | "contact";
 }
+
+const CONTACT_PREFIX = "contact:";
+
+function isContactSelection(value: string): boolean {
+  return value.startsWith(CONTACT_PREFIX);
+}
+
 export async function listActiveSuppliers(): Promise<SupplierRow[]> {
-  const { data, error } = await supabase
-    .from("suppliers")
-    .select("id,code,name,vat_number,phone,email,is_active")
-    .eq("is_active", true)
-    .order("name");
+  const [{ data: sup, error: e1 }, { data: cust, error: e2 }] = await Promise.all([
+    supabase.from("suppliers")
+      .select("id,code,name,vat_number,phone,email,is_active")
+      .eq("is_active", true)
+      .order("name"),
+    supabase.from("customers")
+      .select("id,code,name,vat_number,phone,email,is_active,notes")
+      .eq("is_active", true)
+      .order("name")
+      .limit(1000),
+  ]);
+  if (e1) throw e1;
+  if (e2) throw e2;
+
+  const out: SupplierRow[] = (sup ?? []).map((s: any) => ({
+    id: s.id, code: s.code, name: s.name,
+    vat_number: s.vat_number, phone: s.phone, email: s.email,
+    is_active: s.is_active, source: "supplier",
+  }));
+  const realCodes = new Set(out.map(s => s.code));
+
+  // Parse vendor-tagged customers and surface only those not already promoted
+  const { parseContactMeta } = await import("@/lib/contactMeta");
+  for (const c of cust ?? []) {
+    const { meta } = parseContactMeta((c as any).notes);
+    if (!meta.roles?.includes("vendor")) continue;
+    // If the contact already has a supplier_link_id and that supplier is in our list, skip
+    if (meta.supplier_link_id && out.some(s => s.id === meta.supplier_link_id)) continue;
+    // Suggest a stable code; skip if collides with a real supplier code
+    const code = (c as any).code || `CN-${(c as any).id.slice(0, 6)}`;
+    if (realCodes.has(code)) continue;
+    out.push({
+      id: `${CONTACT_PREFIX}${(c as any).id}`,
+      code,
+      name: (c as any).name,
+      vat_number: (c as any).vat_number ?? null,
+      phone: (c as any).phone ?? null,
+      email: (c as any).email ?? null,
+      is_active: true,
+      source: "contact",
+    });
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name, "ar"));
+}
+
+/**
+ * Resolve a selector value into a real `suppliers.id`. When the user picked
+ * a vendor-tagged contact, upsert a supplier row from the contact and return
+ * the new supplier id (idempotent on supplier code).
+ */
+export async function resolveSupplierSelection(value: string): Promise<string | null> {
+  if (!value) return null;
+  if (!isContactSelection(value)) return value;
+  const contactId = value.slice(CONTACT_PREFIX.length);
+  const { data: c, error } = await supabase
+    .from("customers")
+    .select("id,code,name,vat_number,phone,email,address,notes")
+    .eq("id", contactId)
+    .maybeSingle();
   if (error) throw error;
-  return (data ?? []) as SupplierRow[];
+  if (!c) throw new Error("جهة الاتصال غير موجودة");
+
+  const code = (c as any).code || `CN-${(c as any).id.slice(0, 6)}`;
+  // Idempotent: look for existing supplier with same code first
+  const { data: existing } = await supabase
+    .from("suppliers").select("id").eq("code", code).maybeSingle();
+  if (existing) return (existing as any).id;
+
+  const { data: auth } = await supabase.auth.getUser();
+  const { data: ins, error: ie } = await supabase
+    .from("suppliers")
+    .insert({
+      code,
+      name: (c as any).name,
+      vat_number: (c as any).vat_number ?? null,
+      phone: (c as any).phone ?? null,
+      email: (c as any).email ?? null,
+      address: (c as any).address ?? null,
+      is_active: true,
+      created_by: auth.user?.id ?? null,
+    } as any)
+    .select("id")
+    .single();
+  if (ie) throw ie;
+  return (ins as any).id;
 }
 
 export const fmtSAR = (n: number) =>
