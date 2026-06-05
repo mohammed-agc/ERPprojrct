@@ -70,6 +70,10 @@ export interface PRRow {
   pr_no: string;
   request_date: string;
   requested_by: string | null;
+  requester_name: string | null;
+  branch: string | null;
+  urgency: string;
+  suggested_supplier_id: string | null;
   department_code: string;
   status: PRStatus;
   notes: string | null;
@@ -86,7 +90,9 @@ export interface PRLineRow {
   pr_id: string;
   line_no: number;
   brand: string;
+  manufacturer: string | null;
   model: string;
+  trim: string | null;
   year: number | null;
   color: string | null;
   quantity: number;
