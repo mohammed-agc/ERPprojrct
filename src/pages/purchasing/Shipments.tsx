@@ -62,9 +62,9 @@ export default function Shipments() {
   return (
     <div>
       <PageHeader
-        title="تتبع الشحنات"
-        subtitle={`${shipments.length} شحنة · ${shipments.filter(s => s.status === "in_transit").length} في الطريق`}
-        actions={<Button size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4 ml-1" /> شحنة جديدة</Button>}
+        title="سجلات النقل / التسليم"
+        subtitle={`${shipments.length} سجل · ${shipments.filter(s => s.status === "in_transit").length} قيد النقل · (اختياري — يمكن الاستلام مباشرة من التخصيص)`}
+        actions={<Button size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4 ml-1" /> سجل نقل جديد</Button>}
       />
       <ShipmentCreateDialog open={open} onOpenChange={setOpen} onCreated={() => refetch()} />
 
