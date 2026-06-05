@@ -1,0 +1,1 @@
+ALTER VIEW public.v_gov_duplicate_po_line_allocations SET (security_invoker = true);

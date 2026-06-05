@@ -11,7 +11,7 @@ import {
   listPurchaseOrders, getPurchaseOrder, listActiveSuppliers, fmtSAR, fmtDate,
   type PORow, type POLineRow,
 } from "@/services/erp/purchasingDb";
-import { createAllocation, listEmployees, RECV_METHOD_LABEL, type AllocationLineInput, type ReceivingMethod } from "@/services/erp/allocationsDb";
+import { createAllocation, listEmployees, listActiveAllocatedPoLineIds, RECV_METHOD_LABEL, type AllocationLineInput, type ReceivingMethod } from "@/services/erp/allocationsDb";
 
 interface Props {
   open: boolean;
@@ -81,6 +81,12 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
     enabled: open && !!poId,
   });
 
+  const { data: allocatedPoLineIds = new Set<string>() } = useQuery({
+    queryKey: ["allocated-po-lines"],
+    queryFn: listActiveAllocatedPoLineIds,
+    enabled: open,
+  });
+
   const po: PORow | undefined = poData?.header;
   const supplier = useMemo(() => suppliers.find(s => s.id === po?.supplier_id), [suppliers, po]);
 
@@ -90,9 +96,16 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
   }, [open, defaultPoId, eligible]);
 
   useEffect(() => {
-    if (poData?.lines) setRows(expandLines(poData.lines));
-    else setRows([]);
-  }, [poData]);
+    if (poData?.lines) {
+      const remaining = poData.lines.filter(l => !allocatedPoLineIds.has(l.id));
+      setRows(expandLines(remaining));
+    } else {
+      setRows([]);
+    }
+  }, [poData, allocatedPoLineIds]);
+
+  const hiddenLineCount = (poData?.lines?.length ?? 0) - (poData?.lines?.filter(l => !allocatedPoLineIds.has(l.id)).length ?? 0);
+
 
   const update = (key: string, patch: Partial<UnitRow>) =>
     setRows(prev => prev.map(r => (r.key === key ? { ...r, ...patch } : r)));
@@ -232,7 +245,11 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
             </div>
           )}
 
-
+          {po && hiddenLineCount > 0 && (
+            <div className="border border-warning/40 bg-warning/10 text-warning rounded-md p-2 text-[11px]">
+              تم إخفاء {hiddenLineCount} بند مخصَّص مسبقاً في تخصيص آخر فعَّال (لا يمكن تخصيصه مرتين).
+            </div>
+          )}
 
           {grouped.map(([lineId, units]) => {
             const u0 = units[0];

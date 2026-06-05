@@ -296,3 +296,125 @@ function toConfirmationRow(row: Record<string, unknown>): AllocationConfirmation
 
 export const fmtDate = (s?: string | null) =>
   s ? new Intl.DateTimeFormat("ar-SA", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(s)) : "—";
+
+// ============ Stage 2: invoice-from-allocation (DB-authoritative) ============
+
+export interface InvoiceableAllocationSummary {
+  id: string;
+  alloc_no: string;
+  supplier_id: string;
+  po_id: string;
+  line_count: number;
+  subtotal: number;
+}
+
+export async function listInvoiceableAllocations(): Promise<InvoiceableAllocationSummary[]> {
+  const { data: allocs, error } = await supabase
+    .from("allocations")
+    .select("id, alloc_no, supplier_id, po_id, status, purchase_invoice_id")
+    .eq("status", "confirmed")
+    .is("purchase_invoice_id", null)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const ids = (allocs ?? []).map((a: { id: string }) => a.id);
+  if (!ids.length) return [];
+  const { data: lines, error: e2 } = await supabase
+    .from("allocation_lines")
+    .select("allocation_id, unit_cost, status")
+    .in("allocation_id", ids);
+  if (e2) throw e2;
+  const agg = new Map<string, { count: number; subtotal: number }>();
+  for (const l of (lines ?? []) as { allocation_id: string; unit_cost: number; status: AllocationLineStatus }[]) {
+    if (l.status === "cancelled") continue;
+    const cur = agg.get(l.allocation_id) ?? { count: 0, subtotal: 0 };
+    cur.count += 1;
+    cur.subtotal += Number(l.unit_cost) || 0;
+    agg.set(l.allocation_id, cur);
+  }
+  return (allocs ?? []).map((a: { id: string; alloc_no: string; supplier_id: string; po_id: string }) => ({
+    id: a.id,
+    alloc_no: a.alloc_no,
+    supplier_id: a.supplier_id,
+    po_id: a.po_id,
+    line_count: agg.get(a.id)?.count ?? 0,
+    subtotal: agg.get(a.id)?.subtotal ?? 0,
+  })).filter(r => r.line_count > 0);
+}
+
+export async function createPurchaseInvoiceFromAllocation(input: {
+  allocation_id: string;
+  vat_pct?: number;
+  notes?: string | null;
+  supplier_invoice_ref?: string | null;
+}): Promise<{ id: string; invoice_no: string }> {
+  const alloc = await getAllocation(input.allocation_id);
+  if (!alloc) throw new Error("التخصيص غير موجود");
+  if (alloc.header.status !== "confirmed") throw new Error("التخصيص ليس بحالة مؤكَّد");
+  if (alloc.header.purchase_invoice_id) throw new Error("التخصيص مرتبط بفاتورة مسبقاً");
+
+  const activeLines = alloc.lines.filter(l => l.status !== "cancelled");
+  if (!activeLines.length) throw new Error("لا توجد بنود فعّالة في التخصيص");
+
+  const vatPct = Number(input.vat_pct ?? 15);
+  const subtotal = activeLines.reduce((s, l) => s + (Number(l.unit_cost) || 0), 0);
+  const vatAmount = +(subtotal * vatPct / 100).toFixed(2);
+  const total = +(subtotal + vatAmount).toFixed(2);
+
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id ?? null;
+
+  const { data: inv, error: e1 } = await supabase
+    .from("purchase_invoices")
+    .insert({
+      invoice_no: "",
+      supplier_id: alloc.header.supplier_id,
+      supplier_invoice_ref: input.supplier_invoice_ref ?? null,
+      invoice_date: new Date().toISOString().slice(0, 10),
+      status: "issued",
+      subtotal,
+      vat_amount: vatAmount,
+      total,
+      notes: input.notes ?? `فاتورة شراء من التخصيص ${alloc.header.alloc_no}`,
+      created_by: uid,
+    })
+    .select("id, invoice_no").single();
+  if (e1) throw e1;
+
+  const linesPayload = activeLines.map((l, i) => ({
+    invoice_id: inv.id,
+    line_no: i + 1,
+    description: `${l.brand} ${l.model}${l.year ? " " + l.year : ""} — VIN ${l.vin}`,
+    vehicle_id: l.vehicle_id,
+    quantity: 1,
+    unit_cost: Number(l.unit_cost) || 0,
+    vat_pct: vatPct,
+    line_total: Number(l.unit_cost) || 0,
+  }));
+  const { error: e2 } = await supabase.from("purchase_invoice_lines").insert(linesPayload);
+  if (e2) throw e2;
+
+  const { error: e3 } = await supabase
+    .from("allocations")
+    .update({ purchase_invoice_id: inv.id, status: "invoiced" as AllocationStatus })
+    .eq("id", input.allocation_id);
+  if (e3) throw e3;
+
+  return { id: inv.id, invoice_no: inv.invoice_no };
+}
+
+// ============ Stage 3: hide already-allocated PO lines ============
+
+export async function listActiveAllocatedPoLineIds(): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from("allocation_lines")
+    .select("po_line_id, status, allocations!inner(status)")
+    .not("po_line_id", "is", null)
+    .neq("status", "cancelled")
+    .neq("allocations.status", "cancelled");
+  if (error) throw error;
+  const set = new Set<string>();
+  for (const r of (data ?? []) as { po_line_id: string }[]) {
+    if (r.po_line_id) set.add(r.po_line_id);
+  }
+  return set;
+}
