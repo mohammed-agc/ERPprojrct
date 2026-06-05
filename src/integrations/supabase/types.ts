@@ -182,8 +182,13 @@ export type Database = {
           notes: string | null
           po_id: string
           purchase_invoice_id: string | null
+          receiver_id: string | null
+          receiving_method:
+            | Database["public"]["Enums"]["receiving_method"]
+            | null
           status: Database["public"]["Enums"]["allocation_status"]
           supplier_id: string
+          target_warehouse: string | null
           updated_at: string
         }
         Insert: {
@@ -194,8 +199,13 @@ export type Database = {
           notes?: string | null
           po_id: string
           purchase_invoice_id?: string | null
+          receiver_id?: string | null
+          receiving_method?:
+            | Database["public"]["Enums"]["receiving_method"]
+            | null
           status?: Database["public"]["Enums"]["allocation_status"]
           supplier_id: string
+          target_warehouse?: string | null
           updated_at?: string
         }
         Update: {
@@ -206,8 +216,13 @@ export type Database = {
           notes?: string | null
           po_id?: string
           purchase_invoice_id?: string | null
+          receiver_id?: string | null
+          receiving_method?:
+            | Database["public"]["Enums"]["receiving_method"]
+            | null
           status?: Database["public"]["Enums"]["allocation_status"]
           supplier_id?: string
+          target_warehouse?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -530,7 +545,8 @@ export type Database = {
           po_id: string
           received_at: string
           receiver_id: string | null
-          shipment_id: string
+          shipment_id: string | null
+          source: Database["public"]["Enums"]["grn_source"]
           status: Database["public"]["Enums"]["grn_status"]
           supplier_id: string
           updated_at: string
@@ -546,7 +562,8 @@ export type Database = {
           po_id: string
           received_at?: string
           receiver_id?: string | null
-          shipment_id: string
+          shipment_id?: string | null
+          source?: Database["public"]["Enums"]["grn_source"]
           status?: Database["public"]["Enums"]["grn_status"]
           supplier_id: string
           updated_at?: string
@@ -562,7 +579,8 @@ export type Database = {
           po_id?: string
           received_at?: string
           receiver_id?: string | null
-          shipment_id?: string
+          shipment_id?: string | null
+          source?: Database["public"]["Enums"]["grn_source"]
           status?: Database["public"]["Enums"]["grn_status"]
           supplier_id?: string
           updated_at?: string
@@ -2887,6 +2905,7 @@ export type Database = {
         | "sales"
         | "crm"
       grn_line_condition: "ok" | "damaged" | "missing" | "wrong_item"
+      grn_source: "allocation" | "shipment"
       grn_status: "draft" | "received" | "inspected" | "closed" | "cancelled"
       inspection_line_result: "pending" | "passed" | "rejected"
       inspection_status:
@@ -2923,6 +2942,7 @@ export type Database = {
         | "rejected"
         | "converted"
         | "cancelled"
+      receiving_method: "rep_pickup" | "supplier_delivery"
       shipment_status:
         | "preparing"
         | "shipped"
@@ -3118,6 +3138,7 @@ export const Constants = {
         "crm",
       ],
       grn_line_condition: ["ok", "damaged", "missing", "wrong_item"],
+      grn_source: ["allocation", "shipment"],
       grn_status: ["draft", "received", "inspected", "closed", "cancelled"],
       inspection_line_result: ["pending", "passed", "rejected"],
       inspection_status: [
@@ -3159,6 +3180,7 @@ export const Constants = {
         "converted",
         "cancelled",
       ],
+      receiving_method: ["rep_pickup", "supplier_delivery"],
       shipment_status: [
         "preparing",
         "shipped",
