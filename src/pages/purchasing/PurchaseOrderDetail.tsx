@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Send, ShieldCheck } from "lucide-react";
 import {
-  getPurchaseOrder, setPurchaseOrderStatus, listActiveSuppliers,
+  getPurchaseOrder, getPurchaseRequest, setPurchaseOrderStatus, listActiveSuppliers,
   PO_STATUS_LABEL, PO_STATUS_TONE, fmtSAR, fmtDate, type POStatus,
 } from "@/services/erp/purchasingDb";
 
@@ -18,6 +18,12 @@ export default function PurchaseOrderDetail() {
     queryKey: ["po", id],
     queryFn: () => getPurchaseOrder(id),
     enabled: !!id,
+  });
+  const prId = data?.header.pr_id ?? null;
+  const { data: linkedPR } = useQuery({
+    queryKey: ["po-linked-pr", prId],
+    queryFn: () => getPurchaseRequest(prId!),
+    enabled: !!prId,
   });
   const { data: suppliers = [] } = useQuery({ queryKey: ["active-suppliers"], queryFn: listActiveSuppliers });
 
@@ -60,7 +66,7 @@ export default function PurchaseOrderDetail() {
               <div><div className="text-[10px] text-muted-foreground">الفرعي</div><div className="num">{fmtSAR(Number(po.subtotal))}</div></div>
               <div><div className="text-[10px] text-muted-foreground">الضريبة</div><div className="num">{fmtSAR(Number(po.vat_amount))}</div></div>
               <div><div className="text-[10px] text-muted-foreground">طلب الشراء</div>
-                <div>{po.pr_id ? <Link to={`/purchasing/requests/${po.pr_id}`} className="text-primary hover:underline">عرض</Link> : "—"}</div>
+                <div>{po.pr_id ? <Link to={`/purchasing/requests/${po.pr_id}`} className="text-primary hover:underline font-mono">{linkedPR?.header.pr_no ?? "..."}</Link> : "—"}</div>
               </div>
             </div>
             {po.notes && (
