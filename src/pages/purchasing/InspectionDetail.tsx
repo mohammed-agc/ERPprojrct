@@ -57,8 +57,15 @@ export default function InspectionDetail() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const header = q.data?.header;
+  const lines = q.data?.lines ?? [];
+  const refs = useDocRefs({
+    grnIds: header ? [header.grn_id] : [],
+    vehicleIds: lines.map(l => l.vehicle_id),
+  });
+
   if (q.isLoading) return <div className="p-6 text-sm text-muted-foreground">جارٍ التحميل...</div>;
-  if (!q.data) {
+  if (!q.data || !header) {
     return (
       <div className="p-6 text-sm text-muted-foreground">
         سجل الفحص غير موجود — <Link to="/purchasing/inspection" className="text-primary">رجوع</Link>
@@ -66,11 +73,7 @@ export default function InspectionDetail() {
     );
   }
 
-  const { header: ins, lines } = q.data;
-  const refs = useDocRefs({
-    grnIds: [ins.grn_id],
-    vehicleIds: lines.map(l => l.vehicle_id),
-  });
+  const ins = header;
   const passed = lines.filter(l => l.result === "passed").length;
   const rejected = lines.filter(l => l.result === "rejected").length;
   const pending = lines.filter(l => l.result === "pending").length;
