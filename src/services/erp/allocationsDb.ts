@@ -45,6 +45,13 @@ export const ALC_VSTATUS_TONE: Record<AllocationLineStatus, string> = {
   cancelled: "bg-destructive/10 text-destructive border border-destructive/30",
 };
 
+export type ReceivingMethod = "rep_pickup" | "supplier_delivery";
+
+export const RECV_METHOD_LABEL: Record<ReceivingMethod, string> = {
+  rep_pickup: "استلام بواسطة مندوب الشركة",
+  supplier_delivery: "تسليم من المورد إلى المستودع",
+};
+
 export interface AllocationRow {
   id: string;
   alloc_no: string;
@@ -53,9 +60,21 @@ export interface AllocationRow {
   status: AllocationStatus;
   notes: string | null;
   purchase_invoice_id: string | null;
+  target_warehouse: string | null;
+  receiving_method: ReceivingMethod | null;
+  receiver_id: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface EmployeeOption { id: string; full_name: string; }
+
+export async function listEmployees(): Promise<EmployeeOption[]> {
+  const { data, error } = await supabase
+    .from("profiles").select("id, full_name").order("full_name");
+  if (error) throw error;
+  return (data ?? []) as EmployeeOption[];
 }
 
 export interface AllocationLineRow {
