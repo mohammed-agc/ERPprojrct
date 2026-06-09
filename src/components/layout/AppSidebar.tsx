@@ -71,17 +71,8 @@ const groups: { title: string; items: NavItem[] }[] = [
       { label: "إدارة حوافز الموردين", to: "/incentives", icon: Trophy, deptCode: "vehicles" },
       { label: "الشحنات", to: "/purchasing/shipments", icon: Ship, deptCode: "vehicles" },
       { label: "ورشة الاستلام والفحص", to: "/purchasing/receiving/workbench", icon: PackageCheck, deptCode: "vehicles" },
-      { label: "الاستلام (GRN)", to: "/grn/list", icon: PackageCheck, deptCode: "vehicles" },
       { label: "الفحص والاعتماد", to: "/purchasing/inspection", icon: FileSearch, deptCode: "vehicles" },
 
-      { label: "المشتريات (قديم)", to: "/procurement", icon: ClipboardCheck, deptCode: "vehicles" },
-    ],
-  },
-  {
-    title: "إشعارات الاستلام",
-    items: [
-      { label: "لوحة الاستلام", to: "/grn", icon: LayoutDashboard, deptCode: "vehicles" },
-      { label: "قائمة الإشعارات", to: "/grn/list", icon: PackageCheck, deptCode: "vehicles" },
     ],
   },
   {
@@ -321,8 +312,6 @@ export function AppSidebar() {
     </aside>
   );
 }
-
-
 
 
 

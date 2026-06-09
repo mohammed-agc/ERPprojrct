@@ -221,6 +221,56 @@ export async function confirmationForAllocation(allocationId: string): Promise<A
   return data ? toConfirmationRow(data) : null;
 }
 
+/**
+ * إنشاء مركبات في المخزون من بنود التخصيص (نقطة ميلاد المركبة بـ VIN).
+ * تُستدعى عند تأكيد التخصيص. كل بند بلا vehicle_id → صف جديد في inventory_items
+ * بحالة on_order (مخصّصة، لم تصل بعد). تُحفظ vehicle_id في البند.
+ */
+export async function createInventoryFromAllocation(allocationId: string): Promise<{ created: number; skipped: number }> {
+  const alloc = await getAllocation(allocationId);
+  if (!alloc) throw new Error("التخصيص غير موجود");
+  let created = 0, skipped = 0;
+
+  for (const line of alloc.lines) {
+    if (line.vehicle_id) { skipped++; continue; }            // مُنشأة مسبقاً
+    if (!line.vin) { skipped++; continue; }                  // بلا VIN لا تُنشأ
+
+    // تجنّب التكرار: هل يوجد صف بنفس الـ VIN؟
+    const { data: existing } = await supabase
+      .from("inventory_items").select("id").eq("vin", line.vin).maybeSingle();
+    if (existing) {
+      await supabase.from("allocation_lines").update({ vehicle_id: existing.id, status: "confirmed" }).eq("id", line.id);
+      skipped++; continue;
+    }
+
+    const name = [line.manufacturer || line.brand, line.model, line.trim, line.year, line.color]
+      .filter(Boolean).join(" ") || ("مركبة " + line.vin);
+    const { data: veh, error } = await supabase.from("inventory_items").insert({
+      sku: line.vin,                  // الـ VIN معرّف فريد طبيعي
+      name,
+      item_type: "vehicle",
+      brand: line.brand || line.manufacturer || null,
+      model: line.model || null,
+      trim: line.trim || null,
+      year: line.year || null,
+      color: line.color || null,
+      vin: line.vin,
+      engine_no: line.engine_no || null,
+      cost_price: line.unit_cost || 0,
+      avg_cost: line.unit_cost || 0,
+      sale_price: 0,
+      qty_on_hand: 1,
+      qty_reserved: 0,
+      status: "on_order",             // مخصّصة، لم تصل بعد
+    }).select("id").single();
+    if (error) throw error;
+
+    await supabase.from("allocation_lines").update({ vehicle_id: veh.id, status: "confirmed" }).eq("id", line.id);
+    created++;
+  }
+  return { created, skipped };
+}
+
 export async function createConfirmation(allocationId: string, notes?: string): Promise<AllocationConfirmationRow> {
   const alloc = await getAllocation(allocationId);
   if (!alloc) throw new Error("التخصيص غير موجود");
@@ -248,6 +298,10 @@ export async function createConfirmation(allocationId: string, notes?: string): 
     })
     .select("*").single();
   if (error) throw error;
+
+  // ★ نقطة ميلاد المركبات: إنشاؤها في المخزون من بنود التخصيص (حالة on_order)
+  await createInventoryFromAllocation(allocationId);
+
   return toConfirmationRow(data);
 }
 

@@ -20,7 +20,6 @@ const Contacts = lazy(() => import("./pages/Contacts"));
 const ContactDetail = lazy(() => import("./pages/ContactDetail"));
 const Vehicles = lazy(() => import("./pages/Vehicles"));
 const VehicleDetail = lazy(() => import("./pages/VehicleDetail"));
-const Procurement = lazy(() => import("./pages/Procurement"));
 const SalesOrders = lazy(() => import("./pages/SalesOrders"));
 const SalesOrderDetail = lazy(() => import("./pages/SalesOrderDetail"));
 const Invoices = lazy(() => import("./pages/Invoices"));
@@ -109,9 +108,6 @@ const InventoryParts = lazy(() => import("./pages/inventory/PartsInventory"));
 const InventoryMovements = lazy(() => import("./pages/inventory/Movements"));
 const InventoryReservations = lazy(() => import("./pages/inventory/Reservations"));
 const InventoryTransfers = lazy(() => import("./pages/inventory/Transfers"));
-const GRNDashboard = lazy(() => import("./pages/grn/GRNDashboard"));
-const GRNList = lazy(() => import("./pages/grn/GRNList"));
-const GRNDetail = lazy(() => import("./pages/grn/GRNDetail"));
 
 const ProductsMaster = lazy(() => import("./pages/master/Products"));
 const ColorsMaster = lazy(() => import("./pages/master/Colors"));
@@ -202,7 +198,6 @@ const App = () => (
               <Route path="/contacts/:id" element={<ContactDetail />} />
               <Route path="/vehicles" element={<Vehicles />} />
               <Route path="/vehicles/:id" element={<VehicleDetail />} />
-              <Route path="/procurement" element={<Procurement />} />
               <Route path="/purchasing" element={<PurchasingDashboard />} />
               <Route path="/purchasing/requests" element={<PurchaseRequests />} />
               <Route path="/purchasing/requests/:id" element={<PurchaseRequestDetail />} />
@@ -307,9 +302,6 @@ const App = () => (
               <Route path="/inventory/movements" element={<InventoryMovements />} />
               <Route path="/inventory/reservations" element={<InventoryReservations />} />
               <Route path="/inventory/transfers" element={<InventoryTransfers />} />
-              <Route path="/grn" element={<GRNDashboard />} />
-              <Route path="/grn/list" element={<GRNList />} />
-              <Route path="/grn/:id" element={<GRNDetail />} />
               <Route path="/master/products" element={<ProductsMaster />} />
               <Route path="/master/colors" element={<ColorsMaster />} />
               <Route path="/reports" element={<ComingSoon title="التقارير والإحصاءات" />} />

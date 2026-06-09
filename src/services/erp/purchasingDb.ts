@@ -341,12 +341,17 @@ export interface SupplierRow {
 }
 export async function listActiveSuppliers(): Promise<SupplierRow[]> {
   const { data, error } = await supabase
-    .from("suppliers")
-    .select("id,code,name,vat_number,phone,email,is_active")
-    .eq("is_active", true)
+    .from("contacts")
+    .select("id,code,name,vat_number,phone,email,active")
+    .eq("is_supplier", true)
+    .eq("active", true)
     .order("name");
   if (error) throw error;
-  return (data ?? []) as SupplierRow[];
+  return (data ?? []).map((c: any) => ({
+    id: c.id, code: c.code, name: c.name,
+    vat_number: c.vat_number ?? null, phone: c.phone ?? null,
+    email: c.email ?? null, is_active: !!c.active,
+  })) as SupplierRow[];
 }
 
 export const fmtSAR = (n: number) =>
