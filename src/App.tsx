@@ -25,6 +25,8 @@ const SalesOrders = lazy(() => import("./pages/SalesOrders"));
 const SalesOrderDetail = lazy(() => import("./pages/SalesOrderDetail"));
 const Invoices = lazy(() => import("./pages/Invoices"));
 const InvoiceDetail = lazy(() => import("./pages/InvoiceDetail"));
+const ERPReports = lazy(() => import("./pages/ERPReports"));
+const VehicleCatalog = lazy(() => import("./pages/VehicleCatalog"));
 const CreditNotes = lazy(() => import("./pages/sales/CreditNotes"));
 const CreditNoteDetail = lazy(() => import("./pages/sales/CreditNoteDetail"));
 const Accounts = lazy(() => import("./pages/Accounts"));
@@ -58,6 +60,7 @@ const VehicleProfitability = lazy(() => import("./pages/VehicleProfitability"));
 const FinancialAnalysis = lazy(() => import("./pages/FinancialAnalysis"));
 const CostAllocation = lazy(() => import("./pages/CostAllocation"));
 const GovernanceDashboard = lazy(() => import("./pages/GovernanceDashboard"));
+const GovernanceLog = lazy(() => import("./pages/governance/GovernanceLog"));
 const FinancialPeriods = lazy(() => import("./pages/FinancialPeriods"));
 const MonthlyClosing = lazy(() => import("./pages/MonthlyClosing"));
 const YearEndClosing = lazy(() => import("./pages/YearEndClosing"));
@@ -71,6 +74,7 @@ const PurchaseRequestDetail = lazy(() => import("./pages/purchasing/PurchaseRequ
 const PurchaseOrders = lazy(() => import("./pages/purchasing/PurchaseOrders"));
 const PurchaseOrderDetail = lazy(() => import("./pages/purchasing/PurchaseOrderDetail"));
 const PurchaseInvoices = lazy(() => import("./pages/purchasing/PurchaseInvoices"));
+const IncentiveManagement = lazy(() => import("./pages/purchasing/IncentiveManagement"));
 
 const SupplierCredit = lazy(() => import("./pages/purchasing/SupplierCredit"));
 const SupplierIncentives = lazy(() => import("./pages/purchasing/SupplierIncentives"));
@@ -87,11 +91,15 @@ const Inspection = lazy(() => import("./pages/purchasing/Inspection"));
 const InspectionDetail = lazy(() => import("./pages/purchasing/InspectionDetail"));
 const SalesDashboard = lazy(() => import("./pages/sales/SalesDashboard"));
 const SalesQuotations = lazy(() => import("./pages/sales/Quotations"));
+const QuotationNew = lazy(() => import("./pages/sales/QuotationNew"));
+const QuotationDetail = lazy(() => import("./pages/sales/QuotationDetail"));
+const QuotationPrint = lazy(() => import("./pages/sales/QuotationPrint"));
+const InvoicePrint = lazy(() => import("./pages/InvoicePrint"));
 const SalesReservations = lazy(() => import("./pages/sales/Reservations"));
 const SalesDeliveries = lazy(() => import("./pages/sales/Deliveries"));
 const SalesFinancing = lazy(() => import("./pages/sales/Financing"));
-const SalesAnalytics = lazy(() => import("./pages/sales/SalesAnalytics"));
 const CustomerTimeline = lazy(() => import("./pages/sales/CustomerTimeline"));
+const SalesAnalytics = lazy(() => import("./pages/sales/SalesAnalytics"));
 const CustomerCredit = lazy(() => import("./pages/sales/CustomerCredit"));
 const CustomerPayments = lazy(() => import("./pages/sales/CustomerPayments"));
 const InventoryDashboard = lazy(() => import("./pages/inventory/InventoryDashboard"));
@@ -124,6 +132,20 @@ const AdminMasterDataHub = lazy(() => import("./pages/admin/MasterDataHub"));
 const AdminUatTools = lazy(() => import("./pages/admin/UatTools"));
 const AdminSettingsCompany = lazy(() => import("./pages/admin/settings/Company"));
 const AdminSettingsBranches = lazy(() => import("./pages/admin/settings/Branches"));
+const AdminSettingsAccountDetermination = lazy(() => import("./pages/admin/settings/AccountDetermination"));
+const AdminSettingsAccountGroups = lazy(() => import("./pages/admin/settings/AccountGroups"));
+const AdminSettingsCommunications = lazy(() => import("./pages/admin/settings/Communications"));
+const HRDashboard = lazy(() => import("./pages/hr/HRDashboard"));
+const HREmployees = lazy(() => import("./pages/hr/Employees"));
+const HREmployeeDetail = lazy(() => import("./pages/hr/EmployeeDetail"));
+const HRJobPositions = lazy(() => import("./pages/hr/JobPositions"));
+const HRLeaveTypes = lazy(() => import("./pages/hr/LeaveTypes"));
+const HRSalaryComponents = lazy(() => import("./pages/hr/SalaryComponents"));
+const HRLeaves = lazy(() => import("./pages/hr/Leaves"));
+const HRPayroll = lazy(() => import("./pages/hr/Payroll"));
+const HREmployeeSalary = lazy(() => import("./pages/hr/EmployeeSalary"));
+const HREmployeeLoans = lazy(() => import("./pages/hr/EmployeeLoans"));
+const HRPayrollRunDetail = lazy(() => import("./pages/hr/PayrollRunDetail"));
 const AdminSettingsWarehouses = lazy(() => import("./pages/admin/settings/Warehouses"));
 const AdminSettingsTax = lazy(() => import("./pages/admin/settings/Tax"));
 const AdminSettingsSequences = lazy(() => import("./pages/admin/settings/Sequences"));
@@ -169,6 +191,8 @@ const App = () => (
           <ErpSessionProvider>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/print/quotations/:id" element={<QuotationPrint />} />
+            <Route path="/print/invoices/:id" element={<InvoicePrint />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route element={<AppLayout />}>
@@ -185,6 +209,7 @@ const App = () => (
               <Route path="/purchasing/orders" element={<PurchaseOrders />} />
               <Route path="/purchasing/orders/:id" element={<PurchaseOrderDetail />} />
               <Route path="/purchasing/invoices" element={<PurchaseInvoices />} />
+              <Route path="/incentives" element={<IncentiveManagement />} />
               <Route path="/purchasing/invoices/:id" element={<PurchaseInvoiceDetail />} />
               <Route path="/purchasing/allocations" element={<Allocations />} />
               <Route path="/purchasing/allocations/:id" element={<AllocationDetail />} />
@@ -198,13 +223,27 @@ const App = () => (
               <Route path="/purchasing/receiving/workbench" element={<ReceivingWorkbench />} />
               <Route path="/purchasing/inspection" element={<Inspection />} />
               <Route path="/purchasing/inspection/:id" element={<InspectionDetail />} />
+              <Route path="/hr" element={<HRDashboard />} />
+              <Route path="/hr/employees" element={<HREmployees />} />
+              <Route path="/hr/employees/:id" element={<HREmployeeDetail />} />
+              <Route path="/hr/positions" element={<HRJobPositions />} />
+              <Route path="/hr/leave-types" element={<HRLeaveTypes />} />
+              <Route path="/hr/salary-components" element={<HRSalaryComponents />} />
+              <Route path="/hr/leaves" element={<HRLeaves />} />
+              <Route path="/hr/payroll" element={<HRPayroll />} />
+              <Route path="/hr/payroll/:id" element={<HRPayrollRunDetail />} />
+              <Route path="/hr/employees/:id/salary" element={<HREmployeeSalary />} />
+              <Route path="/hr/loans" element={<HREmployeeLoans />} />
               <Route path="/sales" element={<SalesDashboard />} />
               <Route path="/sales/quotations" element={<SalesQuotations />} />
+              <Route path="/sales/quotations/new" element={<QuotationNew />} />
+              <Route path="/sales/quotations/:id" element={<QuotationDetail />} />
+              <Route path="/sales/quotations/:id/print" element={<QuotationPrint />} />
               <Route path="/sales/reservations" element={<SalesReservations />} />
               <Route path="/sales/deliveries" element={<SalesDeliveries />} />
               <Route path="/sales/financing" element={<SalesFinancing />} />
-              <Route path="/sales/analytics" element={<SalesAnalytics />} />
               <Route path="/sales/customer-timeline" element={<CustomerTimeline />} />
+              <Route path="/sales/analytics" element={<SalesAnalytics />} />
               <Route path="/sales/customer-credit" element={<CustomerCredit />} />
               <Route path="/sales/customer-payments" element={<CustomerPayments />} />
               <Route path="/sales-orders" element={<SalesOrders />} />
@@ -220,6 +259,8 @@ const App = () => (
               <Route path="/accounting/sales-invoices" element={<SalesInvoicesRegistry />} />
               <Route path="/accounts/:id" element={<AccountDetail />} />
               <Route path="/finance" element={<FinanceCenter />} />
+              <Route path="/erp-reports" element={<ERPReports />} />
+              <Route path="/vehicle-catalog" element={<VehicleCatalog />} />
               <Route path="/income-statement" element={<IncomeStatementPage />} />
               <Route path="/balance-sheet" element={<BalanceSheetPage />} />
               <Route path="/cash-flow" element={<CashFlow />} />
@@ -251,6 +292,7 @@ const App = () => (
               <Route path="/governance/year-end-close" element={<YearEndClosing />} />
               <Route path="/governance/approvals" element={<ApprovalsPage scope="journal" />} />
               <Route path="/governance/audit" element={<AuditCenter />} />
+              <Route path="/governance/credit-decisions" element={<GovernanceLog />} />
               <Route path="/activity" element={<ActivityFeed />} />
               <Route path="/users" element={<UsersAdmin />} />
               <Route path="/organization" element={<Organization />} />
@@ -282,6 +324,9 @@ const App = () => (
                 <Route path="audit" element={<AdminAuditLog />} />
                 <Route path="settings/company" element={<AdminSettingsCompany />} />
                 <Route path="settings/branches" element={<AdminSettingsBranches />} />
+                <Route path="settings/account-determination" element={<AdminSettingsAccountDetermination />} />
+                <Route path="settings/account-groups" element={<AdminSettingsAccountGroups />} />
+                <Route path="settings/communications" element={<AdminSettingsCommunications />} />
                 <Route path="settings/warehouses" element={<AdminSettingsWarehouses />} />
                 <Route path="settings/tax" element={<AdminSettingsTax />} />
                 <Route path="settings/sequences" element={<AdminSettingsSequences />} />
@@ -301,3 +346,9 @@ const App = () => (
 );
 
 export default App;
+
+
+
+
+
+

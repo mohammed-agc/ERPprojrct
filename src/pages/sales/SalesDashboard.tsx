@@ -1,98 +1,169 @@
-import { useMemo } from "react";
+﻿import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/badge";
-import {
-  TrendingUp, Car, Calendar, Truck, Banknote, AlertTriangle,
-  Trophy, ArrowLeft, Percent, ShoppingCart, FileText, Clock,
-} from "lucide-react";
-import {
-  salesService, fmtSAR, fmtRelative, QUOTE_LABEL, QUOTE_TONE, DLV_LABEL, DLV_TONE,
-} from "@/services/erp/sales";
+import { TrendingUp, Car, Calendar, Truck, Banknote, AlertTriangle, Trophy, ArrowLeft, Clock } from "lucide-react";
 
-function Kpi({ icon: Icon, label, value, tone = "default", sub, to }: {
-  icon: any; label: string; value: string | number; sub?: string; to?: string;
-  tone?: "default" | "success" | "warning" | "destructive" | "primary";
-}) {
-  const c = tone === "success" ? "text-success"
-    : tone === "warning" ? "text-warning"
-    : tone === "destructive" ? "text-destructive"
-    : tone === "primary" ? "text-primary" : "text-foreground";
-  const inner = (
-    <div className="border border-border bg-card rounded-lg p-3 hover:bg-accent/30 transition-colors">
-      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-1">
-        <Icon className={`h-3.5 w-3.5 ${c}`} />
-        <span>{label}</span>
+const fmtDate = (s?: string) => s ? new Date(s).toLocaleDateString("en-GB") : "—";
+const fmtSAR = (n: number) => Number(n || 0).toLocaleString("ar-SA", { minimumFractionDigits: 0 }) + " ر.س";
+
+// ─── KPI Card ─────────────────────────────────────────────────
+function KPICard({ label, value, sub, icon: Icon, tone = "default" }: any) {
+  const tones: Record<string, string> = {
+    default: "bg-card border-border",
+    green: "bg-emerald-50 border-emerald-200",
+    amber: "bg-amber-50 border-amber-200",
+    rose: "bg-rose-50 border-rose-200",
+    blue: "bg-blue-50 border-blue-200",
+  };
+  return (
+    <div className={`border rounded-xl p-4 ${tones[tone]}`}>
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="text-xs text-muted-foreground mb-1">{label}</div>
+          <div className="text-2xl font-bold">{value}</div>
+          {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
+        </div>
+        {Icon && <Icon className="h-8 w-8 text-muted-foreground/30" />}
       </div>
-      <div className={`text-2xl font-bold num ${c}`}>{value}</div>
-      {sub && <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>}
     </div>
   );
-  return to ? <Link to={to}>{inner}</Link> : inner;
 }
 
 export default function SalesDashboard() {
-  const d = useMemo(() => salesService.dashboard(), []);
-  const analytics = useMemo(() => salesService.analytics(), []);
-  const expiringQuotes = useMemo(() =>
-    salesService.listQuotations().filter(q => {
-      const h = (new Date(q.valid_until).getTime() - Date.now()) / 3600_000;
-      return (q.status === "sent" || q.status === "negotiated") && h >= 0 && h < 72;
-    }).slice(0, 5), []);
-  const upcomingDeliveries = useMemo(() =>
-    salesService.listDeliveries().filter(x => x.status !== "completed").slice(0, 5), []);
+  const today = new Date().toISOString().slice(0, 10);
+  const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
+
+  // ─── Queries ──────────────────────────────────────────────
+  const { data: orders = [] } = useQuery({
+    queryKey: ["dash-orders"],
+    queryFn: async () => (await supabase.from("sales_orders").select("id,total,status,created_at,customer_name,sales_rep_name,sales_rep_id,branch")).data ?? [],
+    refetchInterval: 30000,
+  });
+
+  const { data: deliveries = [] } = useQuery({
+    queryKey: ["dash-deliveries"],
+    queryFn: async () => (await supabase.from("deliveries").select("*,contact:contacts(name),order:sales_orders(order_no)").order("scheduled_date")).data ?? [],
+    refetchInterval: 30000,
+  });
+
+  const { data: reservations = [] } = useQuery({
+    queryKey: ["dash-reservations"],
+    queryFn: async () => (await supabase.from("reservations").select("id,status")).data ?? [],
+    refetchInterval: 30000,
+  });
+
+  const { data: financing = [] } = useQuery({
+    queryKey: ["dash-financing"],
+    queryFn: async () => (await supabase.from("financing_applications").select("id,status")).data ?? [],
+    refetchInterval: 30000,
+  });
+
+  const { data: quotes = [] } = useQuery({
+    queryKey: ["dash-quotes"],
+    queryFn: async () => (await supabase.from("quotations").select("id,status,valid_until,total,customer_name,quote_no")).data ?? [],
+    refetchInterval: 30000,
+  });
+
+  const { data: reps = [] } = useQuery({
+    queryKey: ["dash-reps"],
+    queryFn: async () => (await supabase.from("sales_reps").select("id,name,branch,monthly_target,achieved")).data ?? [],
+  });
+
+  // ─── KPIs ─────────────────────────────────────────────────
+  const todayOrders = orders.filter(o => o.created_at?.slice(0, 10) === today && o.status !== "cancelled");
+  const monthOrders = orders.filter(o => o.created_at >= startOfMonth && o.status !== "cancelled");
+  const dailyRevenue = todayOrders.reduce((s, o) => s + Number(o.total || 0), 0);
+  const monthRevenue = monthOrders.reduce((s, o) => s + Number(o.total || 0), 0);
+  const soldVehicles = monthOrders.filter(o => o.status !== 'cancelled' && o.status !== 'draft').length;
+  const activeReservations = (reservations as any[]).filter(r => r.status === "active" || r.status === "confirmed").length;
+  const pendingDeliveries = (deliveries as any[]).filter(d => d.status !== "completed" && d.status !== "cancelled").length;
+  const financeReview = (financing as any[]).filter(f => f.status === "under_review" || f.status === "submitted").length;
+
+  // عروض قاربت الانتهاء
+  const expiringQuotes = (quotes as any[]).filter(q => {
+    if (!q.valid_until) return false;
+    const h = (new Date(q.valid_until).getTime() - Date.now()) / 3600000;
+    return h < 48 && h >= 0 && (q.status === "sent" || q.status === "negotiating");
+  });
+
+  // التسليمات القادمة
+  const upcomingDeliveries = (deliveries as any[]).filter(d => d.status !== "completed" && d.status !== "cancelled").slice(0, 5);
+
+  // أفضل المندوبين
+  const repStats = (reps as any[]).map(r => {
+    const repOrders = monthOrders.filter(o => o.sales_rep_id === r.id);
+    const revenue = repOrders.reduce((s, o) => s + Number(o.total || 0), 0);
+    const achieved = repOrders.filter(o => o.status !== 'cancelled' && o.status !== 'draft').length;
+    return { ...r, revenue, achieved, pct: r.monthly_target ? Math.round((achieved / r.monthly_target) * 100) : 0 };
+  }).sort((a, b) => b.revenue - a.revenue);
+
+  // حالة التسليم
+  const DLV_LABEL: Record<string, string> = {
+    scheduled: "مجدول", in_progress: "قيد التسليم", completed: "مكتمل", cancelled: "ملغي"
+  };
+  const DLV_TONE: Record<string, string> = {
+    scheduled: "secondary", in_progress: "default", completed: "outline", cancelled: "destructive"
+  };
 
   return (
-    <div>
-      <PageHeader
-        title="لوحة المبيعات"
-        subtitle="نظرة تنفيذية على العمليات اليومية، الحجوزات، التسليم، والتمويل"
-      />
+    <div dir="rtl">
+      <PageHeader title="لوحة المبيعات" subtitle="نظرة تنفيذية على العمليات اليومية، الحجوزات، التسليم، والتمويل" />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 mb-4">
-        <Kpi icon={TrendingUp} label="مبيعات اليوم" value={fmtSAR(d.daily_revenue)} tone="primary" />
-        <Kpi icon={TrendingUp} label="مبيعات الشهر" value={fmtSAR(d.monthly_revenue)} tone="success" sub={`ربح ${fmtSAR(d.monthly_profit)}`} />
-        <Kpi icon={Car} label="مركبات مباعة" value={d.sold_vehicles} tone="success" sub={`متوسط الربح ${fmtSAR(d.avg_profit_per_vehicle)}`} />
-        <Kpi icon={Calendar} label="حجوزات نشطة" value={d.reserved} tone="warning" to="/sales/reservations" />
-        <Kpi icon={Truck} label="تسليمات قيد العمل" value={d.pending_deliveries} tone="primary" to="/sales/deliveries" />
-        <Kpi icon={Banknote} label="تمويل قيد الدراسة" value={d.fin_review} tone="warning" to="/sales/financing" />
-        <Kpi icon={Clock} label="عروض قاربت الانتهاء" value={d.expiring_quotes} tone="warning" to="/sales/quotations" />
-        <Kpi icon={Percent} label="خصومات بانتظار الاعتماد" value={d.discount_pending} tone={d.discount_pending ? "destructive" : "default"} to="/sales/quotations" />
+      {/* KPIs */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-4 mb-6">
+        <KPICard label="مبيعات اليوم" value={fmtSAR(dailyRevenue)} icon={TrendingUp} tone="green" />
+        <KPICard label="مبيعات الشهر" value={fmtSAR(monthRevenue)} sub={`${soldVehicles} مركبة مباعة`} icon={TrendingUp} />
+        <KPICard label="حجوزات نشطة" value={activeReservations} icon={Calendar} tone={activeReservations > 0 ? "amber" : "default"} />
+        <KPICard label="تسليمات قيد العمل" value={pendingDeliveries} icon={Truck} tone={pendingDeliveries > 0 ? "blue" : "default"} />
+        <KPICard label="تمويل قيد الدراسة" value={financeReview} icon={Banknote} tone={financeReview > 0 ? "amber" : "default"} />
+        <KPICard label="عروض قاربت الانتهاء" value={expiringQuotes.length} icon={Clock} tone={expiringQuotes.length > 0 ? "rose" : "default"} />
+        <KPICard label="أوامر بيع هذا الشهر" value={monthOrders.length} icon={Car} />
+        <KPICard label="إجمالي الأوامر" value={orders.length} icon={Car} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Top salespersons */}
-        <div className="bg-card border border-border rounded-lg overflow-hidden">
-          <div className="px-3 py-2 border-b border-border flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <Trophy className="h-4 w-4 text-warning" /> أفضل مندوبي البيع
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 px-4 mb-6">
+        {/* أفضل المندوبين */}
+        <div className="border border-border rounded-xl overflow-hidden">
+          <div className="bg-muted/50 px-4 py-3 flex items-center justify-between border-b border-border">
+            <div className="flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-amber-500" />
+              <span className="font-semibold text-sm">أفضل مندوبي البيع</span>
             </div>
-            <Link to="/sales/analytics" className="text-xs text-primary hover:underline flex items-center gap-1">
-              التحليلات <ArrowLeft className="h-3 w-3" />
-            </Link>
           </div>
-          <table className="erp-table">
-            <thead><tr><th>المندوب</th><th>الفرع</th><th>الإيراد</th><th>الربح</th><th>التحقيق</th></tr></thead>
-            <tbody>
-              {analytics.byPerson.slice(0, 5).map((p, i) => (
-                <tr key={p.id}>
-                  <td>
-                    <div className="flex items-center gap-1.5">
-                      <span className={`text-[10px] font-bold w-4 ${i === 0 ? "text-warning" : "text-muted-foreground"}`}>#{i + 1}</span>
+          <table className="w-full text-sm">
+            <thead className="bg-muted/30 border-b border-border">
+              <tr>
+                <th className="text-right px-3 py-2 font-medium">المندوب</th>
+                <th className="text-right px-3 py-2 font-medium">الفرع</th>
+                <th className="text-right px-3 py-2 font-medium">الإيراد</th>
+                <th className="text-right px-3 py-2 font-medium">التحقيق</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {repStats.length === 0 ? (
+                <tr><td colSpan={4} className="text-center py-6 text-muted-foreground text-xs">لا توجد بيانات</td></tr>
+              ) : repStats.map((r, i) => (
+                <tr key={r.id} className="hover:bg-muted/20">
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-muted-foreground">#{i+1}</span>
                       <div>
-                        <div className="font-medium text-sm">{p.name}</div>
-                        <div className="text-[10px] text-muted-foreground">{p.achieved_monthly}/{p.target_monthly} مركبة</div>
+                        <div className="font-medium">{r.name}</div>
+                        <div className="text-xs text-muted-foreground">{r.achieved}/{r.monthly_target} مركبة</div>
                       </div>
                     </div>
                   </td>
-                  <td className="text-xs">{p.branch}</td>
-                  <td className="num text-xs">{fmtSAR(p.revenue_mtd)}</td>
-                  <td className="num text-xs text-success">{fmtSAR(p.profit_mtd)}</td>
-                  <td className="w-[120px]">
-                    <div className="h-1.5 bg-muted rounded overflow-hidden">
-                      <div className={`h-full ${p.attainment >= 100 ? "bg-success" : p.attainment >= 70 ? "bg-primary" : "bg-warning"}`} style={{ width: `${Math.min(100, p.attainment)}%` }} />
+                  <td className="px-3 py-2 text-xs text-muted-foreground">{r.branch}</td>
+                  <td className="px-3 py-2 text-sm font-medium">{fmtSAR(r.revenue)}</td>
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-1">
+                      <div className="flex-1 bg-muted rounded-full h-1.5">
+                        <div className="bg-primary rounded-full h-1.5" style={{ width: `${Math.min(r.pct, 100)}%` }} />
+                      </div>
+                      <span className="text-xs font-mono w-8">{r.pct}%</span>
                     </div>
-                    <div className="text-[10px] text-muted-foreground mt-0.5">{p.attainment.toFixed(0)}%</div>
                   </td>
                 </tr>
               ))}
@@ -100,67 +171,84 @@ export default function SalesDashboard() {
           </table>
         </div>
 
-        {/* Expiring quotes */}
-        <div className="bg-card border border-border rounded-lg overflow-hidden">
-          <div className="px-3 py-2 border-b border-border flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <AlertTriangle className="h-4 w-4 text-warning" /> عروض قاربت على الانتهاء
+        {/* عروض قاربت الانتهاء */}
+        <div className="border border-border rounded-xl overflow-hidden">
+          <div className="bg-muted/50 px-4 py-3 flex items-center justify-between border-b border-border">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-rose-500" />
+              <span className="font-semibold text-sm">عروض قاربت على الانتهاء</span>
             </div>
             <Link to="/sales/quotations" className="text-xs text-primary hover:underline flex items-center gap-1">
               عرض الكل <ArrowLeft className="h-3 w-3" />
             </Link>
           </div>
-          <table className="erp-table">
-            <thead><tr><th>الرقم</th><th>العميل</th><th>القيمة</th><th>تنتهي</th><th>الحالة</th></tr></thead>
-            <tbody>
-              {expiringQuotes.length === 0 && <tr><td colSpan={5} className="text-center text-muted-foreground py-6 text-xs">لا توجد عروض قاربت الانتهاء</td></tr>}
-              {expiringQuotes.map(q => (
-                <tr key={q.id}>
-                  <td className="font-mono text-[11px]">{q.code}</td>
-                  <td className="text-xs">{q.customer}</td>
-                  <td className="num text-xs">{fmtSAR(q.net_price)}</td>
-                  <td className="text-xs text-warning">{fmtRelative(q.valid_until)}</td>
-                  <td><Badge className={QUOTE_TONE[q.status]}>{QUOTE_LABEL[q.status]}</Badge></td>
+          <table className="w-full text-sm">
+            <thead className="bg-muted/30 border-b border-border">
+              <tr>
+                <th className="text-right px-3 py-2 font-medium">الرقم</th>
+                <th className="text-right px-3 py-2 font-medium">العميل</th>
+                <th className="text-right px-3 py-2 font-medium">القيمة</th>
+                <th className="text-right px-3 py-2 font-medium">تنتهي</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {expiringQuotes.length === 0 ? (
+                <tr><td colSpan={4} className="text-center py-6 text-muted-foreground text-xs">لا توجد عروض قاربت الانتهاء</td></tr>
+              ) : expiringQuotes.map(q => (
+                <tr key={q.id} className="hover:bg-muted/20">
+                  <td className="px-3 py-2 font-mono text-xs">{q.quote_no}</td>
+                  <td className="px-3 py-2 text-sm">{q.customer_name || "—"}</td>
+                  <td className="px-3 py-2 text-sm">{fmtSAR(Number(q.total))}</td>
+                  <td className="px-3 py-2 text-xs text-rose-600">{q.valid_until}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      </div>
 
-        {/* Upcoming deliveries */}
-        <div className="bg-card border border-border rounded-lg overflow-hidden lg:col-span-2">
-          <div className="px-3 py-2 border-b border-border flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <Truck className="h-4 w-4 text-primary" /> تسليمات قادمة
+      {/* التسليمات القادمة */}
+      <div className="px-4 mb-6">
+        <div className="border border-border rounded-xl overflow-hidden">
+          <div className="bg-muted/50 px-4 py-3 flex items-center justify-between border-b border-border">
+            <div className="flex items-center gap-2">
+              <Truck className="h-4 w-4 text-blue-500" />
+              <span className="font-semibold text-sm">تسليمات قادمة</span>
             </div>
             <Link to="/sales/deliveries" className="text-xs text-primary hover:underline flex items-center gap-1">
               تنسيق التسليم <ArrowLeft className="h-3 w-3" />
             </Link>
           </div>
-          <table className="erp-table">
-            <thead><tr><th>الرقم</th><th>أمر البيع</th><th>العميل</th><th>المركبة</th><th>الفرع</th><th>الموعد</th><th>الجهوزية</th><th>الحالة</th></tr></thead>
-            <tbody>
-              {upcomingDeliveries.map(dl => {
-                const done = dl.checklist.filter(c => c.done).length;
-                const pct = (done / dl.checklist.length) * 100;
-                return (
-                  <tr key={dl.id}>
-                    <td className="font-mono text-[11px]">{dl.code}</td>
-                    <td className="font-mono text-[11px]">{dl.so_code}</td>
-                    <td className="text-xs">{dl.customer}</td>
-                    <td className="text-xs">{dl.vehicle}</td>
-                    <td className="text-xs">{dl.branch}</td>
-                    <td className="text-xs">{fmtRelative(dl.scheduled_at)}</td>
-                    <td className="w-[100px]">
-                      <div className="h-1.5 bg-muted rounded overflow-hidden">
-                        <div className={`h-full ${pct === 100 ? "bg-success" : pct >= 50 ? "bg-primary" : "bg-warning"}`} style={{ width: `${pct}%` }} />
-                      </div>
-                      <div className="text-[10px] text-muted-foreground mt-0.5">{done}/{dl.checklist.length}</div>
-                    </td>
-                    <td><Badge className={DLV_TONE[dl.status]}>{DLV_LABEL[dl.status]}</Badge></td>
-                  </tr>
-                );
-              })}
+          <table className="w-full text-sm">
+            <thead className="bg-muted/30 border-b border-border">
+              <tr>
+                <th className="text-right px-3 py-2 font-medium">الرقم</th>
+                <th className="text-right px-3 py-2 font-medium">أمر البيع</th>
+                <th className="text-right px-3 py-2 font-medium">العميل</th>
+                <th className="text-right px-3 py-2 font-medium">المركبة</th>
+                <th className="text-right px-3 py-2 font-medium">الفرع</th>
+                <th className="text-right px-3 py-2 font-medium">الموعد</th>
+                <th className="text-right px-3 py-2 font-medium">الحالة</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {upcomingDeliveries.length === 0 ? (
+                <tr><td colSpan={7} className="text-center py-6 text-muted-foreground text-xs">لا توجد تسليمات</td></tr>
+              ) : upcomingDeliveries.map(d => (
+                <tr key={d.id} className="hover:bg-muted/20">
+                  <td className="px-3 py-2 font-mono text-xs">{d.delivery_no}</td>
+                  <td className="px-3 py-2 font-mono text-xs">{d.order?.order_no || "—"}</td>
+                  <td className="px-3 py-2 text-sm">{d.contact?.name || d.customer_name || "—"}</td>
+                  <td className="px-3 py-2 text-xs text-muted-foreground">{d.vehicle_desc || "—"}</td>
+                  <td className="px-3 py-2 text-xs">{d.branch || "—"}</td>
+                  <td className="px-3 py-2 text-xs">{fmtDate(d.scheduled_date)}</td>
+                  <td className="px-3 py-2">
+                    <Badge variant={DLV_TONE[d.status] as any ?? "secondary"}>
+                      {DLV_LABEL[d.status] ?? d.status}
+                    </Badge>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -168,3 +256,6 @@ export default function SalesDashboard() {
     </div>
   );
 }
+
+
+

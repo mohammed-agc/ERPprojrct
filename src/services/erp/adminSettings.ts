@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Admin settings persistence layer.
  * Stored in localStorage to align with the rest of the ERP modules.
  */
@@ -130,3 +130,4 @@ export const adminSettings = {
   saveSequences: (q: NumberSequence[]) => { const s = read(); s.sequences = q; write(s); },
   saveTemplates: (t: PrintTemplate[]) => { const s = read(); s.templates = t; write(s); },
 };
+

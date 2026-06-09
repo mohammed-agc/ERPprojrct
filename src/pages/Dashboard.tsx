@@ -33,7 +33,7 @@ export default function Dashboard() {
     <div>
       <PageHeader
         title={`مرحباً، ${profile?.full_name ?? ""}`}
-        subtitle={department ? `لوحة معلومات قسم ${department.name_ar}` : "لوحة المعلومات العامة"}
+        subtitle={department?.name_ar ? `لوحة معلومات قسم ${department.name_ar}` : "لوحة المعلومات العامة"}
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

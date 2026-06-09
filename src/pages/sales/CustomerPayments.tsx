@@ -60,7 +60,7 @@ export default function CustomerPayments() {
       const invIds = Array.from(new Set(list.map(p => p.invoice_id).filter(Boolean)));
       const [{ data: customers }, { data: invoices }, { data: jes }] = await Promise.all([
         custIds.length
-          ? supabase.from("customers").select("id, code, name, vat_number").in("id", custIds)
+          ? supabase.from("contacts").select("id, code, name, vat_number").in("id", custIds)
           : Promise.resolve({ data: [] as any[] }),
         invIds.length
           ? supabase.from("invoices").select("id, invoice_no, invoice_date, total, paid_amount, credited_amount").in("id", invIds)

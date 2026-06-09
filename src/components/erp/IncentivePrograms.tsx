@@ -1,67 +1,67 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Trophy, ExternalLink, BookOpen } from "lucide-react";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
-import { Trophy, Plus, Pencil, Trash2, CheckCircle2, Sparkles, Clock, X, ShieldCheck } from "lucide-react";
-import { toast } from "sonner";
-import {
-  purchasingService, fmtSAR, fmtDate,
-  type IncentiveProgram, type IncentiveProgramStatus, type IncentiveProgramType, type IncentiveClaimMode, type IncentiveClaim,
-} from "@/services/erp/purchasing";
-import { cn } from "@/lib/utils";
+  incentiveEngine,
+  PERIOD_LABEL, CALC_LABEL, PAYOUT_LABEL, STAGE_LABEL,
+  type IncentiveProgram, type IncentiveAccrual, type ProgramStatus,
+} from "@/services/erp/incentiveEngine";
 import { useIncentivePermissions } from "@/lib/incentivePermissions";
-import { ensureIncentiveAccess } from "@/lib/incentiveAuthzApi";
-import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
 
-const STATUS_LABEL: Record<IncentiveProgramStatus, string> = {
-  active: "نشط", closed: "مغلق", achieved: "محقق",
-};
-const STATUS_TONE: Record<IncentiveProgramStatus, string> = {
+const fmtSAR = (n: number) => Number(n || 0).toLocaleString("en-US") + " ر.س";
+const fmtDate = (s?: string) => s ? new Date(s).toLocaleDateString("ar-SA") : "—";
+
+const STATUS_TONE: Record<ProgramStatus, string> = {
   active: "bg-primary/10 text-primary border border-primary/30",
   closed: "bg-muted text-muted-foreground border border-border",
   achieved: "bg-success/10 text-success border border-success/40",
 };
-const TYPE_LABEL: Record<IncentiveProgramType, string> = {
-  accumulative: "حافز تراكمي",
-  target_based: "حافز مرتبط بالهدف",
-};
-const TYPE_TONE: Record<IncentiveProgramType, string> = {
-  accumulative: "bg-sky-500/10 text-sky-700 border border-sky-400/40",
-  target_based: "bg-violet-500/10 text-violet-700 border border-violet-400/40",
+const STATUS_LABEL: Record<ProgramStatus, string> = { active: "نشط", closed: "مغلق", achieved: "محقق" };
+
+const STAGE_TONE: Record<string, string> = {
+  expected: "bg-muted text-muted-foreground",
+  earned: "bg-primary/10 text-primary",
+  approved: "bg-sky-500/10 text-sky-700",
+  received: "bg-success/10 text-success",
+  utilized: "bg-violet-500/10 text-violet-700",
+  rejected: "bg-destructive/10 text-destructive",
+  cancelled: "bg-muted text-muted-foreground",
 };
 
 export function IncentivePrograms({ supplierId }: { supplierId: string }) {
   const perms = useIncentivePermissions();
-  const [tick, setTick] = useState(0);
-  const refresh = () => setTick(t => t + 1);
-  const [editProgram, setEditProgram] = useState<IncentiveProgram | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [claimProgram, setClaimProgram] = useState<IncentiveProgram | null>(null);
-  const [rejectClaim, setRejectClaim] = useState<IncentiveClaim | null>(null);
+  const [programs, setPrograms] = useState<IncentiveProgram[]>([]);
+  const [accruals, setAccruals] = useState<IncentiveAccrual[]>([]);
+  const [balance, setBalance] = useState({ earned: 0, received: 0, utilized: 0, outstanding: 0 });
+  const [loading, setLoading] = useState(true);
 
-  const programs = useMemo(
-    () => purchasingService.listIncentivePrograms(supplierId),
-    [supplierId, tick],
-  );
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    const [progs, accs, bal] = await Promise.all([
+      incentiveEngine.listPrograms(supplierId),
+      incentiveEngine.listAccruals({ supplierId }),
+      incentiveEngine.supplierBalance(supplierId),
+    ]);
+    setPrograms(progs);
+    setAccruals(accs);
+    setBalance(bal);
+    setLoading(false);
+  }, [supplierId]);
+
+  useEffect(() => { refresh(); }, [refresh]);
 
   if (!perms.canView) {
     return (
       <Card>
         <CardHeader className="p-3 pb-1">
-          <CardTitle className="text-xs flex items-center gap-1">
-            <Trophy className="h-3.5 w-3.5 text-warning" /> برامج الحوافز
-          </CardTitle>
+          <CardTitle className="text-xs flex items-center gap-1"><Trophy className="h-3.5 w-3.5 text-warning" /> برامج الحوافز</CardTitle>
         </CardHeader>
         <CardContent className="p-3 pt-1">
-          <div className="text-[11px] text-muted-foreground text-center py-4">
-            لا تملك صلاحية عرض برامج الحوافز.
-          </div>
+          <div className="text-[12.5px] text-muted-foreground text-center py-4">لا تملك صلاحية عرض برامج الحوافز.</div>
         </CardContent>
       </Card>
     );
@@ -70,501 +70,87 @@ export function IncentivePrograms({ supplierId }: { supplierId: string }) {
   return (
     <Card>
       <CardHeader className="p-3 pb-1 flex flex-row items-center justify-between">
-        <CardTitle className="text-xs flex items-center gap-1">
-          <Trophy className="h-3.5 w-3.5 text-warning" /> برامج الحوافز
-        </CardTitle>
-        {perms.canManage && (
-          <Button size="sm" className="h-7 px-2 text-[11px]" onClick={async () => {
-            try { await ensureIncentiveAccess("manage"); } catch (e) { toast.error((e as Error).message); return; }
-            setCreateOpen(true);
-          }}>
-            <Plus className="h-3 w-3 ml-1" /> برنامج جديد
-          </Button>
-        )}
+        <CardTitle className="text-xs flex items-center gap-1"><Trophy className="h-3.5 w-3.5 text-warning" /> برامج الحوافز</CardTitle>
+        <Link to="/incentives" className="text-[12.5px] text-primary hover:underline flex items-center gap-1">
+          <ExternalLink className="h-3 w-3" /> إدارة الحوافز
+        </Link>
       </CardHeader>
-      <CardContent className="p-3 pt-1 space-y-2">
-        {programs.length === 0 && (
-          <div className="text-[11px] text-muted-foreground text-center py-4">
-            لا توجد برامج حوافز بعد. أنشئ برنامجًا لتتبع الأهداف والحوافز المستحقة من فواتير الشراء المعتمدة.
+      <CardContent className="p-3 pt-1 space-y-3">
+        {/* ملخص رصيد الحوافز */}
+        <div className="grid grid-cols-4 gap-1.5">
+          <Stat label="مستحق" value={fmtSAR(balance.earned)} tone="primary" />
+          <Stat label="مستلم" value={fmtSAR(balance.received)} tone="success" />
+          <Stat label="مستخدَم" value={fmtSAR(balance.utilized)} />
+          <Stat label="المتبقي" value={fmtSAR(balance.outstanding)} tone={balance.outstanding > 0 ? "warning" : "default"} />
+        </div>
+
+        {loading ? (
+          <div className="text-[12.5px] text-muted-foreground text-center py-4">جاري التحميل...</div>
+        ) : programs.length === 0 ? (
+          <div className="text-[12.5px] text-muted-foreground text-center py-4">
+            لا توجد برامج حوافز لهذا المورد. أنشئ برنامجًا من <Link to="/incentives" className="text-primary hover:underline">إدارة الحوافز</Link>.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {programs.map(p => (
+              <div key={p.id} className="border border-border rounded-md p-2.5 bg-card/60">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="text-sm font-semibold flex items-center gap-1.5 flex-wrap">
+                      {p.name}
+                      <Badge className={STATUS_TONE[p.status]}>{STATUS_LABEL[p.status]}</Badge>
+                    </div>
+                    <div className="text-[12px] text-muted-foreground mt-0.5">
+                      {p.type_name} · {PERIOD_LABEL[p.period_kind]} · {CALC_LABEL[p.calc_method]}
+                      {(p.brand || p.model) && <> · {[p.brand, p.model].filter(Boolean).join(" ")}</>}
+                    </div>
+                    <div className="text-[12px] text-muted-foreground">
+                      {fmtDate(p.start_date)} ← {fmtDate(p.end_date)} · السداد: {PAYOUT_LABEL[p.payout_method]}
+                    </div>
+                  </div>
+                  <div className="text-left shrink-0">
+                    <div className="text-[12px] text-muted-foreground">الهدف</div>
+                    <div className="text-sm font-bold num">{p.target_qty || "—"}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
-        {programs.map(p => {
-          const perf = purchasingService.programPerformance(p);
-          const pct = Math.min(100, perf.achievement);
-          return (
-            <div key={p.id} className="border border-border rounded-md p-2.5 space-y-2 bg-card/60">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="text-sm font-semibold flex items-center gap-1.5 flex-wrap">
-                    {p.name}
-                    <Badge className={STATUS_TONE[p.status]}>{STATUS_LABEL[p.status]}</Badge>
-                    <Badge className={TYPE_TONE[(p.program_type ?? "accumulative")]}>
-                      {TYPE_LABEL[(p.program_type ?? "accumulative")]}
-                    </Badge>
-                    {perf.eligible && (
-                      <Badge className="bg-amber-500/15 text-amber-700 border border-amber-400/50 gap-1">
-                        <Sparkles className="h-3 w-3" /> مؤهل للمطالبة
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="text-[10.5px] text-muted-foreground mt-0.5">
-                    {fmtDate(p.start_date)} → {fmtDate(p.end_date)}
-                    {p.brand && <> · العلامة: <b>{p.brand}</b></>}
-                    {p.model && <> · الموديل: <b>{p.model}</b></>}
-                  </div>
-                </div>
-                {perms.canManage && (
-                  <div className="flex items-center gap-1">
-                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={async () => {
-                      try { await ensureIncentiveAccess("manage"); } catch (e) { toast.error((e as Error).message); return; }
-                      setEditProgram(p);
-                    }}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                      onClick={async () => {
-                        try { await ensureIncentiveAccess("manage"); } catch (e) { toast.error((e as Error).message); return; }
-                        if (confirm(`حذف برنامج "${p.name}"؟`)) {
-                          purchasingService.deleteIncentiveProgram(p.id);
-                          toast.success("تم حذف البرنامج"); refresh();
-                        }
-                      }}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                )}
-              </div>
 
-              {/* Live performance grid */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-1.5">
-                <Stat label="الهدف" value={`${perf.target}`} sub="مركبة" />
-                <Stat label="المُشترى" value={`${perf.purchased}`} sub="مركبة" tone={perf.eligible ? "success" : "warning"} />
-                <Stat label="المتبقي" value={`${perf.remaining}`} sub="مركبة" />
-                <Stat label="نسبة التحقق" value={`${perf.achievement.toFixed(0)}%`}
-                  tone={perf.eligible ? "success" : pct > 70 ? "warning" : "default"} />
-                <Stat label="الحافز المتوقع" value={fmtSAR(perf.earned)} tone="success" />
-              </div>
-
-              <div className="h-1.5 bg-muted rounded overflow-hidden">
-                <div className={cn("h-full", perf.eligible ? "bg-success" : "bg-primary")}
-                  style={{ width: `${pct}%` }} />
-              </div>
-
-              {/* Earned / Approved / Pending / Remaining */}
-              <div className="grid grid-cols-4 gap-1.5 pt-1 border-t border-border">
-                <Stat label="حافز مكتسب" value={fmtSAR(perf.earned)} />
-                <Stat label="مُعتمد" value={fmtSAR(perf.claimed)} tone="success" />
-                <Stat label="قيد الاعتماد" value={fmtSAR(perf.pending)} tone="warning" />
-                <Stat label="متبقي" value={fmtSAR(perf.remaining_incentive)} />
-              </div>
-
-              {/* Pending approval queue */}
-              {perf.pendingClaims.length > 0 && (
-                <div className="border border-warning/40 bg-warning/5 rounded p-2 space-y-1.5">
-                  <div className="text-[10.5px] font-semibold text-warning flex items-center gap-1">
-                    <Clock className="h-3 w-3" /> مطالبات بانتظار اعتماد المدير
-                    ({perf.pendingClaims.length})
-                  </div>
-                  {perf.pendingClaims.map(c => (
-                    <PendingClaimRow
-                      key={c.id}
-                      claim={c}
-                      canApprove={perms.canApprove}
-                      onApproved={() => { toast.success(`تم اعتماد ${c.code}`); refresh(); }}
-                      onReject={() => setRejectClaim(c)}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {/* Submit-claim actions */}
-              {perms.canManage && p.status !== "closed" && (() => {
-                const isTargetBased = (p.program_type ?? "accumulative") === "target_based";
-                const targetBlocked = isTargetBased && !perf.target_met;
-                const noRemaining = perf.remaining_incentive <= 0;
-                if (targetBlocked) {
-                  return (
-                    <div className="pt-1 space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" className="h-7 text-[11px]" disabled>
-                          <CheckCircle2 className="h-3 w-3 ml-1" /> تقديم مطالبة للاعتماد
-                        </Button>
-                        <Button size="sm" variant="outline" className="h-7 text-[11px]" disabled>
-                          خصم من الحد الائتماني
-                        </Button>
-                      </div>
-                      <div className="text-[10.5px] bg-destructive/5 border border-destructive/30 text-destructive rounded px-2 py-1">
-                        لا يمكن إنشاء مطالبة حافز قبل تحقيق الهدف المطلوب
-                      </div>
-                    </div>
-                  );
-                }
-                if (perf.eligible && !noRemaining) {
-                  return (
-                    <div className="flex items-center gap-2 pt-1">
-                      <Button size="sm" className="h-7 text-[11px]" onClick={() => setClaimProgram(p)}>
-                        <CheckCircle2 className="h-3 w-3 ml-1" /> تقديم مطالبة للاعتماد
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-7 text-[11px]"
-                        onClick={() => setClaimProgram({ ...p, notes: "credit" })}>
-                        خصم من الحد الائتماني
-                      </Button>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
+        {/* الاستحقاقات الأخيرة */}
+        {accruals.length > 0 && (
+          <div className="border-t border-border pt-2">
+            <div className="text-[12.5px] font-semibold flex items-center gap-1 mb-1.5">
+              <BookOpen className="h-3 w-3" /> آخر الاستحقاقات
             </div>
-          );
-        })}
+            <div className="space-y-1">
+              {accruals.slice(0, 5).map(a => (
+                <div key={a.id} className="flex items-center justify-between text-[12.5px] bg-muted/30 rounded px-2 py-1">
+                  <span className="font-mono">{a.code}</span>
+                  <span className="text-muted-foreground">{fmtDate(a.period_from)} → {fmtDate(a.period_to)}</span>
+                  <span className="num font-semibold">{fmtSAR(a.earned_amount)}</span>
+                  <Badge className={cn("text-[9px]", STAGE_TONE[a.stage])}>{STAGE_LABEL[a.stage]}</Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
-
-      <ProgramFormDialog
-        open={createOpen || !!editProgram}
-        onOpenChange={(v) => { if (!v) { setCreateOpen(false); setEditProgram(null); } }}
-        supplierId={supplierId}
-        program={editProgram}
-        onSaved={() => { refresh(); setCreateOpen(false); setEditProgram(null); }}
-      />
-      <ClaimDialog
-        program={claimProgram}
-        onOpenChange={(v) => !v && setClaimProgram(null)}
-        onCreated={() => { refresh(); setClaimProgram(null); }}
-      />
-      <RejectDialog
-        claim={rejectClaim}
-        onOpenChange={(v) => !v && setRejectClaim(null)}
-        onRejected={() => { refresh(); setRejectClaim(null); }}
-      />
     </Card>
   );
 }
 
-function Stat({ label, value, sub, tone = "default" }: {
-  label: string; value: string; sub?: string;
-  tone?: "default" | "success" | "warning" | "destructive";
+function Stat({ label, value, tone = "default" }: {
+  label: string; value: string;
+  tone?: "default" | "primary" | "success" | "warning" | "destructive";
 }) {
   const c = tone === "success" ? "text-success" : tone === "warning" ? "text-warning" :
-    tone === "destructive" ? "text-destructive" : "text-foreground";
+    tone === "primary" ? "text-primary" : tone === "destructive" ? "text-destructive" : "text-foreground";
   return (
     <div className="bg-muted/40 rounded p-1.5">
-      <div className="text-[9.5px] text-muted-foreground">{label}</div>
-      <div className={cn("text-xs font-bold num tabular-nums", c)}>{value}</div>
-      {sub && <div className="text-[9px] text-muted-foreground">{sub}</div>}
+      <div className="text-[12.5px] text-muted-foreground">{label}</div>
+      <div className={cn("text-sm font-bold num tabular-nums", c)}>{value}</div>
     </div>
-  );
-}
-
-/* ---------- Pending claim row ---------- */
-function PendingClaimRow({
-  claim, canApprove, onApproved, onReject,
-}: {
-  claim: IncentiveClaim;
-  canApprove: boolean;
-  onApproved: () => void;
-  onReject: () => void;
-}) {
-  const { profile } = useAuth();
-  const approver = profile?.full_name || "مدير المشتريات";
-  return (
-    <div className="flex items-center gap-2 text-[11px] bg-background/60 rounded px-2 py-1.5">
-      <div className="flex-1 min-w-0">
-        <div className="font-mono font-semibold">{claim.code}</div>
-        <div className="text-[10px] text-muted-foreground truncate">
-          {claim.mode === "credit" ? "خصم من الحد الائتماني" : "مطالبة حافز (ذمم)"}
-          {claim.requested_by ? ` · طلب: ${claim.requested_by}` : ""}
-        </div>
-      </div>
-      <div className="num tabular-nums font-semibold">{fmtSAR(claim.amount)}</div>
-      {canApprove ? (
-        <>
-          <Button
-            size="sm" className="h-6 px-2 text-[10px]"
-            onClick={async () => {
-              try { await ensureIncentiveAccess("approve"); } catch (e) { toast.error((e as Error).message); return; }
-              const r = purchasingService.approveIncentiveClaim(claim.id, approver);
-              if ("error" in r) { toast.error(r.error); return; }
-              onApproved();
-            }}>
-            <ShieldCheck className="h-3 w-3 ml-0.5" /> اعتماد
-          </Button>
-          <Button size="sm" variant="outline" className="h-6 px-2 text-[10px] text-destructive border-destructive/40"
-            onClick={onReject}>
-            <X className="h-3 w-3" /> رفض
-          </Button>
-        </>
-      ) : (
-        <Badge variant="outline" className="text-[10px] gap-1">
-          <Clock className="h-2.5 w-2.5" /> بانتظار المدير
-        </Badge>
-      )}
-    </div>
-  );
-}
-
-/* ---------- Program form ---------- */
-function ProgramFormDialog({
-  open, onOpenChange, supplierId, program, onSaved,
-}: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  supplierId: string;
-  program: IncentiveProgram | null;
-  onSaved: () => void;
-}) {
-  const today = new Date().toISOString().slice(0, 10);
-  const plus = (d: number) => {
-    const x = new Date(); x.setDate(x.getDate() + d); return x.toISOString().slice(0, 10);
-  };
-  const [form, setForm] = useState({
-    name: "", start_date: today, end_date: plus(30),
-    target_vehicles: 10, incentive_per_vehicle: 1000,
-    program_type: "accumulative" as IncentiveProgramType,
-    brand: "", model: "", status: "active" as IncentiveProgramStatus, notes: "",
-  });
-
-  // Reset when opening
-  const seedFrom = program?.id ?? "__new__";
-  useMemo(() => {
-    if (program) {
-      setForm({
-        name: program.name, start_date: program.start_date, end_date: program.end_date,
-        target_vehicles: program.target_vehicles, incentive_per_vehicle: program.incentive_per_vehicle,
-        program_type: program.program_type ?? "accumulative",
-        brand: program.brand ?? "", model: program.model ?? "",
-        status: program.status, notes: program.notes ?? "",
-      });
-    } else {
-      setForm(f => ({ ...f, name: "", brand: "", model: "", notes: "", program_type: "accumulative" }));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seedFrom, open]);
-
-  const submit = async () => {
-    if (!form.name.trim()) { toast.error("اسم البرنامج مطلوب"); return; }
-    if (form.target_vehicles <= 0) { toast.error("الهدف يجب أن يكون أكبر من صفر"); return; }
-    if (form.end_date < form.start_date) { toast.error("تاريخ النهاية قبل تاريخ البداية"); return; }
-    try { await ensureIncentiveAccess("manage"); }
-    catch (e) { toast.error((e as Error).message); return; }
-    purchasingService.upsertIncentiveProgram({
-      id: program?.id,
-      supplier_id: supplierId,
-      name: form.name.trim(),
-      start_date: form.start_date, end_date: form.end_date,
-      target_vehicles: Number(form.target_vehicles),
-      incentive_per_vehicle: Number(form.incentive_per_vehicle),
-      program_type: form.program_type,
-      brand: form.brand.trim() || undefined,
-      model: form.model.trim() || undefined,
-      status: form.status,
-      notes: form.notes.trim() || undefined,
-    });
-    toast.success(program ? "تم تحديث البرنامج" : "تم إنشاء البرنامج");
-    onSaved();
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{program ? "تعديل برنامج حافز" : "برنامج حافز جديد"}</DialogTitle>
-        </DialogHeader>
-        <div className="grid grid-cols-2 gap-3 py-2">
-          <div className="col-span-2">
-            <Label className="text-xs">اسم البرنامج</Label>
-            <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-              placeholder="مثال: Q2 2026 Hilux Push" className="h-9 text-sm" />
-          </div>
-          <div className="col-span-2">
-            <Label className="text-xs">نوع البرنامج</Label>
-            <Select value={form.program_type}
-              onValueChange={(v) => setForm({ ...form, program_type: v as IncentiveProgramType })}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="accumulative">حافز تراكمي — يُكتسب لكل مركبة فور الشراء</SelectItem>
-                <SelectItem value="target_based">حافز مرتبط بالهدف — لا يُكتسب إلا بعد تحقيق الهدف كاملاً</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-[10px] text-muted-foreground mt-1">
-              في الحوافز المرتبطة بالهدف، لا يمكن إنشاء مطالبة حافز قبل تحقيق الهدف المطلوب.
-            </p>
-          </div>
-          <div>
-            <Label className="text-xs">تاريخ البداية</Label>
-            <Input type="date" value={form.start_date}
-              onChange={e => setForm({ ...form, start_date: e.target.value })} className="h-9 text-sm" />
-          </div>
-          <div>
-            <Label className="text-xs">تاريخ النهاية</Label>
-            <Input type="date" value={form.end_date}
-              onChange={e => setForm({ ...form, end_date: e.target.value })} className="h-9 text-sm" />
-          </div>
-          <div>
-            <Label className="text-xs">الهدف (عدد المركبات)</Label>
-            <Input type="number" min={1} value={form.target_vehicles}
-              onChange={e => setForm({ ...form, target_vehicles: Number(e.target.value) })} className="h-9 text-sm num" />
-          </div>
-          <div>
-            <Label className="text-xs">حافز لكل مركبة (ر.س)</Label>
-            <Input type="number" min={0} value={form.incentive_per_vehicle}
-              onChange={e => setForm({ ...form, incentive_per_vehicle: Number(e.target.value) })} className="h-9 text-sm num" />
-          </div>
-          <div>
-            <Label className="text-xs">العلامة التجارية (اختياري)</Label>
-            <Input value={form.brand} onChange={e => setForm({ ...form, brand: e.target.value })}
-              placeholder="Toyota / Hyundai..." className="h-9 text-sm" />
-          </div>
-          <div>
-            <Label className="text-xs">الموديل (اختياري)</Label>
-            <Input value={form.model} onChange={e => setForm({ ...form, model: e.target.value })}
-              placeholder="Camry / Hilux..." className="h-9 text-sm" />
-          </div>
-          <div>
-            <Label className="text-xs">الحالة</Label>
-            <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as IncentiveProgramStatus })}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">نشط</SelectItem>
-                <SelectItem value="achieved">محقق</SelectItem>
-                <SelectItem value="closed">مغلق</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="col-span-2">
-            <Label className="text-xs">ملاحظات</Label>
-            <Input value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} className="h-9 text-sm" />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
-          <Button onClick={submit}>{program ? "حفظ التغييرات" : "إنشاء البرنامج"}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/* ---------- Claim dialog (submit for approval) ---------- */
-function ClaimDialog({
-  program, onOpenChange, onCreated,
-}: {
-  program: (IncentiveProgram & { notes?: string }) | null;
-  onOpenChange: (v: boolean) => void;
-  onCreated: () => void;
-}) {
-  const { profile } = useAuth();
-  const perf = program ? purchasingService.programPerformance(program) : null;
-  const defaultMode: IncentiveClaimMode = program?.notes === "credit" ? "credit" : "claim";
-  const [mode, setMode] = useState<IncentiveClaimMode>(defaultMode);
-  const [amount, setAmount] = useState<number>(perf?.remaining_incentive ?? 0);
-  const [reference, setReference] = useState("");
-
-  useMemo(() => {
-    setMode(defaultMode);
-    setAmount(perf?.remaining_incentive ?? 0);
-    setReference("");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [program?.id]);
-
-  if (!program || !perf) return null;
-
-  const submit = async () => {
-    try { await ensureIncentiveAccess("manage"); }
-    catch (e) { toast.error((e as Error).message); return; }
-    const r = purchasingService.createIncentiveClaim({
-      program_id: program.id, amount: Number(amount), mode, reference: reference || undefined,
-      requested_by: profile?.full_name || undefined,
-    });
-    if ("error" in r) { toast.error(r.error); return; }
-    toast.success(`تم إرسال المطالبة ${r.code} بانتظار اعتماد المدير`);
-    onCreated();
-  };
-
-  return (
-    <Dialog open={!!program} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>مطالبة حافز · {program.name}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3 py-2">
-          <div className="bg-warning/10 border border-warning/40 rounded p-2 text-[11px] text-warning-foreground">
-            <b>سياسة الاعتماد:</b> المطالبة تُسجَّل بحالة <b>بانتظار اعتماد المدير</b>.
-            لن يتم ترحيل قيد دفتر المورد ولا تحرير الحد الائتماني إلا بعد اعتماد المدير.
-          </div>
-          <div className="grid grid-cols-4 gap-2 text-xs">
-            <Stat label="مكتسب" value={fmtSAR(perf.earned)} tone="success" />
-            <Stat label="معتمد" value={fmtSAR(perf.claimed)} tone="success" />
-            <Stat label="معلّق" value={fmtSAR(perf.pending)} tone="warning" />
-            <Stat label="المتبقي" value={fmtSAR(perf.remaining_incentive)} />
-          </div>
-          <div>
-            <Label className="text-xs">نوع المطالبة</Label>
-            <Select value={mode} onValueChange={(v) => setMode(v as IncentiveClaimMode)}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="claim">إنشاء مطالبة حافز (تسوية بالذمم)</SelectItem>
-                <SelectItem value="credit">خصم من الحد الائتماني للمورد</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label className="text-xs">المبلغ (ر.س)</Label>
-            <Input type="number" min={0} max={perf.remaining_incentive}
-              value={amount} onChange={e => setAmount(Number(e.target.value))} className="h-9 text-sm num" />
-          </div>
-          <div>
-            <Label className="text-xs">المرجع (اختياري)</Label>
-            <Input value={reference} onChange={e => setReference(e.target.value)} className="h-9 text-sm" />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
-          <Button onClick={submit}>إرسال للاعتماد</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/* ---------- Reject dialog ---------- */
-function RejectDialog({
-  claim, onOpenChange, onRejected,
-}: {
-  claim: IncentiveClaim | null;
-  onOpenChange: (v: boolean) => void;
-  onRejected: () => void;
-}) {
-  const { profile } = useAuth();
-  const [reason, setReason] = useState("");
-  useMemo(() => { setReason(""); }, [claim?.id]);
-  if (!claim) return null;
-
-  return (
-    <Dialog open={!!claim} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>رفض المطالبة {claim.code}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-2 py-2">
-          <Label className="text-xs">سبب الرفض</Label>
-          <Input value={reason} onChange={e => setReason(e.target.value)}
-            placeholder="مطلوب لتوثيق سبب الرفض" className="h-9 text-sm" />
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
-          <Button variant="destructive" onClick={async () => {
-            if (!reason.trim()) { toast.error("سبب الرفض مطلوب"); return; }
-            try { await ensureIncentiveAccess("approve"); }
-            catch (e) { toast.error((e as Error).message); return; }
-            const r = purchasingService.rejectIncentiveClaim(
-              claim.id, profile?.full_name || "مدير المشتريات", reason.trim(),
-            );
-            if ("error" in r) { toast.error(r.error); return; }
-            toast.success(`تم رفض المطالبة ${claim.code}`);
-            onRejected();
-          }}>تأكيد الرفض</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }

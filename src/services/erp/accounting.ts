@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Accounting adapter — frontend-only consumer layer.
  *
  * Reads directly from the backend (Supabase tables) today. When a dedicated
@@ -137,10 +137,14 @@ export const accountingService = {
   async listAccounts(): Promise<AccountRow[]> {
     const { data, error } = await supabase
       .from("accounts")
-      .select("id, code, name_ar, name_en, type, is_active")
+      .select("id, code, name_ar, name_en, type, is_archived, is_posting, level, parent_id, nature")
       .order("code");
     if (error) throw error;
-    return (data ?? []) as AccountRow[];
+    return ((data ?? []) as any[]).map(a => ({
+      id: a.id, code: a.code, name_ar: a.name_ar, name_en: a.name_en,
+      type: a.type, is_active: !a.is_archived,
+      parent_id: a.parent_id, is_posting: a.is_posting, level: a.level, nature: a.nature,
+    })) as AccountRow[];
   },
 
   async ledger(accountId: string, from?: string, to?: string): Promise<LedgerMovement[]> {
@@ -1110,4 +1114,8 @@ export interface AccountingServiceExt {
 }
 
 export const accounting = accountingService as unknown as AccountingServiceExt;
+
+
+
+
 

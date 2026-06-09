@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,8 @@ import {
   type ReceiptKind, type PaymentKind,
   receiptKindLabel, paymentKindLabel, methodLabel,
 } from "@/services/erp/treasury";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { AmountInput } from "@/components/erp/AmountInput";
 
 interface Props {
@@ -33,6 +35,14 @@ export function VoucherDialog({ open, onOpenChange, type, accounts, defaultAccou
   const [reference, setReference] = useState("");
   const [linkedInvoice, setLinkedInvoice] = useState("");
   const [notes, setNotes] = useState("");
+  const { data: contacts = [] } = useQuery({
+    queryKey: ["contacts-voucher"],
+    queryFn: async () => {
+      const { data } = await supabase.from("customers").select("id,name,type").eq("active", true).order("name");
+      return data ?? [];
+    },
+    enabled: open,
+  });
 
   useEffect(() => {
     if (open) {
@@ -49,11 +59,31 @@ export function VoucherDialog({ open, onOpenChange, type, accounts, defaultAccou
       toast.error("الحقول المطلوبة غير مكتملة");
       return;
     }
-    await treasuryService.createVoucher({
-      type, kind: kind as any, date, account_id: accountId,
-      counterparty, amount: Number(amount), method, reference: reference || undefined,
-      linked_invoice: linkedInvoice || undefined, notes: notes || undefined,
-    });
+    const kindLabel = type === "receipt" ? receiptKindLabel[kind as ReceiptKind] : paymentKindLabel[kind as PaymentKind];
+    const desc = `${kindLabel} — ${counterparty}`;
+    if (type === "receipt") {
+      await treasuryService.postReceipt({
+        account_id: accountId,
+        amount: Number(amount),
+        description: desc,
+        payment_method: method as any,
+        party_name: counterparty,
+        party_type: "customer",
+        transaction_date: date,
+        notes: notes || undefined,
+      });
+    } else {
+      await treasuryService.postPayment({
+        account_id: accountId,
+        amount: Number(amount),
+        description: desc,
+        payment_method: method as any,
+        party_name: counterparty,
+        party_type: "vendor",
+        transaction_date: date,
+        notes: notes || undefined,
+      });
+    }
     toast.success(type === "receipt" ? "تم إنشاء سند القبض" : "تم إنشاء سند الصرف");
     onOpenChange(false);
     onSaved?.();
@@ -83,7 +113,14 @@ export function VoucherDialog({ open, onOpenChange, type, accounts, defaultAccou
           </div>
           <div className="flex flex-col gap-1 col-span-2">
             <Label className="text-xs">{type === "receipt" ? "الدافع" : "المستفيد"} *</Label>
-            <Input className="h-8" value={counterparty} onChange={e => setCounterparty(e.target.value)} />
+            <Select value={counterparty} onValueChange={setCounterparty}>
+              <SelectTrigger className="h-8"><SelectValue placeholder="اختر أو اكتب..." /></SelectTrigger>
+              <SelectContent>
+                {contacts.map(c => (
+                  <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-xs">الحساب الخزينة *</Label>
@@ -132,3 +169,9 @@ export function VoucherDialog({ open, onOpenChange, type, accounts, defaultAccou
     </Dialog>
   );
 }
+
+
+
+
+
+

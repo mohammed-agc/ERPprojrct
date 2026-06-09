@@ -1,18 +1,23 @@
 /**
  * Sales-side vehicle status transitions, persisted in Supabase.
  *
- *   available → reserved (on Sales Order confirm)
- *              ↓
- *              sold      (on full invoice payment)
- *              ↓
- *              delivered (on Sales Order delivery)
+ * المخزون الموحّد في جدول `inventory_items` (وليس `vehicles`).
+ * نستخدم حقل status + qty_reserved لدورة حياة البيع:
  *
- * On cancel: vehicles tied to the SO that are not yet delivered revert to
- * 'available'. Delivered vehicles are never reverted.
+ *   active → reserved   (عند تأكيد أمر البيع)
+ *           ↓
+ *           sold        (عند سداد الفاتورة كاملة)
+ *           ↓
+ *           delivered   (عند التسليم)
+ *
+ * عند الإلغاء: المركبات المرتبطة بالأمر غير المُسلَّمة تعود إلى 'active'.
+ * المركبات المُسلَّمة لا تُعاد أبداً (تتطلب مرتجع فعلي).
  */
 import { supabase } from "@/integrations/supabase/client";
 
-type VehicleStatus = "available" | "reserved" | "sold" | "delivered";
+const TABLE = "inventory_items";
+
+type SalesStatus = "active" | "reserved" | "sold" | "delivered";
 
 async function vehicleIdsForOrder(orderId: string): Promise<string[]> {
   const { data } = await supabase
@@ -34,65 +39,92 @@ async function vehicleIdsForInvoice(invoiceId: string): Promise<string[]> {
   return vehicleIdsForOrder(inv.sales_order_id);
 }
 
-async function setVehicles(ids: string[], status: VehicleStatus) {
-  if (ids.length === 0) return { error: null };
-  return supabase.from("vehicles").update({ status: status as any }).in("id", ids);
+/**
+ * يطبّق الحالة على inventory_items مع ضبط qty_reserved.
+ * نقرأ qty_on_hand أولاً حتى نحجز الكمية الصحيحة.
+ * لا نلمس qty_on_hand لتجنّب التداخل مع triggers المخزون/المحاسبة.
+ */
+async function applyStatus(ids: string[], status: SalesStatus): Promise<{ error: any }> {
+  if (!ids.length) return { error: null };
+
+  const { data: items } = await supabase
+    .from(TABLE)
+    .select("id, qty_on_hand")
+    .in("id", ids);
+
+  const patchFor = (id: string): Record<string, any> => {
+    const qoh = Number((items ?? []).find((x: any) => x.id === id)?.qty_on_hand ?? 1);
+    switch (status) {
+      case "reserved":  return { status: "reserved",  qty_reserved: qoh };
+      case "sold":      return { status: "sold",      qty_reserved: qoh };
+      case "delivered": return { status: "delivered", qty_reserved: 0 };
+      case "active":
+      default:          return { status: "active",    qty_reserved: 0 };
+    }
+  };
+
+  let firstErr: any = null;
+  for (const id of ids) {
+    const { error } = await supabase.from(TABLE).update(patchFor(id)).eq("id", id);
+    if (error && !firstErr) firstErr = error;
+  }
+  return { error: firstErr };
 }
 
 export const salesVehicleStatus = {
-  /** Verify every linked vehicle is still available; returns conflicting VINs (empty = OK). */
+  /** تحقّق أن كل مركبة لا تزال قابلة للبيع؛ يرجع VINs المتعارضة (فارغ = سليم). */
   async assertAvailable(orderId: string): Promise<string[]> {
     const ids = await vehicleIdsForOrder(orderId);
     if (!ids.length) return [];
     const { data } = await supabase
-      .from("vehicles")
+      .from(TABLE)
       .select("id, vin, status")
       .in("id", ids);
+    // مسموح: active (متاح) أو reserved (محجوز بهذا الأمر نفسه — idempotent)
     return (data ?? [])
-      .filter((v: any) => v.status !== "available" && v.status !== "reserved")
+      .filter((v: any) => v.status !== "active" && v.status !== "reserved")
       .map((v: any) => v.vin || v.id);
   },
 
   async reserveForOrder(orderId: string) {
     const ids = await vehicleIdsForOrder(orderId);
-    return setVehicles(ids, "reserved");
+    return applyStatus(ids, "reserved");
   },
 
   async markSoldForOrder(orderId: string) {
     const ids = await vehicleIdsForOrder(orderId);
-    return setVehicles(ids, "sold");
+    return applyStatus(ids, "sold");
   },
 
   async markSoldForInvoice(invoiceId: string) {
     const ids = await vehicleIdsForInvoice(invoiceId);
-    return setVehicles(ids, "sold");
+    return applyStatus(ids, "sold");
   },
 
   async markDeliveredForOrder(orderId: string) {
     const ids = await vehicleIdsForOrder(orderId);
-    return setVehicles(ids, "delivered");
+    return applyStatus(ids, "delivered");
   },
 
-  /** Revert non-delivered vehicles back to 'available' (e.g. SO cancellation). */
+  /** إعادة المركبات غير المُسلَّمة إلى المخزون (مثلاً عند إلغاء الأمر). */
   async releaseForOrder(orderId: string) {
     const ids = await vehicleIdsForOrder(orderId);
     if (!ids.length) return { error: null };
-    return supabase
-      .from("vehicles")
-      .update({ status: "available" as any })
-      .in("id", ids)
-      .neq("status", "delivered");
+    // لا نُعيد المُسلَّمة
+    const { data: vs } = await supabase
+      .from(TABLE)
+      .select("id, status")
+      .in("id", ids);
+    const releasable = (vs ?? [])
+      .filter((v: any) => v.status !== "delivered")
+      .map((v: any) => v.id);
+    return applyStatus(releasable, "active");
   },
 
   /**
-   * Release vehicles linked to a credit note back to `available` stock.
-   *
-   * Business rules:
-   *  - reserved / sold  → available (silent revert; goods were not handed over)
-   *  - delivered        → NOT reverted; an explicit goods-return workflow is required.
-   *
-   * Returns { released, blockedDelivered } so callers can surface a follow-up
-   * action for delivered units that need a physical return before re-entering stock.
+   * إعادة المركبات المرتبطة بإشعار دائن إلى المخزون.
+   *  - reserved / sold  → active (عكس صامت؛ البضاعة لم تُسلَّم)
+   *  - delivered        → لا تُعاد؛ تتطلب مرتجع فعلي
    */
   async releaseForCreditNote(
     creditNoteId: string,
@@ -107,7 +139,7 @@ export const salesVehicleStatus = {
     if (!ids.length) return { released: [], blockedDelivered: [] };
 
     const { data: vs } = await supabase
-      .from("vehicles")
+      .from(TABLE)
       .select("id, vin, status")
       .in("id", ids);
 
@@ -119,10 +151,7 @@ export const salesVehicleStatus = {
       .map((v: any) => v.vin || v.id);
 
     if (releasable.length) {
-      await supabase
-        .from("vehicles")
-        .update({ status: "available" as any })
-        .in("id", releasable);
+      await applyStatus(releasable, "active");
     }
     return { released: releasable, blockedDelivered };
   },

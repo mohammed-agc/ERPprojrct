@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -57,6 +58,12 @@ export default function Vehicles() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const nav = useNavigate();
+  const { data: vBrands = [] } = useQuery({ queryKey: ["vehicle-brands"], queryFn: async () => (await supabase.from("vehicle_brands").select("id,name").order("name")).data ?? [] });
+  const { data: vModels = [] } = useQuery({ queryKey: ["vehicle-models"], queryFn: async () => (await supabase.from("vehicle_models").select("id,name,brand_id").order("name")).data ?? [] });
+  const { data: vTrims = [] } = useQuery({ queryKey: ["vehicle-trims"], queryFn: async () => (await supabase.from("vehicle_trims").select("id,name,model_id").order("name")).data ?? [] });
+  const { data: vColors = [] } = useQuery({ queryKey: ["vehicle-colors"], queryFn: async () => (await supabase.from("vehicle_colors").select("id,name,hex").order("name")).data ?? [] });
+  const filteredVModels = (vModels as any[]).filter((m) => m.brand_id === (vBrands as any[]).find((b) => b.name === form.brand)?.id);
+  const filteredVTrims = (vTrims as any[]).filter((t) => t.model_id === (vModels as any[]).find((m) => m.name === form.model)?.id);
 
   const load = async () => {
     const { data } = await supabase
@@ -193,11 +200,11 @@ export default function Vehicles() {
                   <div className="grid grid-cols-3 gap-3">
                     <div><Label>الكود *</Label><Input value={form.code} onChange={e=>setForm({...form, code:e.target.value})} /></div>
                     <div className="col-span-2"><Label>الاسم التجاري *</Label><Input value={form.name} onChange={e=>setForm({...form, name:e.target.value})} placeholder="تويوتا كامري 2024 فل كامل" /></div>
-                    <div><Label>الصانع *</Label><Input value={form.brand} onChange={e=>setForm({...form, brand:e.target.value})} /></div>
-                    <div><Label>الموديل</Label><Input value={form.model} onChange={e=>setForm({...form, model:e.target.value})} /></div>
-                    <div><Label>الفئة (Trim)</Label><Input value={form.trim} onChange={e=>setForm({...form, trim:e.target.value})} placeholder="GLE / GLX..." /></div>
+                    <div><Label>الصانع *</Label><Select value={form.brand} onValueChange={v=>setForm({...form,brand:v,model:"",trim:""})}><SelectTrigger><SelectValue placeholder="اختر الماركة"/></SelectTrigger><SelectContent>{(vBrands as any[]).map((b:any)=><SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}</SelectContent></Select></div>
+                    <div><Label>الموديل</Label><Select value={form.model} onValueChange={v=>setForm({...form,model:v,trim:""})} disabled={!form.brand}><SelectTrigger><SelectValue placeholder="اختر الموديل"/></SelectTrigger><SelectContent>{filteredVModels.map((m:any)=><SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>)}</SelectContent></Select></div>
+                    <div><Label>الفئة</Label><Select value={form.trim} onValueChange={v=>setForm({...form,trim:v})} disabled={!form.model}><SelectTrigger><SelectValue placeholder="اختر الفئة"/></SelectTrigger><SelectContent>{filteredVTrims.map((t:any)=><SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>)}</SelectContent></Select></div>
                     <div><Label>السنة</Label><Input type="number" value={form.year} onChange={e=>setForm({...form, year:Number(e.target.value)})} dir="ltr" /></div>
-                    <div><Label>اللون</Label><Input value={form.color} onChange={e=>setForm({...form, color:e.target.value})} /></div>
+                    <div><Label>اللون</Label><Select value={form.color} onValueChange={v=>setForm({...form,color:v})}><SelectTrigger><SelectValue placeholder="اختر اللون"/></SelectTrigger><SelectContent>{(vColors as any[]).map((c:any)=><SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}</SelectContent></Select></div>
                     <div><Label>الممشى (كم)</Label><Input type="number" value={form.mileage} onChange={e=>setForm({...form, mileage:Number(e.target.value)})} dir="ltr" /></div>
                   </div>
                 </div>
@@ -403,3 +410,5 @@ function KpiCard({
     </div>
   );
 }
+
+

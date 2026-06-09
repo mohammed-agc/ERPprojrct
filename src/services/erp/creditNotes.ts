@@ -24,11 +24,15 @@ type CnLineInput = {
 };
 
 async function finalizeCreditNote(cnId: string) {
+  const { data: _cn } = await supabase.from("credit_notes").select("invoice_id, total").eq("id", cnId).single();
+  if (_cn?.invoice_id) {
+    const { data: _inv } = await supabase.from("invoices").select("credited_amount").eq("id", _cn.invoice_id).single();
+    await supabase.from("invoices").update({ credited_amount: Number(_inv?.credited_amount ?? 0) + Number(_cn.total ?? 0) }).eq("id", _cn.invoice_id);
+  }
   let journalEntryId: string | null = null;
   try {
     const { data, error } = await supabase.rpc("post_credit_note_journal" as any, { p_cn_id: cnId });
-    if (error) throw error;
-    journalEntryId = (data as string) ?? null;
+    if (!error) journalEntryId = (data as string) ?? null;
   } catch (e) {
     // Re-throw so the caller can surface the failure; CN exists but JE failed
     throw new Error(

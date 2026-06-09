@@ -4,140 +4,163 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Receipt, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { fmtSAR, fmtDate } from "@/services/erp/purchasing";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ActionButton } from "@/components/erp/ActionButton";
+import { useErpSession } from "@/contexts/ErpSessionContext";
+import { canPerform } from "@/lib/erpPermissions";
+import { PaymentDialog, PaymentSubmitPayload, PaymentInvoiceContext } from "@/components/erp/PaymentDialog";
+import { creditNotesService } from "@/services/erp/creditNotes";
+import { salesVehicleStatus } from "@/services/erp/salesVehicleStatus";
+import { Search, Receipt, RefreshCw, Banknote, FileMinus, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
 
-type InvStatus = "draft" | "posted" | "paid" | "cancelled";
+const fmtSAR = (n: number) => Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ر.س";
+const fmtDate = (s?: string) => s ? new Date(s).toLocaleDateString("ar-SA") : "—";
 
-const STATUS_LABEL: Record<InvStatus | "all", string> = {
-  all: "كل الحالات",
-  draft: "مسودة",
-  posted: "مرحّلة",
-  paid: "مدفوعة",
-  cancelled: "ملغاة",
+const STATUS_LABEL: Record<string, string> = {
+  all: "كل الحالات", draft: "مسودة", issued: "مُصدرة", posted: "مرحّلة",
+  partially_paid: "مدفوعة جزئياً", paid: "مدفوعة", cancelled: "ملغاة",
 };
 
-const STATUS_TONE: Record<InvStatus, string> = {
-  draft: "bg-muted text-muted-foreground",
-  posted: "bg-primary/15 text-primary",
-  paid: "bg-success/15 text-success",
-  cancelled: "bg-destructive/15 text-destructive",
-};
-
-interface InvoiceRow {
-  id: string;
-  invoice_no: string;
-  invoice_date: string;
-  status: InvStatus;
-  subtotal: number;
-  vat_amount: number;
-  total: number;
-  qr_code: string | null;
-  sales_order_id: string | null;
-  customer_name: string;
-  vehicle: string;
-  vin: string | null;
-  so_code: string;
+function payBadge(s: "unpaid" | "partial" | "paid") {
+  if (s === "paid") return <Badge className="bg-success text-success-foreground">مدفوعة</Badge>;
+  if (s === "partial") return <Badge variant="secondary">جزئية</Badge>;
+  return <Badge variant="destructive">غير مدفوعة</Badge>;
 }
 
 export default function SalesInvoicesRegistry() {
-  const [q, setQ] = useState("");
-  const [status, setStatus] = useState<InvStatus | "all">("all");
-  const [rows, setRows] = useState<InvoiceRow[]>([]);
+  const { role } = useErpSession();
+  const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState("");
+  const [status, setStatus] = useState("all");
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [activeInvoice, setActiveInvoice] = useState<PaymentInvoiceContext | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const load = async () => {
     setLoading(true);
     const { data: invs } = await supabase
       .from("invoices")
-      .select("*, customers(name), sales_orders(order_no)")
+      .select("*, contact:contacts(name, vat_number)")
       .order("invoice_date", { ascending: false });
     const list = invs ?? [];
 
-    // Enrich with vehicles via sales_order_lines
+    // المركبات عبر sales_order_lines → inventory_items
     const soIds = Array.from(new Set(list.map((i: any) => i.sales_order_id).filter(Boolean)));
-    let vehiclesBySo: Record<string, any[]> = {};
-    if (soIds.length > 0) {
-      const { data: lines } = await supabase
-        .from("sales_order_lines")
-        .select("order_id, vehicles(vin, brand, model, year)")
-        .in("order_id", soIds);
-      (lines ?? []).forEach((l: any) => {
-        if (!l.vehicles) return;
-        (vehiclesBySo[l.order_id] ??= []).push(l.vehicles);
+    const vehiclesByInvoice: Record<string, any[]> = {};
+    if (soIds.length) {
+      const { data: soLines } = await supabase
+        .from("sales_order_lines").select("order_id, vehicle_id").in("order_id", soIds);
+      const vehIds = Array.from(new Set((soLines ?? []).map((l: any) => l.vehicle_id).filter(Boolean)));
+      const itemsById: Record<string, any> = {};
+      if (vehIds.length) {
+        const { data: items } = await supabase
+          .from("inventory_items").select("id, vin, brand, model, year").in("id", vehIds);
+        (items ?? []).forEach((it: any) => { itemsById[it.id] = it; });
+      }
+      const bySo: Record<string, any[]> = {};
+      (soLines ?? []).forEach((l: any) => {
+        const it = l.vehicle_id ? itemsById[l.vehicle_id] : null;
+        if (it) (bySo[l.order_id] ??= []).push(it);
       });
+      list.forEach((i: any) => { if (i.sales_order_id) vehiclesByInvoice[i.id] = bySo[i.sales_order_id] ?? []; });
     }
 
-    const mapped: InvoiceRow[] = list.map((i: any) => {
-      const vehs = i.sales_order_id ? (vehiclesBySo[i.sales_order_id] ?? []) : [];
-      const veh = vehs[0];
-      return {
-        id: i.id,
-        invoice_no: i.invoice_no,
-        invoice_date: i.invoice_date,
-        status: i.status as InvStatus,
-        subtotal: Number(i.subtotal),
-        vat_amount: Number(i.vat_amount),
-        total: Number(i.total),
-        qr_code: i.qr_code,
-        sales_order_id: i.sales_order_id,
-        customer_name: i.customers?.name ?? "—",
-        vehicle: vehs.length === 0 ? "—"
-          : vehs.length === 1 ? `${veh.brand} ${veh.model} ${veh.year ?? ""}`.trim()
-          : `${vehs.length} مركبات`,
-        vin: vehs.length === 1 ? (veh.vin ?? null) : null,
-        so_code: i.sales_orders?.order_no ?? "—",
-      };
-    });
-    setRows(mapped);
+    setRows(list.map((i: any) => ({ ...i, _vehicles: vehiclesByInvoice[i.id] ?? [] })));
     setLoading(false);
   };
-
   useEffect(() => { load(); }, []);
 
-  const filtered = useMemo(() => {
-    const qv = q.trim().toLowerCase();
-    return rows.filter(i => {
-      if (status !== "all" && i.status !== status) return false;
-      if (!qv) return true;
-      return `${i.invoice_no} ${i.customer_name} ${i.vehicle} ${i.vin ?? ""} ${i.so_code}`.toLowerCase().includes(qv);
+  const openPayment = (r: any) => {
+    setActiveInvoice({
+      id: r.id, invoice_no: r.invoice_no,
+      customer_name: r.contact?.name ?? r.customer_name,
+      total: Number(r.total), paid_amount: Number(r.paid_amount ?? 0),
     });
-  }, [rows, q, status]);
+    setDialogOpen(true);
+  };
 
-  const totals = useMemo(() => ({
-    count: filtered.length,
-    sub: filtered.reduce((s, i) => s + i.subtotal, 0),
-    vat: filtered.reduce((s, i) => s + i.vat_amount, 0),
-    total: filtered.reduce((s, i) => s + i.total, 0),
-    paid: filtered.filter(i => i.status === "paid").reduce((s, i) => s + i.total, 0),
-  }), [filtered]);
+  const handleSubmitPayment = async (p: PaymentSubmitPayload) => {
+    setSubmitting(true);
+    try {
+      const row = rows.find(r => r.id === p.invoiceId);
+      if (!row) throw new Error("الفاتورة غير موجودة");
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      const { error } = await supabase.from("payments").insert({
+        payment_no: "PMT-" + Date.now().toString().slice(-10),
+        customer_id: row.customer_id, invoice_id: p.invoiceId,
+        amount: p.amount, payment_date: p.paymentDate, method: p.method,
+        reference: p.reference || null, notes: p.notes || null, created_by: userId,
+      });
+      if (error) throw error;
+      const totalAfter = Number(row.paid_amount ?? 0) + p.amount;
+      if (totalAfter >= Number(row.total)) {
+        await salesVehicleStatus.markSoldForInvoice(p.invoiceId);
+        toast.success("تم تسجيل الدفعة الكاملة — المركبة أصبحت مباعة");
+      } else {
+        toast.success(`تم تسجيل دفعة جزئية بقيمة ${p.amount.toLocaleString("ar-SA")}`);
+      }
+      setDialogOpen(false);
+      load();
+    } catch (e: any) {
+      toast.error(e.message ?? "فشل تسجيل الدفعة");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const issueCreditNote = async (r: any) => {
+    if (!confirm(`إصدار إشعار دائن يعكس المتبقي من الفاتورة ${r.invoice_no}؟`)) return;
+    try {
+      const cnId = await creditNotesService.issueFullReversal(r.id, "accounting_adjustment", `إشعار دائن من المحاسبة للفاتورة ${r.invoice_no}`);
+      if (!cnId) { toast.info("الفاتورة معكوسة بالكامل مسبقاً"); return; }
+      toast.success("تم إصدار الإشعار الدائن وتحديث رصيد العميل");
+      load();
+    } catch (e: any) {
+      toast.error(e.message ?? "فشل إصدار الإشعار الدائن");
+    }
+  };
+
+  const filtered = useMemo(() => rows.filter(r => {
+    if (status !== "all" && r.status !== status) return false;
+    if (!q) return true;
+    const vehs = (r._vehicles ?? []).map((v: any) => `${v.vin ?? ""} ${v.brand ?? ""} ${v.model ?? ""}`).join(" ");
+    const hay = `${r.invoice_no} ${r.contact?.name ?? r.customer_name ?? ""} ${vehs}`.toLowerCase();
+    return hay.includes(q.toLowerCase());
+  }), [rows, q, status]);
+
+  const totals = useMemo(() => {
+    const t = filtered.reduce((s, r) => s + Number(r.total), 0);
+    const paid = filtered.reduce((s, r) => s + Number(r.paid_amount ?? 0), 0);
+    const credited = filtered.reduce((s, r) => s + Number(r.credited_amount ?? 0), 0);
+    return { count: filtered.length, total: t, paid, credited, outstanding: Math.max(0, t - paid - credited) };
+  }, [filtered]);
 
   return (
-    <div>
+    <div dir="rtl">
       <PageHeader
         title="فواتير المبيعات — سجل المحاسبة"
-        subtitle={`${totals.count} فاتورة · إجمالي ${fmtSAR(totals.total)} · مدفوع ${fmtSAR(totals.paid)} · متبقي ${fmtSAR(totals.total - totals.paid)}`}
+        subtitle={`${totals.count} فاتورة · إجمالي ${fmtSAR(totals.total)} · محصّل ${fmtSAR(totals.paid)} · متبقٍ ${fmtSAR(totals.outstanding)}`}
       />
 
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border border-border rounded-lg p-3 mb-3 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[240px] max-w-md">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input className="pr-9 h-9" placeholder="بحث: رقم، عميل، VIN، أمر بيع..." value={q} onChange={e => setQ(e.target.value)} />
+          <Input className="pr-9 h-9" placeholder="بحث: رقم، عميل، VIN..." value={q} onChange={e => setQ(e.target.value)} />
         </div>
-        <Select value={status} onValueChange={(v) => setStatus(v as any)}>
-          <SelectTrigger className="w-[180px] h-9"><SelectValue /></SelectTrigger>
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger className="w-[170px] h-9"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {(["all","draft","posted","paid","cancelled"] as const).map(v =>
-              <SelectItem key={v} value={v}>{STATUS_LABEL[v]}</SelectItem>
-            )}
+            {["all", "issued", "partially_paid", "paid", "cancelled"].map(v =>
+              <SelectItem key={v} value={v}>{STATUS_LABEL[v] ?? v}</SelectItem>)}
           </SelectContent>
         </Select>
         <Button variant="outline" size="sm" className="h-9" onClick={load} disabled={loading}>
           <RefreshCw className={`h-3.5 w-3.5 ml-1 ${loading ? "animate-spin" : ""}`} /> تحديث
         </Button>
-        <div className="text-xs text-muted-foreground ml-auto">{filtered.length} نتيجة</div>
       </div>
 
       <div className="bg-card border border-border rounded-lg overflow-hidden">
@@ -145,56 +168,97 @@ export default function SalesInvoicesRegistry() {
           <thead>
             <tr>
               <th>رقم الفاتورة</th>
-              <th>العميل</th>
-              <th>أمر البيع</th>
-              <th>المركبة</th>
-              <th>VIN</th>
               <th>التاريخ</th>
-              <th className="text-left">المبلغ</th>
-              <th className="text-left">الضريبة</th>
+              <th>العميل</th>
+              <th>المركبة / VIN</th>
               <th className="text-left">الإجمالي</th>
+              <th className="text-left">المدفوع</th>
+              <th className="text-left">المتبقي</th>
               <th>الحالة</th>
+              <th className="text-left">الإجراءات المحاسبية</th>
             </tr>
           </thead>
           <tbody>
-            {loading && (
-              <tr><td colSpan={10} className="text-center text-muted-foreground py-8 text-xs">جاري التحميل...</td></tr>
-            )}
-            {!loading && filtered.length === 0 && (
-              <tr><td colSpan={10} className="text-center text-muted-foreground py-8 text-xs">لا توجد فواتير مطابقة</td></tr>
-            )}
-            {!loading && filtered.map(i => (
-              <tr key={i.id}>
-                <td className="font-mono text-[11px]">
-                  <Link to="/invoices" className="flex items-center gap-1.5 text-primary hover:underline">
-                    <Receipt className="h-3 w-3" />{i.invoice_no}
-                  </Link>
-                </td>
-                <td className="text-xs">{i.customer_name}</td>
-                <td className="font-mono text-[10px] text-muted-foreground">{i.so_code}</td>
-                <td className="text-xs">{i.vehicle}</td>
-                <td className="font-mono text-[10px]">{i.vin ?? "—"}</td>
-                <td className="text-xs">{fmtDate(i.invoice_date)}</td>
-                <td className="num text-xs text-left">{fmtSAR(i.subtotal)}</td>
-                <td className="num text-xs text-left">{fmtSAR(i.vat_amount)}</td>
-                <td className="num text-xs text-left font-semibold">{fmtSAR(i.total)}</td>
-                <td><Badge className={STATUS_TONE[i.status]}>{STATUS_LABEL[i.status]}</Badge></td>
-              </tr>
-            ))}
+            {loading && <tr><td colSpan={9} className="text-center text-muted-foreground py-8 text-xs">جاري التحميل...</td></tr>}
+            {!loading && filtered.length === 0 && <tr><td colSpan={9} className="text-center text-muted-foreground py-8 text-xs">لا توجد فواتير مطابقة</td></tr>}
+            {!loading && filtered.map(r => {
+              const total = Number(r.total);
+              const paid = Number(r.paid_amount ?? 0);
+              const credited = Number(r.credited_amount ?? 0);
+              const remaining = Math.max(0, total - paid - credited);
+              const payStatus: "unpaid" | "partial" | "paid" = paid <= 0 ? "unpaid" : paid >= total ? "paid" : "partial";
+              const payPerm = canPerform("receive_payment", (payStatus === "paid" ? "paid" : "invoiced") as any, role);
+              const cnPerm = canPerform("issue_credit_note", "invoiced" as any, role);
+              const vehs: any[] = r._vehicles ?? [];
+              return (
+                <tr key={r.id}>
+                  <td className="font-mono text-[11px]">
+                    <Link to={`/invoices/${r.id}`} className="flex items-center gap-1 text-primary hover:underline">
+                      <Receipt className="h-3 w-3" />{r.invoice_no}
+                    </Link>
+                  </td>
+                  <td className="num text-xs">{fmtDate(r.invoice_date)}</td>
+                  <td className="text-xs">
+                    {r.customer_id ? (
+                      <Link to={`/ar/${r.customer_id}`} className="hover:underline">{r.contact?.name ?? r.customer_name ?? "—"}</Link>
+                    ) : (r.contact?.name ?? r.customer_name ?? "—")}
+                  </td>
+                  <td className="text-xs">
+                    {vehs.length === 0 ? <span className="text-muted-foreground">—</span>
+                      : vehs.length === 1 ? (
+                        <div>
+                          <div>{vehs[0].brand} {vehs[0].model} <span className="text-muted-foreground">{vehs[0].year}</span></div>
+                          <div className="font-mono text-[10px] text-muted-foreground" dir="ltr">{vehs[0].vin || "—"}</div>
+                        </div>
+                      ) : <span>{vehs.length} مركبات</span>}
+                  </td>
+                  <td className="num text-left text-xs font-bold">{fmtSAR(total)}</td>
+                  <td className="num text-left text-xs text-success">{fmtSAR(paid)}</td>
+                  <td className={`num text-left text-xs ${remaining > 0 ? "text-warning font-semibold" : "text-muted-foreground"}`}>{fmtSAR(remaining)}
+                    {credited > 0 && <div className="text-[9px] text-red-600">دائن: {fmtSAR(credited)}</div>}
+                  </td>
+                  <td>{payBadge(payStatus)}</td>
+                  <td className="text-left">
+                    <div className="flex items-center justify-end gap-1">
+                      <ActionButton size="sm" variant="outline" permission={payPerm} hideIfDenied
+                        onClick={() => openPayment(r)} disabled={payStatus === "paid" || r.status === "cancelled"}>
+                        <Banknote className="h-3.5 w-3.5 ml-1" /> دفعة
+                      </ActionButton>
+                      <ActionButton size="sm" variant="ghost" permission={cnPerm} hideIfDenied
+                        onClick={() => issueCreditNote(r)} disabled={r.status === "cancelled" || remaining <= 0}
+                        className="text-destructive">
+                        <FileMinus className="h-3.5 w-3.5 ml-1" /> إشعار دائن
+                      </ActionButton>
+                      <Link to={`/invoices/${r.id}`} className="inline-flex items-center text-muted-foreground hover:text-primary px-1" title="فتح الفاتورة">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
           {!loading && filtered.length > 0 && (
             <tfoot>
               <tr className="bg-muted/60 font-semibold">
-                <td colSpan={6} className="text-left text-xs">الإجمالي</td>
-                <td className="num text-xs text-left">{fmtSAR(totals.sub)}</td>
-                <td className="num text-xs text-left">{fmtSAR(totals.vat)}</td>
-                <td className="num text-xs text-left">{fmtSAR(totals.total)}</td>
-                <td></td>
+                <td colSpan={4} className="text-left text-xs">الإجمالي</td>
+                <td className="num text-left text-xs">{fmtSAR(totals.total)}</td>
+                <td className="num text-left text-xs text-success">{fmtSAR(totals.paid)}</td>
+                <td className="num text-left text-xs text-warning">{fmtSAR(totals.outstanding)}</td>
+                <td colSpan={2}></td>
               </tr>
             </tfoot>
           )}
         </table>
       </div>
+
+      <PaymentDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        invoice={activeInvoice}
+        submitting={submitting}
+        onSubmit={handleSubmitPayment}
+      />
     </div>
   );
 }

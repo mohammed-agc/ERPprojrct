@@ -1,135 +1,200 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, AlertTriangle, Clock, X, Plus } from "lucide-react";
-import { toast } from "sonner";
-import {
-  salesService, RES_LABEL, RES_TONE, fmtSAR, fmtRelative, fmtDateTime,
-  type ReservationStatus,
-} from "@/services/erp/sales";
+import { Button } from "@/components/ui/button";
+import { Search, ExternalLink, Car, Lock } from "lucide-react";
 
-const OPTS: { value: ReservationStatus | "all"; label: string }[] = [
-  { value: "all", label: "كل الحالات" },
-  { value: "active", label: RES_LABEL.active },
-  { value: "expiring", label: RES_LABEL.expiring },
-  { value: "expired", label: RES_LABEL.expired },
-  { value: "released", label: RES_LABEL.released },
-  { value: "converted", label: RES_LABEL.converted },
-];
+const fmtSAR = (n: number) => Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 0 }) + " ر.س";
+const fmtDate = (s?: string) => s ? new Date(s).toLocaleDateString("ar-SA") : "—";
 
-export default function SalesReservations() {
-  const [tick, setTick] = useState(0);
-  const refresh = () => setTick(t => t + 1);
+const STATUS_MAP: Record<string, { label: string; variant: any }> = {
+  reserved: { label: "محجوز", variant: "default" },
+  sold:     { label: "مباع",  variant: "secondary" },
+};
+
+interface Row {
+  vehicle_id: string;
+  vin: string | null;
+  name: string | null;
+  brand: string | null;
+  model: string | null;
+  year: number | null;
+  color: string | null;
+  sale_price: number;
+  status: string;
+  qty_reserved: number;
+  order_id: string | null;
+  order_no: string | null;
+  order_status: string | null;
+  order_date: string | null;
+  customer_name: string | null;
+}
+
+export default function Reservations() {
+  const nav = useNavigate();
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState<ReservationStatus | "all">("all");
-  const all = useMemo(() => salesService.listReservations(), [tick]);
-  const sps = useMemo(() => salesService.listSalespeople(), []);
+  const [statusFilter, setStatusFilter] = useState("reserved");
 
-  const filtered = useMemo(() => {
-    const qv = q.trim().toLowerCase();
-    return all.filter(r => {
-      if (status !== "all" && r.status !== status) return false;
-      if (!qv) return true;
-      const hay = `${r.code} ${r.customer} ${r.vehicle} ${r.branch}`.toLowerCase();
-      return hay.includes(qv);
+  const load = async () => {
+    setLoading(true);
+    // 1) المركبات المحجوزة/المباعة فعلياً في المخزون
+    const { data: items } = await supabase
+      .from("inventory_items")
+      .select("id, vin, name, brand, model, year, color, sale_price, status, qty_reserved")
+      .in("status", ["reserved", "sold"]);
+
+    const ids = (items ?? []).map((i: any) => i.id);
+    // 2) ربط كل مركبة بأمر البيع الذي يحجزها
+    const orderByVeh: Record<string, any> = {};
+    if (ids.length) {
+      const { data: soLines } = await supabase
+        .from("sales_order_lines")
+        .select("vehicle_id, order_id")
+        .in("vehicle_id", ids);
+      const orderIds = Array.from(new Set((soLines ?? []).map((l: any) => l.order_id).filter(Boolean)));
+      const ordersById: Record<string, any> = {};
+      if (orderIds.length) {
+        const { data: orders } = await supabase
+          .from("sales_orders")
+          .select("id, order_no, status, order_date, created_at, customer_name, contact:contacts(name)")
+          .in("id", orderIds);
+        (orders ?? []).forEach((o: any) => { ordersById[o.id] = o; });
+      }
+      (soLines ?? []).forEach((l: any) => {
+        if (l.vehicle_id && !orderByVeh[l.vehicle_id]) {
+          const o = ordersById[l.order_id];
+          if (o) orderByVeh[l.vehicle_id] = o;
+        }
+      });
+    }
+
+    const mapped: Row[] = (items ?? []).map((it: any) => {
+      const o = orderByVeh[it.id];
+      return {
+        vehicle_id: it.id, vin: it.vin, name: it.name, brand: it.brand, model: it.model,
+        year: it.year, color: it.color, sale_price: Number(it.sale_price ?? 0),
+        status: it.status, qty_reserved: Number(it.qty_reserved ?? 0),
+        order_id: o?.id ?? null, order_no: o?.order_no ?? null,
+        order_status: o?.status ?? null,
+        order_date: o?.order_date ?? o?.created_at ?? null,
+        customer_name: o?.contact?.name ?? o?.customer_name ?? null,
+      };
     });
-  }, [all, q, status]);
+    // المحجوز أولاً، ثم الأحدث
+    mapped.sort((a, b) => (a.status === b.status ? 0 : a.status === "reserved" ? -1 : 1));
+    setRows(mapped);
+    setLoading(false);
+  };
+  useEffect(() => { load(); }, []);
 
-  const counts = useMemo(() => ({
-    active: all.filter(r => r.status === "active").length,
-    expiring: all.filter(r => r.status === "expiring").length,
-    expired: all.filter(r => r.status === "expired").length,
-    deposits: all.filter(r => r.status === "active" || r.status === "expiring").reduce((s, r) => s + r.deposit, 0),
-  }), [all]);
+  const filtered = useMemo(() => rows.filter(r => {
+    const matchS = statusFilter === "all" || r.status === statusFilter;
+    if (!matchS) return false;
+    if (!q) return true;
+    const hay = [r.vin, r.name, r.brand, r.model, r.customer_name, r.order_no].filter(Boolean).join(" ").toLowerCase();
+    return hay.includes(q.toLowerCase());
+  }), [rows, q, statusFilter]);
 
-  const onRelease = (id: string) => { salesService.releaseReservation(id, "أُفرج يدوياً"); toast.message("تم الإفراج عن الحجز"); refresh(); };
-  const onExtend = (id: string) => { salesService.extendReservation(id, 24); toast.success("تم تمديد الحجز 24 ساعة"); refresh(); };
+  const reservedCount = rows.filter(r => r.status === "reserved").length;
+  const soldCount = rows.filter(r => r.status === "sold").length;
+  const reservedValue = rows.filter(r => r.status === "reserved").reduce((s, r) => s + r.sale_price, 0);
 
   return (
-    <div>
+    <div dir="rtl">
       <PageHeader
         title="إدارة الحجوزات"
-        subtitle={`${counts.active} نشط · ${counts.expiring} قارب الانتهاء · ${counts.expired} منتهي · عرابين بقيمة ${fmtSAR(counts.deposits)}`}
-        actions={<Button size="sm"><Plus className="h-4 w-4 ml-1" /> حجز جديد</Button>}
+        subtitle={
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            <span>محجوز: <b className="text-foreground">{reservedCount}</b></span>
+            <span>مباع (لم يُسلَّم): <b className="text-foreground">{soldCount}</b></span>
+            <span>قيمة المحجوز: <b className="text-foreground">{fmtSAR(reservedValue)}</b></span>
+          </div>
+        }
       />
 
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border border-border rounded-lg p-3 mb-3 flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[240px] max-w-md">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input className="pr-9 h-9" placeholder="بحث: رقم، عميل، مركبة..." value={q} onChange={e => setQ(e.target.value)} />
+      <div className="flex gap-2 px-4 pb-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input className="h-9 pr-8" placeholder="بحث: VIN، مركبة، عميل، رقم أمر..." value={q} onChange={e => setQ(e.target.value)} />
         </div>
-        <Select value={status} onValueChange={(v) => setStatus(v as any)}>
-          <SelectTrigger className="w-[180px] h-9"><SelectValue /></SelectTrigger>
-          <SelectContent>{OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-        </Select>
-        <div className="text-xs text-muted-foreground ml-auto">{filtered.length} نتيجة</div>
+        <select className="h-9 px-3 border border-border rounded-md text-sm bg-background"
+          value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+          <option value="reserved">المحجوز فقط</option>
+          <option value="sold">المباع</option>
+          <option value="all">الكل</option>
+        </select>
       </div>
 
-      <div className="bg-card border border-border rounded-lg overflow-hidden">
-        <table className="erp-table">
-          <thead>
-            <tr>
-              <th>الرقم</th>
-              <th>العميل / المركبة</th>
-              <th>المندوب</th>
-              <th>الفرع</th>
-              <th>الحجز</th>
-              <th>الانتهاء</th>
-              <th>العربون</th>
-              <th>الربح المتوقع</th>
-              <th>الحالة</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 && <tr><td colSpan={10} className="text-center text-muted-foreground py-8">لا توجد حجوزات مطابقة</td></tr>}
-            {filtered.map(r => {
-              const sp = sps.find(s => s.id === r.salesperson_id);
-              const margin = r.expected_price - r.expected_cost;
-              const expiringSoon = r.status === "expiring";
-              const overlap = (r.status === "active" || r.status === "expiring") && salesService.vehicleHasActiveReservation(r.vehicle_id, r.id);
-              return (
-                <tr key={r.id}>
-                  <td className="font-mono text-[11px]">
-                    {r.code}
-                    {overlap && <div className="text-[9px] text-destructive flex items-center gap-0.5 mt-0.5"><AlertTriangle className="h-2.5 w-2.5" />تعارض حجز</div>}
-                  </td>
-                  <td>
-                    <div className="text-sm">{r.customer}</div>
-                    <div className="text-[10px] text-muted-foreground">{r.vehicle}</div>
-                  </td>
-                  <td className="text-xs">{sp?.name ?? "—"}</td>
-                  <td className="text-xs">{r.branch}</td>
-                  <td className="text-xs">{fmtDateTime(r.reserved_at)}</td>
-                  <td className="text-xs">
-                    <div>{fmtDateTime(r.expires_at)}</div>
-                    <div className={`text-[10px] flex items-center gap-0.5 ${expiringSoon ? "text-warning font-semibold" : "text-muted-foreground"}`}>
-                      {expiringSoon && <AlertTriangle className="h-2.5 w-2.5" />} {fmtRelative(r.expires_at)}
-                    </div>
-                  </td>
-                  <td className="num text-xs">{fmtSAR(r.deposit)}</td>
-                  <td className="num text-xs text-success">{fmtSAR(margin)}</td>
-                  <td><Badge className={RES_TONE[r.status]}>{RES_LABEL[r.status]}</Badge></td>
-                  <td className="whitespace-nowrap">
-                    {(r.status === "active" || r.status === "expiring") && (
-                      <div className="flex gap-1">
-                        <Button size="sm" variant="ghost" className="h-7 px-2 text-primary" onClick={() => onExtend(r.id)} title="تمديد 24 ساعة">
-                          <Clock className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive" onClick={() => onRelease(r.id)} title="إفراج">
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
+      <div className="px-4">
+        <div className="border border-border rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 border-b border-border">
+              <tr>
+                <th className="text-right px-3 py-2 font-medium">المركبة</th>
+                <th className="text-right px-3 py-2 font-medium">VIN</th>
+                <th className="text-right px-3 py-2 font-medium">العميل</th>
+                <th className="text-right px-3 py-2 font-medium">أمر البيع</th>
+                <th className="text-right px-3 py-2 font-medium">تاريخ الحجز</th>
+                <th className="text-left px-3 py-2 font-medium">السعر</th>
+                <th className="text-right px-3 py-2 font-medium">الحالة</th>
+                <th className="text-right px-3 py-2 font-medium w-10"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {loading ? (
+                <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">جاري التحميل...</td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={8} className="text-center py-10 text-muted-foreground">
+                  <Lock className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                  لا توجد حجوزات. تُحجز المركبة تلقائياً عند تأكيد أمر البيع.
+                </td></tr>
+              ) : filtered.map(r => {
+                const sm = STATUS_MAP[r.status] ?? { label: r.status, variant: "secondary" };
+                return (
+                  <tr key={r.vehicle_id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-1.5">
+                        <Car className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <div>
+                          <div className="font-medium">{[r.brand, r.model].filter(Boolean).join(" ") || r.name}</div>
+                          <div className="text-[10px] text-muted-foreground">{[r.year, r.color].filter(Boolean).join(" · ")}</div>
+                        </div>
                       </div>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    </td>
+                    <td className="px-3 py-2 font-mono text-xs" dir="ltr">{r.vin || "—"}</td>
+                    <td className="px-3 py-2">{r.customer_name || <span className="text-muted-foreground">—</span>}</td>
+                    <td className="px-3 py-2">
+                      {r.order_no ? (
+                        <button onClick={() => nav(`/sales-orders/${r.order_id}`)} className="text-primary hover:underline font-mono text-xs">
+                          {r.order_no}
+                        </button>
+                      ) : <span className="text-muted-foreground text-xs">—</span>}
+                    </td>
+                    <td className="px-3 py-2 text-xs text-muted-foreground">{fmtDate(r.order_date)}</td>
+                    <td className="px-3 py-2 text-left num font-medium">{fmtSAR(r.sale_price)}</td>
+                    <td className="px-3 py-2"><Badge variant={sm.variant}>{sm.label}</Badge></td>
+                    <td className="px-3 py-2">
+                      {r.order_id && (
+                        <button onClick={() => nav(`/sales-orders/${r.order_id}`)} className="text-muted-foreground hover:text-primary" title="فتح أمر البيع">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-[11px] text-muted-foreground mt-2 px-1">
+          الحجز يُنشأ تلقائياً عند تأكيد أمر البيع، ويستمر حتى السداد (يصبح "مباع") أو يُفرَج عنه بإلغاء الأمر / إشعار دائن.
+          لإلغاء حجز، افتح أمر البيع المرتبط.
+        </p>
       </div>
     </div>
   );

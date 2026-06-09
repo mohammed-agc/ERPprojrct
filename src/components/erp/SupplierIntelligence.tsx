@@ -1,111 +1,107 @@
-import { useMemo } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  ShieldCheck, AlertTriangle, CalendarClock, Trophy, Target, TrendingUp,
-  Truck, ClipboardCheck, Wallet, Activity, Link2, Info, CheckCircle2,
+  ShieldCheck, AlertTriangle, Link2, Info, Wallet, Activity, Clock,
 } from "lucide-react";
-import { purchasingService, fmtSAR, fmtDate } from "@/services/erp/purchasing";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { ContactMeta } from "@/lib/contactMeta";
 import { cn } from "@/lib/utils";
 import { IncentivePrograms } from "@/components/erp/IncentivePrograms";
 
-export function SupplierIntelligence({
-  meta, onChange,
-}: {
+const fmtSAR = (n: number | null | undefined) =>
+  n == null || isNaN(Number(n)) ? "—" : Number(n).toLocaleString("en-US") + " ر.س";
+
+export function SupplierIntelligence({ meta, onChange }: {
   meta: ContactMeta;
   onChange: (m: ContactMeta) => void;
 }) {
-  const suppliers = useMemo(() => purchasingService.listSuppliers(), []);
-  const linked = suppliers.find(s => s.id === meta.supplier_link_id);
+  // قائمة الموردين للربط
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ["suppliers-list"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("contacts").select("id,code,name")
+        .eq("is_supplier", true).eq("active", true).order("name");
+      return (data ?? []).map(s => ({ id: s.id, code: s.code, name: s.name }));
+    },
+  });
 
-  if (!linked) {
+  const linkedRef = suppliers.find(s => s.id === meta.supplier_link_id);
+
+  // بيانات المورد المرتبط الحقيقية من contacts
+  const { data: linked } = useQuery({
+    queryKey: ["supplier-credit", meta.supplier_link_id],
+    enabled: !!meta.supplier_link_id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("contacts")
+        .select("id, code, name, credit_limit, credit_used, current_balance, payment_term, settlement_policy")
+        .eq("id", meta.supplier_link_id!).maybeSingle();
+      return data;
+    },
+  });
+
+  if (!linkedRef) {
     return (
       <Card>
         <CardHeader className="p-3 pb-1">
-          <CardTitle className="text-xs flex items-center gap-1">
-            <Link2 className="h-3.5 w-3.5" /> ربط بسجل مورد
-          </CardTitle>
+          <CardTitle className="text-xs flex items-center gap-1"><Link2 className="h-3.5 w-3.5" /> ربط بسجل مورد</CardTitle>
         </CardHeader>
         <CardContent className="p-3 pt-1 space-y-3">
           <div className="bg-primary/5 border border-primary/30 rounded p-3 text-xs flex items-start gap-2">
             <Info className="h-4 w-4 text-primary mt-0.5" />
-            <div>
-              لعرض <b>ذكاء المورد</b> الكامل (الائتمان، الحوافز، الانكشاف المالي، الأداء التشغيلي، السجل الموحّد)،
-              اختر سجل المورد المرتبط من قائمة الموردين في وحدة المشتريات.
-            </div>
+            <div>لعرض <b>ذكاء المورد</b> الكامل (الائتمان، الحوافز، الانكشاف المالي، الأداء)، اختر سجل المورد المرتبط.</div>
           </div>
           <div className="max-w-md">
             <Label className="text-xs">سجل المورد</Label>
-            <Select
-              value={meta.supplier_link_id ?? ""}
-              onValueChange={v => onChange({ ...meta, supplier_link_id: v || undefined })}
-            >
+            <Select value={meta.supplier_link_id ?? ""} onValueChange={v => onChange({ ...meta, supplier_link_id: v || undefined })}>
               <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="— غير مرتبط —" /></SelectTrigger>
               <SelectContent>
-                {suppliers.map(s => (
-                  <SelectItem key={s.id} value={s.id} className="text-xs">
-                    {s.code} · {s.name}
-                  </SelectItem>
-                ))}
+                {suppliers.map(s => <SelectItem key={s.id} value={s.id} className="text-xs">{s.code} · {s.name}</SelectItem>)}
               </SelectContent>
             </Select>
-            <p className="text-[10px] text-muted-foreground mt-1">
-              لا يتطلب ذلك أي تغيير في النظام الخلفي — مجرد ربط تشغيلي للملف.
-            </p>
+            <p className="text-[12px] text-muted-foreground mt-1">مجرد ربط تشغيلي للملف.</p>
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  const credit = purchasingService.creditSummary(linked);
-  const incentive = purchasingService.expectedIncentive(linked);
-  const exposure = purchasingService.supplierExposure(linked.id);
-  const perf = purchasingService.supplierPerformance(linked.id);
-  const timeline = purchasingService.supplierTimeline(linked.id);
-  const expiringSoon = credit.daysToExpiry <= 60 && credit.daysToExpiry >= 0;
-  const incentivePct = linked.monthly_target > 0 ? (linked.achieved / linked.monthly_target) * 100 : 0;
-  const agreementLabel =
-    linked.agreement_type === "framework" ? "ائتمان + حوافز (إطارية)" :
-    linked.agreement_type === "spot" ? "فورية (دفع)" : "أمانة (Consignment)";
+  // حسابات الائتمان من البيانات الحقيقية
+  const creditLimit = linked?.credit_limit != null ? Number(linked.credit_limit) : null;
+  const creditUsed = linked?.credit_used != null ? Number(linked.credit_used) : null;
+  const remaining = creditLimit != null ? creditLimit - (creditUsed ?? 0) : null;
+  const usage = creditLimit && creditLimit > 0 ? ((creditUsed ?? 0) / creditLimit) * 100 : 0;
+  const over = remaining != null && remaining < 0;
+  const hasCredit = creditLimit != null && creditLimit > 0;
 
   return (
-    <div className="space-y-3">
-      {/* Header / link control */}
+    <div className="space-y-3" dir="rtl">
+      {/* Header */}
       <div className="flex items-center justify-between bg-card border border-border rounded-lg p-2.5 text-xs">
         <div className="flex items-center gap-2">
-          <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-200">سجل مورد مرتبط</Badge>
-          <span className="font-mono text-muted-foreground">{linked.code}</span>
-          <span>·</span>
-          <span className="font-semibold">{linked.name}</span>
-          <span className="text-muted-foreground">· {linked.country}</span>
-          <span className="text-muted-foreground">· {agreementLabel}</span>
+          <span className="font-mono text-muted-foreground">{linkedRef.code}</span>
+          <span className="text-muted-foreground">·</span>
+          <span className="font-semibold">{linkedRef.name}</span>
         </div>
-        <Select
-          value={meta.supplier_link_id ?? "__none__"}
-          onValueChange={v => onChange({ ...meta, supplier_link_id: v === "__none__" ? undefined : v })}
-        >
-          <SelectTrigger className="h-7 text-[11px] w-40"><SelectValue /></SelectTrigger>
+        <Select value={meta.supplier_link_id ?? ""} onValueChange={v => onChange({ ...meta, supplier_link_id: v || undefined })}>
+          <SelectTrigger className="h-7 text-[12.5px] w-48"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="__none__">— إلغاء الربط —</SelectItem>
-            {suppliers.map(s => (
-              <SelectItem key={s.id} value={s.id} className="text-xs">{s.code} · {s.name}</SelectItem>
-            ))}
+            {suppliers.map(s => <SelectItem key={s.id} value={s.id} className="text-xs">{s.code} · {s.name}</SelectItem>)}
           </SelectContent>
         </Select>
-
       </div>
 
-      {/* Credit agreement */}
+      {/* اتفاقية الائتمان — بيانات حقيقية */}
       <Card>
         <CardHeader className="p-3 pb-1">
           <CardTitle className="text-xs flex items-center gap-1">
             <ShieldCheck className="h-3.5 w-3.5" /> اتفاقية الائتمان
-            {credit.over && (
+            {over && (
               <Badge className="bg-destructive/10 text-destructive border border-destructive/40 gap-1 mr-2">
                 <AlertTriangle className="h-3 w-3" /> تجاوز الحد
               </Badge>
@@ -113,161 +109,50 @@ export function SupplierIntelligence({
           </CardTitle>
         </CardHeader>
         <CardContent className="p-3 pt-1 space-y-3">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <Cell label="الحد الائتماني" value={fmtSAR(linked.credit_limit)} tone="primary" />
-            <Cell label="المستخدم" value={fmtSAR(linked.utilized)} tone="warning" />
-            <Cell label="المتبقي" value={fmtSAR(credit.remaining)} tone={credit.remaining < 0 ? "destructive" : "success"} />
-            <Cell label="دورة التجديد" value={`${linked.renewal_period_months} شهر`} />
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
-              <span>نسبة الاستخدام</span>
-              <span className={cn("num font-semibold",
-                credit.over ? "text-destructive" : credit.usage > 80 ? "text-warning" : "text-success")}>
-                {credit.usage.toFixed(1)}%
-              </span>
+          {!hasCredit ? (
+            <div className="text-[12.5px] text-muted-foreground bg-muted/30 rounded p-2 text-center">
+              لا يوجد حد ائتماني مُعرّف لهذا المورد. يمكن تعريفه من تبويب "المالي والائتمان".
             </div>
-            <div className="h-2 bg-muted rounded overflow-hidden">
-              <div
-                className={cn("h-full",
-                  credit.over ? "bg-destructive" : credit.usage > 80 ? "bg-warning" : "bg-success")}
-                style={{ width: `${Math.min(100, credit.usage)}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between text-[11px] border-t border-border pt-2">
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <CalendarClock className="h-3 w-3" />
-              تنتهي الاتفاقية: {fmtDate(linked.agreement_expiry)}
-            </div>
-            <div className={expiringSoon ? "text-warning font-semibold" : "text-muted-foreground"}>
-              {credit.daysToExpiry >= 0 ? `${credit.daysToExpiry} يوم متبقي` : `منتهية منذ ${Math.abs(credit.daysToExpiry)} يوم`}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Incentives */}
-      {linked.monthly_target > 0 && (
-        <Card>
-          <CardHeader className="p-3 pb-1">
-            <CardTitle className="text-xs flex items-center gap-1">
-              <Trophy className="h-3.5 w-3.5 text-warning" /> الحوافز الشهرية
-              {linked.campaign && (
-                <span className="text-[10px] font-normal text-muted-foreground mr-2">· {linked.campaign}</span>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 pt-1 space-y-3">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              <Cell label="الهدف الشهري" value={`${linked.monthly_target} مركبة`} icon={Target} />
-              <Cell label="المُحقق" value={`${linked.achieved} مركبة`} tone={incentivePct >= 100 ? "success" : "warning"} icon={TrendingUp} />
-              <Cell label="حافز/مركبة" value={fmtSAR(linked.incentive_per_vehicle)} />
-              <Cell label="الحافز المتوقع" value={fmtSAR(incentive.total)} tone="success" icon={Trophy} />
-            </div>
-            <div>
-              <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
-                <span>التقدم نحو الهدف</span>
-                <span className={cn("num font-semibold", incentivePct >= 100 ? "text-success" : "text-warning")}>
-                  {incentivePct.toFixed(0)}%
-                </span>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <Cell label="الحد الائتماني" value={fmtSAR(creditLimit)} tone="primary" />
+                <Cell label="المستخدم" value={fmtSAR(creditUsed ?? 0)} tone="warning" />
+                <Cell label="المتبقي" value={fmtSAR(remaining)} tone={over ? "destructive" : "success"} />
+                <Cell label="مهلة السداد" value={linked?.payment_term ? String(linked.payment_term) : "—"} />
               </div>
-              <div className="h-2 bg-muted rounded overflow-hidden">
-                <div className={cn("h-full", incentivePct >= 100 ? "bg-success" : "bg-primary")}
-                  style={{ width: `${Math.min(100, incentivePct)}%` }} />
+              <div>
+                <div className="flex items-center justify-between text-[12.5px] text-muted-foreground mb-1">
+                  <span>نسبة الاستخدام</span>
+                  <span className={cn("num font-semibold", over ? "text-destructive" : usage > 80 ? "text-warning" : "text-success")}>
+                    {usage.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="h-2 bg-muted rounded overflow-hidden">
+                  <div className={cn("h-full", over ? "bg-destructive" : usage > 80 ? "bg-warning" : "bg-success")}
+                    style={{ width: `${Math.min(100, Math.max(0, usage))}%` }} />
+                </div>
               </div>
-            </div>
-            <div className="text-[11px] bg-primary/5 border border-primary/30 rounded p-2 flex items-start gap-2">
-              <Info className="h-3.5 w-3.5 text-primary mt-0.5 flex-shrink-0" />
-              الحوافز <b>تُخصم من ذمم المورد الدائنة</b> ولا تُسدد مباشرة.
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Incentive Programs (Commercial Agreements → Incentive Programs) */}
-      <IncentivePrograms supplierId={linked.id} />
-
-
-
-      {/* Financial exposure */}
-      <Card>
-        <CardHeader className="p-3 pb-1">
-          <CardTitle className="text-xs flex items-center gap-1">
-            <Wallet className="h-3.5 w-3.5" /> الانكشاف المالي والتشغيلي
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-3 pt-1">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-            <Cell label="الذمم الدائنة" value={fmtSAR(exposure.payable)} tone="warning" />
-            <Cell label="متأخرة" value={fmtSAR(exposure.overdue_payable)} tone={exposure.overdue_payable > 0 ? "destructive" : "default"} />
-            <Cell label="أوامر شراء مفتوحة" value={String(exposure.pending_pos)} icon={Truck} />
-            <Cell label="شحنات قيد الطريق" value={String(exposure.pending_shipments)} icon={Truck} />
-            <Cell label="بانتظار الفحص" value={String(exposure.pending_inspections)} icon={ClipboardCheck} tone={exposure.pending_inspections > 0 ? "warning" : "default"} />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Performance */}
-      <Card>
-        <CardHeader className="p-3 pb-1">
-          <CardTitle className="text-xs flex items-center gap-1">
-            <Activity className="h-3.5 w-3.5" /> أداء المورد
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-3 pt-1 space-y-3">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-            <Cell label="متوسط زمن التسليم" value={`${perf.avgDeliveryDays} يوم`} />
-            <Cell label="تأخيرات حالية" value={String(perf.delayed)} tone={perf.delayed > 0 ? "warning" : "default"} />
-            <Cell label="نسبة الرفض بالفحص" value={`${perf.rejectionRate.toFixed(1)}%`} tone={perf.rejectionRate > 5 ? "destructive" : "success"} />
-            <Cell label="نسبة الإرجاع" value={`${perf.returnRate.toFixed(1)}%`} tone={perf.returnRate > 5 ? "warning" : "default"} />
-            <Cell label="موثوقية المورد" value={`${perf.reliability}/100`} tone={perf.reliability >= 80 ? "success" : perf.reliability >= 60 ? "warning" : "destructive"} icon={CheckCircle2} />
-          </div>
-          <div>
-            <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
-              <span>مؤشر الموثوقية</span>
-              <span className="num font-semibold">{perf.reliability}%</span>
-            </div>
-            <div className="h-2 bg-muted rounded overflow-hidden">
-              <div className={cn("h-full",
-                perf.reliability >= 80 ? "bg-success" : perf.reliability >= 60 ? "bg-warning" : "bg-destructive")}
-                style={{ width: `${perf.reliability}%` }} />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Unified ERP timeline */}
-      <Card>
-        <CardHeader className="p-3 pb-1 flex flex-row items-center justify-between">
-          <CardTitle className="text-xs">السجل الموحّد للمورد</CardTitle>
-          <Link to="/purchasing/dashboard" className="text-[11px] text-primary hover:underline">
-            فتح لوحة المشتريات ←
-          </Link>
-        </CardHeader>
-        <CardContent className="p-3 pt-1">
-          {timeline.length === 0 && (
-            <div className="text-xs text-muted-foreground text-center py-6">لا يوجد نشاط مسجل بعد</div>
+            </>
           )}
-          <div className="divide-y divide-border">
-            {timeline.slice(0, 30).map((t, i) => (
-              <div key={i} className="py-1.5 flex items-center gap-3 text-xs">
-                <span className="font-mono text-[10px] text-muted-foreground w-28">
-                  {new Date(t.date).toLocaleDateString("ar-SA", { dateStyle: "medium" })}
-                </span>
-                <span className={cn(
-                  "text-[10px] px-1.5 py-0.5 rounded border",
-                  t.tone === "success" ? "bg-success/10 text-success border-success/40" :
-                  t.tone === "destructive" ? "bg-destructive/10 text-destructive border-destructive/40" :
-                  "bg-accent text-accent-foreground border-border",
-                )}>
-                  {t.kind}
-                </span>
-                <span className="flex-1">{t.title}</span>
-              </div>
-            ))}
+        </CardContent>
+      </Card>
+
+      {/* برامج الحوافز — المحرّك الحقيقي */}
+      <IncentivePrograms supplierId={linkedRef.id} />
+
+      {/* الانكشاف والأداء — قيد التفعيل مع المشتريات */}
+      <Card>
+        <CardHeader className="p-3 pb-1">
+          <CardTitle className="text-xs flex items-center gap-1"><Activity className="h-3.5 w-3.5" /> الانكشاف المالي وأداء المورد</CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 pt-1">
+          <div className="flex items-center gap-2 text-[12.5px] text-muted-foreground bg-muted/30 rounded p-3">
+            <Clock className="h-4 w-4 shrink-0" />
+            <div>
+              الانكشاف المالي (الذمم الدائنة، أوامر الشراء المفتوحة، الشحنات) وأداء المورد (التسليم، الفحص، الموثوقية)
+              يُفعّل تلقائياً عند تطوير وحدة المشتريات الحقيقية. <Wallet className="inline h-3 w-3" />
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -275,23 +160,16 @@ export function SupplierIntelligence({
   );
 }
 
-function Cell({ label, value, sub, tone = "default", icon: Icon }: {
-  label: string; value: string; sub?: string;
-  tone?: "default" | "success" | "warning" | "destructive" | "primary";
-  icon?: any;
+function Cell({ label, value, tone = "default" }: {
+  label: string; value: string;
+  tone?: "default" | "primary" | "success" | "warning" | "destructive";
 }) {
-  const c =
-    tone === "success" ? "text-success" :
-    tone === "warning" ? "text-warning" :
-    tone === "destructive" ? "text-destructive" :
-    tone === "primary" ? "text-primary" : "text-foreground";
+  const c = tone === "primary" ? "text-primary" : tone === "success" ? "text-success" :
+    tone === "warning" ? "text-warning" : tone === "destructive" ? "text-destructive" : "text-foreground";
   return (
-    <div className="bg-muted/40 border border-border rounded p-2">
-      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-        {Icon && <Icon className={cn("h-3 w-3", c)} />}<span>{label}</span>
-      </div>
-      <div className={cn("text-sm font-semibold num", c)}>{value}</div>
-      {sub && <div className="text-[9px] text-muted-foreground">{sub}</div>}
+    <div className="bg-muted/40 rounded p-2">
+      <div className="text-[12px] text-muted-foreground">{label}</div>
+      <div className={cn("text-sm font-bold num tabular-nums", c)}>{value}</div>
     </div>
   );
 }

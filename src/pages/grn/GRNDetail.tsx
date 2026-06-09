@@ -11,6 +11,7 @@ import {
   getGRN, inspectionForGRN, createInspectionFromGRN,
   GRN_LABEL, GRN_TONE, fmtDate,
 } from "@/services/erp/receivingDb";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function GRNDetail() {
   const { id = "" } = useParams();
@@ -33,7 +34,27 @@ export default function GRNDetail() {
 
   const data = grnQ.data;
   const insp = inspQ.data;
-
+  const metaQ = useQuery({
+    queryKey: ["grn-meta", id],
+    queryFn: async () => {
+      if (!data?.header) return null;
+      const g = data.header;
+      const [shp, alc, sup, po] = await Promise.all([
+        g.shipment_id ? supabase.from("shipments").select("shipment_no").eq("id", g.shipment_id).maybeSingle() : Promise.resolve(null),
+        g.allocation_id ? supabase.from("allocations").select("alloc_no").eq("id", g.allocation_id).maybeSingle() : Promise.resolve(null),
+        g.supplier_id ? supabase.from("suppliers").select("name").eq("id", g.supplier_id).maybeSingle() : Promise.resolve(null),
+        g.po_id ? supabase.from("purchase_orders").select("po_no").eq("id", g.po_id).maybeSingle() : Promise.resolve(null),
+      ]);
+      return {
+        shipment_no:   shp?.data?.shipment_no,
+        alloc_no:      alc?.data?.alloc_no,
+        supplier_name: sup?.data?.name,
+        po_no:         po?.data?.po_no,
+      };
+    },
+    enabled: !!data,
+  });
+  const meta = metaQ.data;
   const totals = useMemo(() => {
     const lines = data?.lines ?? [];
     return {
@@ -61,9 +82,9 @@ export default function GRNDetail() {
           <div className="flex items-center gap-2 text-xs">
             <Badge className={GRN_TONE[g.status]}>{GRN_LABEL[g.status]}</Badge>
             <span className="text-muted-foreground">الشحنة:</span>
-            <span className="font-mono">{g.shipment_id.slice(0, 8)}</span>
+            <span className="font-mono">{(g as any).shipment?.shipment_no ?? meta?.shipment_no ?? meta?.shipment_no ?? g.shipment_id?.slice(0,8)}</span>
             <span className="text-muted-foreground">· التخصيص:</span>
-            <span className="font-mono">{g.allocation_id.slice(0, 8)}</span>
+            <span className="font-mono">{(g as any).allocation?.alloc_no ?? meta?.alloc_no ?? meta?.alloc_no ?? g.allocation_id?.slice(0,8)}</span>
           </div>
         }
         actions={
@@ -92,8 +113,8 @@ export default function GRNDetail() {
         <CardContent className="p-3 grid grid-cols-4 gap-3 text-xs">
           <div><div className="text-[10px] text-muted-foreground">المستودع</div><div>{g.warehouse ?? "—"}</div></div>
           <div><div className="text-[10px] text-muted-foreground">تاريخ الاستلام</div><div>{fmtDate(g.received_at)}</div></div>
-          <div><div className="text-[10px] text-muted-foreground">المورد</div><div className="font-mono text-[11px]">{g.supplier_id.slice(0, 8)}</div></div>
-          <div><div className="text-[10px] text-muted-foreground">أمر الشراء</div><div className="font-mono text-[11px]">{g.po_id.slice(0, 8)}</div></div>
+          <div><div className="text-[10px] text-muted-foreground">المورد</div><div className="font-mono text-[11px]">{(g as any).supplier?.name ?? meta?.supplier_name ?? meta?.supplier_name ?? g.supplier_id?.slice(0,8)}</div></div>
+          <div><div className="text-[10px] text-muted-foreground">أمر الشراء</div><div className="font-mono text-[11px]">{(g as any).po?.po_no ?? meta?.po_no ?? meta?.po_no ?? g.po_id?.slice(0,8)}</div></div>
         </CardContent>
       </Card>
 

@@ -109,7 +109,7 @@ export async function listGRNs(): Promise<GrnRow[]> {
 export async function getGRN(id: string): Promise<{ header: GrnRow; lines: GrnLineRow[] } | null> {
   const { data: h, error: e1 } = await supabase
     .from("goods_receipts").select("*").eq("id", id).maybeSingle();
-  if (e1) throw e1;
+  if (e1) { console.error("getInspection error:", e1); throw e1; }
   if (!h) return null;
   const { data: lines, error: e2 } = await supabase
     .from("goods_receipt_lines").select("*").eq("grn_id", id).order("line_no");
@@ -220,7 +220,7 @@ export async function getInspection(
 ): Promise<{ header: InspectionRow; lines: InspectionLineRow[] } | null> {
   const { data: h, error: e1 } = await supabase
     .from("inspections").select("*").eq("id", id).maybeSingle();
-  if (e1) throw e1;
+  if (e1) { console.error("getInspection error:", e1); throw e1; }
   if (!h) return null;
   const { data: lines, error: e2 } = await supabase
     .from("inspection_lines").select("*").eq("inspection_id", id).order("line_no");

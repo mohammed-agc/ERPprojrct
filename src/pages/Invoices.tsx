@@ -3,18 +3,19 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ActionButton } from "@/components/erp/ActionButton";
 import { useErpSession } from "@/contexts/ErpSessionContext";
 import { canPerform } from "@/lib/erpPermissions";
-import { Banknote, FileMinus } from "lucide-react";
+import { Banknote, FileMinus, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { PaymentDialog, PaymentSubmitPayload, PaymentInvoiceContext } from "@/components/erp/PaymentDialog";
-import { DocPrintActions } from "@/components/erp/DocPrintActions";
-import { PrintableInvoiceDoc, type InvoiceLine } from "@/components/erp/PrintableInvoiceDoc";
+
 import { salesVehicleStatus } from "@/services/erp/salesVehicleStatus";
 
 const statusMap: Record<string, { label: string; variant: any }> = {
   draft: { label: "مسودة", variant: "secondary" },
+  issued: { label: "مُصدرة", variant: "default" },
   posted: { label: "مرحّلة", variant: "default" },
   partially_paid: { label: "مدفوعة جزئياً", variant: "secondary" },
   paid: { label: "مدفوعة", variant: "outline" },
@@ -37,27 +38,53 @@ export default function Invoices() {
   const load = async () => {
     const { data: invs } = await supabase
       .from("invoices")
-      .select("*, customers(name)")
+      .select("*, contact:contacts(name, vat_number)")
       .order("invoice_date", { ascending: false });
     const list = invs ?? [];
-    // Vehicle enrichment via sales_order_lines
+
+    // إثراء المركبات عبر sales_order_lines → inventory_items (وليس vehicles)
     const soIds = Array.from(new Set(list.map(i => i.sales_order_id).filter(Boolean)));
-    let vehiclesByInvoice: Record<string, any[]> = {};
+    const vehiclesByInvoice: Record<string, any[]> = {};
     if (soIds.length > 0) {
-      const { data: lines } = await supabase
+      const { data: soLines } = await supabase
         .from("sales_order_lines")
-        .select("order_id, vehicle_id, vehicles(id, vin, brand, model, year, color, name)")
+        .select("order_id, vehicle_id")
         .in("order_id", soIds);
+      const vehIds = Array.from(new Set((soLines ?? []).map((l: any) => l.vehicle_id).filter(Boolean)));
+      const itemsById: Record<string, any> = {};
+      if (vehIds.length) {
+        const { data: items } = await supabase
+          .from("inventory_items")
+          .select("id, vin, brand, model, year, color, name")
+          .in("id", vehIds);
+        (items ?? []).forEach((it: any) => { itemsById[it.id] = it; });
+      }
       const linesBySo: Record<string, any[]> = {};
-      (lines ?? []).forEach((l: any) => {
-        if (!l.vehicles) return;
-        (linesBySo[l.order_id] ??= []).push(l.vehicles);
+      (soLines ?? []).forEach((l: any) => {
+        const it = l.vehicle_id ? itemsById[l.vehicle_id] : null;
+        if (it) (linesBySo[l.order_id] ??= []).push(it);
       });
       list.forEach(i => {
         if (i.sales_order_id) vehiclesByInvoice[i.id] = linesBySo[i.sales_order_id] ?? [];
       });
     }
-    setRows(list.map(i => ({ ...i, _vehicles: vehiclesByInvoice[i.id] ?? [] })));
+    // بنود الفاتورة الحقيقية (سعر + خصم) لكل فاتورة — للطباعة الدقيقة
+    const invIds = list.map(i => i.id);
+    const linesByInvoice: Record<string, any[]> = {};
+    if (invIds.length) {
+      const { data: invLines } = await supabase
+        .from("invoice_lines")
+        .select("invoice_id, line_no, description, quantity, unit_price, discount, vat_pct, total, vin, brand, model, year, color")
+        .in("invoice_id", invIds)
+        .order("line_no");
+      (invLines ?? []).forEach((l: any) => { (linesByInvoice[l.invoice_id] ??= []).push(l); });
+    }
+
+    setRows(list.map(i => ({
+      ...i,
+      _vehicles: vehiclesByInvoice[i.id] ?? [],
+      _lines: linesByInvoice[i.id] ?? [],
+    })));
   };
   useEffect(() => { load(); }, []);
 
@@ -65,7 +92,7 @@ export default function Invoices() {
     setActiveInvoice({
       id: r.id,
       invoice_no: r.invoice_no,
-      customer_name: r.customers?.name,
+      customer_name: (r as any).contact?.name ?? (r as any).customer_name,
       total: Number(r.total),
       paid_amount: Number(r.paid_amount ?? 0),
     });
@@ -81,7 +108,6 @@ export default function Invoices() {
       const userId = (await supabase.auth.getUser()).data.user?.id;
       const paymentNo = "PMT-" + Date.now().toString().slice(-10);
 
-      // Insert into persistent payments table — DB trigger recalculates invoice paid_amount + status
       const { error } = await supabase.from("payments").insert({
         payment_no: paymentNo,
         customer_id: row.customer_id,
@@ -95,7 +121,6 @@ export default function Invoices() {
       });
       if (error) throw error;
 
-      // If fully paid → mark linked vehicles as 'sold'
       const previouslyPaid = Number(row.paid_amount ?? 0);
       const totalAfter = previouslyPaid + p.amount;
       if (totalAfter >= Number(row.total)) {
@@ -113,9 +138,157 @@ export default function Invoices() {
     }
   };
 
+  // ───────── طباعة فاتورة واحدة بنافذة مستقلة نظيفة (عربية سليمة، بلا علامة مائية) ─────────
+  const printInvoice = (r: any) => {
+    const esc = (s: any) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
+    const fmt = (n: number) => Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const lines: any[] = r._lines ?? [];
+    const buyerName = r.contact?.name ?? r.customer_name ?? "—";
+    const buyerVat = r.contact?.vat_number ?? "";
+    const total = Number(r.total ?? 0);
+    const paid = Number(r.paid_amount ?? 0);
+    const remaining = Math.max(0, total - paid);
+    const totalDisc = lines.reduce((s, l) => s + Number(l.discount ?? 0), 0);
+    const totalBeforeDisc = lines.reduce((s, l) => s + Number(l.unit_price) * Number(l.quantity ?? 1), 0);
+
+    const rowsHTML = lines.length
+      ? lines.map((l, i) => {
+          const qty = Number(l.quantity ?? 1);
+          const up = Number(l.unit_price);
+          const disc = Number(l.discount ?? 0);
+          const base = up * qty - disc;
+          const vat = base * (Number(l.vat_pct ?? 15) / 100);
+          const incl = base + vat;
+          const partNo = l.vin || l.part_no || "—";          // الرقم: هيكل للمركبات / قطعة للقطع
+          const prodName = [l.brand, l.model].filter(Boolean).join(" ") || l.description || "—";
+          return `<tr style="background:${i % 2 === 0 ? "#fff" : "#f9fafb"}">
+            <td style="text-align:center;color:#6b7280">${i + 1}</td>
+            <td style="font-weight:600">${esc(prodName)}</td>
+            <td style="font-size:11px">${esc(l.description || "")}${[l.year, l.color].filter(Boolean).length ? `<div style="color:#6b7280;font-size:10px">${esc([l.year, l.color].filter(Boolean).join(" · "))}</div>` : ""}</td>
+            <td style="font-family:monospace;font-size:11px" dir="ltr">${esc(partNo)}</td>
+            <td style="text-align:left;font-family:monospace">${fmt(up)}</td>
+            <td style="text-align:left;font-family:monospace;color:${disc > 0 ? "#dc2626" : "#9ca3af"}">${disc > 0 ? "- " + fmt(disc) : "—"}</td>
+            <td style="text-align:left;font-family:monospace">${fmt(vat)}</td>
+            <td style="text-align:left;font-family:monospace;font-weight:700">${fmt(incl)}</td>
+          </tr>`;
+        }).join("")
+      : `<tr><td colspan="8" style="text-align:center;color:#9ca3af;padding:20px">لا توجد بنود</td></tr>`;
+
+    const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${esc(r.invoice_no)}</title>
+<style>
+  *{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;margin:0;padding:24px 28px;color:#1a1a1a;font-size:12px}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #0f766e;padding-bottom:12px;margin-bottom:14px}
+  .topbar .ttl{text-align:center;flex:1}
+  .topbar .ttl .ar{font-size:20px;font-weight:bold;color:#0f766e}
+  .topbar .ttl .en{font-size:12px;color:#6b7280;letter-spacing:1px}
+  .seller-ar{font-size:16px;font-weight:bold;color:#0f766e;text-align:left}
+  .meta{font-size:11px;text-align:left;color:#374151;line-height:1.7}
+  .parties{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .box{border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px}
+  .box .lbl{color:#6b7280;font-size:10px}
+  .box .row{display:flex;justify-content:space-between;gap:8px;padding:2px 0;font-size:11px}
+  table.items{border-collapse:collapse;width:100%;margin-bottom:14px}
+  table.items th,table.items td{border:1px solid #e5e7eb;padding:6px 8px;text-align:right;vertical-align:top}
+  table.items th{background:#0f766e;color:#fff;font-size:10.5px;line-height:1.4}
+  table.items th .en{display:block;font-weight:normal;font-size:9px;opacity:.85}
+  .bottom{display:grid;grid-template-columns:200px 1fr;gap:14px;margin-bottom:14px}
+  .qrbox{border:1px solid #e5e7eb;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:8px;background:#fafafa;min-height:150px}
+  .summary{border:1px solid #e5e7eb;border-radius:8px;overflow:hidden}
+  .summary .r{display:flex;justify-content:space-between;padding:6px 12px;font-size:12px;border-bottom:1px solid #f3f4f6}
+  .summary .r .en{color:#9ca3af;font-size:10px}
+  .summary .grand{background:#0f766e;color:#fff;font-weight:bold;font-size:14px}
+  .terms{font-size:9.5px;color:#4b5563;line-height:1.9;border-top:1px solid #e5e7eb;padding-top:8px;margin-bottom:18px}
+  .signs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-top:20px}
+  .signs .s{text-align:center;font-size:11px;color:#6b7280}
+  .signs .s .line{border-bottom:1px solid #9ca3af;height:48px;margin-bottom:4px}
+  .foot{text-align:center;color:#9ca3af;font-size:10px;border-top:1px solid #e5e7eb;padding-top:8px;margin-top:14px}
+  @page{size:A4 landscape;margin:10mm}
+</style></head><body>
+  <div class="topbar">
+    <div>
+      <div class="seller-ar">أرض المبارك للسيارات</div>
+      <div class="meta">المملكة العربية السعودية — جدة</div>
+    </div>
+    <div class="ttl">
+      <div class="ar">فاتورة ضريبية — مركبات</div>
+      <div class="en">TAX INVOICE — VEHICLES</div>
+    </div>
+    <div class="meta">
+      <div><b>الرقم الضريبي / VAT No.:</b> 300000000000003</div>
+      <div><b>السجل التجاري / CR:</b> 1010000000</div>
+      <div><b>تاريخ الطباعة:</b> ${new Date().toLocaleString("ar-SA")}</div>
+    </div>
+  </div>
+
+  <div class="parties">
+    <div class="box">
+      <div class="lbl">بيانات البائع / Seller</div>
+      <div class="row"><span>اسم الشركة / Company</span><b>أرض المبارك للسيارات</b></div>
+      <div class="row"><span>الرقم الضريبي / VAT</span><b dir="ltr">300000000000003</b></div>
+      <div class="row"><span>الفرع / Branch</span><b>${esc(r.branch || "جدة")}</b></div>
+      <div class="row"><span>التواصل / Contact</span><b dir="ltr">+966 12 000 0000</b></div>
+    </div>
+    <div class="box">
+      <div class="lbl">بيانات المشتري / Customer</div>
+      <div class="row"><span>الاسم / Name</span><b>${esc(buyerName)}</b></div>
+      <div class="row"><span>الرقم الضريبي / VAT</span><b dir="ltr">${esc(buyerVat || "—")}</b></div>
+      <div class="row"><span>رقم الفاتورة / Invoice No.</span><b dir="ltr">${esc(r.invoice_no)}</b></div>
+      <div class="row"><span>تاريخ الفاتورة / Date</span><b dir="ltr">${esc(r.invoice_date)}</b></div>
+    </div>
+  </div>
+
+  <table class="items">
+    <thead><tr>
+      <th style="width:30px">#<span class="en">No.</span></th>
+      <th>اسم المنتج / الخدمة<span class="en">Product / Service</span></th>
+      <th>الوصف<span class="en">Description</span></th>
+      <th style="width:135px">الرقم (هيكل/قطعة)<span class="en">Chassis / Part No.</span></th>
+      <th style="width:90px;text-align:left">السعر الأساسي<span class="en">Base Price</span></th>
+      <th style="width:80px;text-align:left">الخصم<span class="en">Discount</span></th>
+      <th style="width:85px;text-align:left">الضريبة<span class="en">VAT</span></th>
+      <th style="width:100px;text-align:left">شامل الضريبة<span class="en">Incl. VAT</span></th>
+    </tr></thead>
+    <tbody>${rowsHTML}</tbody>
+  </table>
+
+  <div class="bottom">
+    <div class="qrbox">${r.qr_code ? `<img src="${r.qr_code}" style="width:140px;height:140px"/>` : `<span style="color:#9ca3af;font-size:10px">QR</span>`}</div>
+    <div class="summary">
+      <div class="r"><span>المجموع قبل الخصم <span class="en">Total Before Discount</span></span><b dir="ltr">${fmt(totalBeforeDisc)}</b></div>
+      <div class="r"><span>إجمالي الخصم <span class="en">Total Discount</span></span><b dir="ltr">${totalDisc > 0 ? "(" + fmt(totalDisc) + ")" : "0.00"}</b></div>
+      <div class="r"><span>الإجمالي بعد الخصم (الخاضع للضريبة) <span class="en">Total After Discount</span></span><b dir="ltr">${fmt(Number(r.subtotal))}</b></div>
+      <div class="r"><span>ضريبة القيمة المضافة (15%) <span class="en">VAT Amount</span></span><b dir="ltr">${fmt(Number(r.vat_amount))}</b></div>
+      <div class="r"><span>المدفوع <span class="en">Paid</span></span><b dir="ltr">${paid > 0 ? fmt(paid) : "0.00"}</b></div>
+      <div class="r"><span>المتبقي <span class="en">Remaining</span></span><b dir="ltr">${fmt(remaining)}</b></div>
+      <div class="r grand"><span>الإجمالي بالريال السعودي <span class="en" style="color:#bfe3df">Total (SAR)</span></span><span dir="ltr">${fmt(total)} SAR</span></div>
+    </div>
+  </div>
+
+  <div class="terms">
+    * لقد استلمنا السيارة / السيارات المذكورة أعلاه سليمة وتعمل في حالة جيدة وكاملة اللوازم غير منقوصة ولا يوجد بها عيب من العيوب بتاتاً.<br>
+    * لقد فهمنا ووافقنا على تحمّل المسؤولية كاملة عن السيارة / السيارات المشتراة وعن المخاطر المحتملة بخصوصها.<br>
+    * هذه الفاتورة ليست سند سداد لقيمة السيارات، والشركة غير ملزمة بتسليم السيارات ما لم يتم سداد المبلغ بموجب سند قبض موقّع ومختوم يوضّح قيمة سداد السيارات.
+  </div>
+
+  <div class="signs">
+    <div class="s"><div class="line"></div>مندوب المبيعات</div>
+    <div class="s"><div class="line"></div>المحاسب</div>
+    <div class="s"><div class="line"></div>مدير المبيعات</div>
+  </div>
+
+  <div class="foot">أرض المبارك للسيارات · جدة · المملكة العربية السعودية</div>
+</body></html>`;
+
+    const w = window.open("", "_blank", "width=1100,height=750");
+    if (!w) { toast.error("الرجاء السماح بالنوافذ المنبثقة"); return; }
+    w.document.open(); w.document.write(html); w.document.close(); w.focus();
+    setTimeout(() => w.print(), 500);
+  };
+
   return (
     <div>
-      <PageHeader title="الفواتير الضريبية" subtitle="فواتير متوافقة مع هيئة الزكاة (ZATCA Phase 1) — الدفعات تُسجَّل في سجل ائتمان العميل" />
+      <PageHeader title="الفواتير الضريبية" subtitle="فواتير متوافقة مع هيئة الزكاة (ZATCA Phase 1) — تسجيل الدفعات متاح للمحاسبة فقط" />
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <table className="erp-table">
           <thead>
@@ -150,7 +323,7 @@ export default function Invoices() {
                 <tr key={r.id}>
                   <td className="font-mono"><Link to={`/invoices/${r.id}`} className="text-primary hover:underline">{r.invoice_no}</Link></td>
                   <td className="num">{r.invoice_date}</td>
-                  <td>{r.customers?.name ?? "—"}</td>
+                  <td>{(r as any).contact?.name ?? (r as any).customer_name ?? "—"}</td>
                   <td className="text-xs">
                     {vehs.length === 0 ? (
                       <span className="text-muted-foreground">—</span>
@@ -180,50 +353,9 @@ export default function Invoices() {
                   <td>{paymentBadge(payStatus)}</td>
                   <td className="text-left">
                     <div className="flex items-center justify-end gap-1.5">
-                      <DocPrintActions
-                        size="sm"
-                        doc={
-                          <PrintableInvoiceDoc
-                            variant="sales"
-                            statusKind={payStatus === "paid" ? "paid" : r.status === "cancelled" ? "cancelled" : r.status === "draft" ? "draft" : "approved"}
-                            statusLabel={statusMap[r.status]?.label ?? r.status}
-                            invoice_no={r.invoice_no}
-                            invoice_date={r.invoice_date}
-                            supply_date={r.invoice_date}
-                            branch={r.branch ?? undefined}
-                            payment_method={r.payment_method ?? "—"}
-                            payment_method_key={r.payment_method}
-                            seller={{
-                              name: "ساراط للسيارات",
-                              cr_number: "1010000000",
-                              vat_number: "300000000000003",
-                              address: "المملكة العربية السعودية — الرياض",
-                              contact: "+966 11 000 0000",
-                            }}
-                            buyer={{ name: r.customers?.name ?? "—" }}
-                            items={
-                              (vehs.length > 0 ? vehs : [null]).map((v): InvoiceLine => v ? {
-                                vin: v.vin,
-                                description: `${v.brand ?? ""} ${v.model ?? ""}`.trim() || v.name || "مركبة",
-                                color: v.color,
-                                model_year: v.year,
-                                base_price: Number(r.subtotal) / Math.max(1, vehs.length),
-                                discount: 0,
-                                vat_pct: 15,
-                              } : {
-                                description: "بنود الفاتورة",
-                                base_price: Number(r.subtotal),
-                                vat_pct: 15,
-                              })
-                            }
-                            totalVehicleValue={Number(r.subtotal)}
-                            netBeforeVat={Number(r.subtotal)}
-                            vatAmount={Number(r.vat_amount)}
-                            finalTotal={total}
-                            notes={r.notes ?? undefined}
-                          />
-                        }
-                      />
+                      <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => printInvoice(r)}>
+                        <Printer className="h-3.5 w-3.5 ml-1" /> طباعة / PDF
+                      </Button>
                       <ActionButton
                         size="sm"
                         variant="outline"
@@ -246,7 +378,6 @@ export default function Invoices() {
                 </tr>
               );
             })}
-
           </tbody>
         </table>
       </div>

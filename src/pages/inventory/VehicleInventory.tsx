@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +50,7 @@ function daysBetween(iso?: string | null): number {
 function mapDbStatus(s: string | null | undefined): VehicleInvStatus {
   switch (s) {
     case "available": return "available";
+    case "active": return "available";
     case "reserved": return "reserved";
     case "sold": return "sold";
     case "delivered": return "delivered";
@@ -71,10 +72,9 @@ export default function VehicleInventory() {
   const fetchAll = async () => {
     setLoading(true);
     const { data, error } = await supabase
-      .from("vehicles")
-      .select("id, code, name, brand, model, year, vin, color, mileage, cost_price, status, notes, created_at")
-      .order("created_at", { ascending: false })
-      .limit(1000);
+      .from("inventory_items")
+      .select("id, sku, name, brand, model, year, vin, color, cost_price, avg_cost, sale_price, status, notes, created_at, warehouse_id")
+      .eq("item_type", "vehicle").order("created_at", { ascending: false }).limit(1000);
     if (error) {
       console.error("[VehicleInventory] fetch error:", error);
       setRows([]);
@@ -113,7 +113,7 @@ export default function VehicleInventory() {
     fetchAll();
     // realtime: pick up new intakes immediately
     const ch = supabase
-      .channel("vehicles-inventory")
+      .channel("inventory-items-channel")
       .on("postgres_changes", { event: "*", schema: "public", table: "vehicles" }, () => fetchAll())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
@@ -223,3 +223,7 @@ export default function VehicleInventory() {
     </div>
   );
 }
+
+
+
+

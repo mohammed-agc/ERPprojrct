@@ -224,7 +224,7 @@ export async function setPurchaseRequestStatus(id: string, status: PRStatus, rej
 
 export async function listPurchaseOrders(): Promise<PORow[]> {
   const { data, error } = await supabase
-    .from("purchase_orders").select("*").order("created_at", { ascending: false });
+    .from("purchase_orders").select("*, contact:contacts(name, code)").order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as PORow[];
 }

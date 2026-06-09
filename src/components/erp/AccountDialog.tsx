@@ -1,4 +1,4 @@
-/**
+﻿/**
  * AccountDialog — create / edit ERP chart-of-account entry.
  *
  * Frontend operational contract. Writes through `accountOverlay`.
@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { accountOverlay, type AccountTypeKey } from "@/lib/accountOverlay";
 import type { AccountRow } from "@/services/erp/accounting";
 import { accountTypeLabel } from "@/lib/erpFormat";
@@ -96,35 +97,27 @@ export function AccountDialog({ open, onClose, onSaved, mode, accounts, target, 
     && !parentMismatch
     && !editPostingBlocked;
 
-  function handleSave() {
+  async function handleSave() {
     if (!canSave) return;
     if (mode === "create") {
-      accountOverlay.create({
-        code: code.trim(),
-        name_ar: nameAr.trim(),
-        name_en: nameEn.trim() || null,
-        type,
-        is_active: isActive,
-        meta: {
-          is_posting: isPosting,
-          vat_applicable: vatApplicable,
-          cost_center_applicable: costCenterApplicable,
-          notes: notes.trim() || undefined,
-        },
+      const parentSorted = accounts.filter(a => code.trim().startsWith(a.code) && a.code !== code.trim()).sort((a, b) => b.code.length - a.code.length)[0];
+      const { error: insErr } = await supabase.from("accounts").insert({
+        code: code.trim(), name_ar: nameAr.trim(), name_en: nameEn.trim() || null, type,
+        nature: (type === "asset" || type === "expense") ? "debit" : "credit",
+        is_posting: isPosting, is_vat: vatApplicable, cost_center: costCenterApplicable,
+        is_archived: !isActive, notes: notes.trim() || null,
+        level: code.length - 1, parent_id: parentSorted?.id ?? null,
       });
+      if (insErr) { toast.error(insErr.message); return; }
       toast.success("تم إنشاء الحساب");
     } else if (target) {
-      accountOverlay.update(target.id, {
-        name_ar: nameAr.trim(),
-        name_en: nameEn.trim() || null,
-        is_active: isActive,
-        meta: {
-          is_posting: isPosting,
-          vat_applicable: vatApplicable,
-          cost_center_applicable: costCenterApplicable,
-          notes: notes.trim() || undefined,
-        },
-      });
+      const { error: updErr } = await supabase.from("accounts").update({
+        name_ar: nameAr.trim(), name_en: nameEn.trim() || null,
+        is_archived: !isActive, is_posting: isPosting, is_vat: vatApplicable,
+        cost_center: costCenterApplicable, notes: notes.trim() || null,
+        updated_at: new Date().toISOString(),
+      }).eq("id", target.id);
+      if (updErr) { toast.error(updErr.message); return; }
       toast.success("تم حفظ التغييرات");
     }
     onSaved();
@@ -264,3 +257,7 @@ export function AccountDialog({ open, onClose, onSaved, mode, accounts, target, 
     </Dialog>
   );
 }
+
+
+
+

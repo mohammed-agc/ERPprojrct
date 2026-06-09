@@ -1,158 +1,169 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Check, X, ArrowRight, AlertTriangle, Plus, Percent } from "lucide-react";
 import { toast } from "sonner";
-import {
-  salesService, QUOTE_LABEL, QUOTE_TONE, fmtSAR, fmtRelative, fmtDate,
-  type QuoteStatus,
-} from "@/services/erp/sales";
+import { Plus, Search, Eye, CheckCircle, XCircle, ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-const OPTS: { value: QuoteStatus | "all" | "open"; label: string }[] = [
-  { value: "open", label: "العروض النشطة" },
-  { value: "all", label: "كل الحالات" },
-  { value: "draft", label: QUOTE_LABEL.draft },
-  { value: "sent", label: QUOTE_LABEL.sent },
-  { value: "negotiated", label: QUOTE_LABEL.negotiated },
-  { value: "approved", label: QUOTE_LABEL.approved },
-  { value: "expired", label: QUOTE_LABEL.expired },
-  { value: "converted", label: QUOTE_LABEL.converted },
-];
+const fmtSAR = (n: number) => Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " SAR";
 
-export default function SalesQuotations() {
-  const [tick, setTick] = useState(0);
-  const refresh = () => setTick(t => t + 1);
+const STATUS_MAP: Record<string, { label: string; variant: any }> = {
+  draft:       { label: "مسودة",   variant: "secondary" },
+  sent:        { label: "مُرسل",   variant: "default" },
+  negotiating: { label: "تفاوض",  variant: "outline" },
+  approved:    { label: "معتمدة",  variant: "default" },
+  rejected:    { label: "مرفوضة", variant: "destructive" },
+  expired:     { label: "منتهية", variant: "secondary" },
+  converted:   { label: "محوّلة", variant: "outline" },
+};
+
+export default function Quotations() {
+  const nav = useNavigate();
+  const qc = useQueryClient();
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState<QuoteStatus | "all" | "open">("open");
-  const all = useMemo(() => salesService.listQuotations(), [tick]);
-  const sps = useMemo(() => salesService.listSalespeople(), []);
+  const [statusFilter, setStatusFilter] = useState("all");
 
-  const filtered = useMemo(() => {
-    const qv = q.trim().toLowerCase();
-    const open: QuoteStatus[] = ["draft", "sent", "negotiated", "approved"];
-    return all.filter(x => {
-      if (status === "open" && !open.includes(x.status)) return false;
-      if (status !== "all" && status !== "open" && x.status !== status) return false;
-      if (!qv) return true;
-      const hay = `${x.code} ${x.customer} ${x.vehicle} ${x.branch}`.toLowerCase();
-      return hay.includes(qv);
-    });
-  }, [all, q, status]);
+  const { data: quotes = [], isLoading } = useQuery({
+    queryKey: ["quotations"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("quotations")
+        .select("*, contact:contacts(name), lines:quotation_lines(*)")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
-  const totals = useMemo(() => ({
-    count: filtered.length,
-    value: filtered.reduce((s, x) => s + x.net_price, 0),
-    expiring: filtered.filter(x => {
-      const h = (new Date(x.valid_until).getTime() - Date.now()) / 3600_000;
-      return (x.status === "sent" || x.status === "negotiated") && h >= 0 && h < 72;
-    }).length,
-  }), [filtered]);
+  const approveMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("quotations").update({ status: "approved" }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("تم اعتماد العرض"); qc.invalidateQueries({ queryKey: ["quotations"] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
 
-  const onApprove = (id: string) => { salesService.approveQuotation(id); toast.success("تم اعتماد العرض"); refresh(); };
-  const onReject = (id: string) => { salesService.rejectQuotation(id); toast.error("تم رفض العرض"); refresh(); };
-  const onConvert = (id: string) => { salesService.convertQuotationToSO(id); toast.success("تم تحويل العرض إلى أمر بيع"); refresh(); };
+  const rejectMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("quotations").update({ status: "rejected" }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.error("تم رفض العرض"); qc.invalidateQueries({ queryKey: ["quotations"] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // ملاحظة: التحويل لأمر بيع يتم من صفحة العرض فقط — هناك يتم التحقق من توفر
+  // المركبات في المخزون قبل الإنشاء وربط vehicle_id. أزلنا التحويل المباشر هنا
+  // لأنه كان يتجاوز هذا التحقق.
+
+  const filtered = quotes.filter(r => {
+    const matchQ = !q || r.quote_no?.includes(q) || (r.contact?.name || r.customer_name || "").includes(q);
+    const matchS = statusFilter === "all" || r.status === statusFilter;
+    return matchQ && matchS;
+  });
+
+  const totalVal = filtered.reduce((s, r) => s + Number(r.total || 0), 0);
+  const expiring = filtered.filter(r => {
+    if (!r.valid_until) return false;
+    const h = (new Date(r.valid_until).getTime() - Date.now()) / 3600000;
+    return h < 48 && h >= 0 && (r.status === "sent" || r.status === "negotiating");
+  }).length;
 
   return (
-    <div>
+    <div dir="rtl">
       <PageHeader
         title="عروض الأسعار"
-        subtitle={`${totals.count} عرض · إجمالي ${fmtSAR(totals.value)} · ${totals.expiring} قارب الانتهاء`}
-        actions={<Button size="sm"><Plus className="h-4 w-4 ml-1" /> عرض جديد</Button>}
+        subtitle={`${filtered.length} عرض · إجمالي ${fmtSAR(totalVal)} · ${expiring} قارب الانتهاء`}
+        actions={
+          <Button size="sm" onClick={() => nav("/sales/quotations/new")}>
+            <Plus className="h-4 w-4 ml-1" /> عرض جديد
+          </Button>
+        }
       />
 
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border border-border rounded-lg p-3 mb-3 flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[240px] max-w-md">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input className="pr-9 h-9" placeholder="بحث: رقم، عميل، مركبة، فرع..." value={q} onChange={e => setQ(e.target.value)} />
+      <div className="flex gap-2 px-4 pb-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input className="h-9 pr-8" placeholder="بحث: رقم، عميل..." value={q} onChange={e => setQ(e.target.value)} />
         </div>
-        <Select value={status} onValueChange={(v) => setStatus(v as any)}>
-          <SelectTrigger className="w-[180px] h-9"><SelectValue /></SelectTrigger>
-          <SelectContent>{OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-        </Select>
-        <div className="text-xs text-muted-foreground ml-auto">{filtered.length} نتيجة</div>
+        <select className="h-9 px-3 border border-border rounded-md text-sm bg-background"
+          value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+          <option value="all">كل الحالات</option>
+          {Object.entries(STATUS_MAP).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+        </select>
       </div>
 
-      <div className="bg-card border border-border rounded-lg overflow-hidden">
-        <table className="erp-table">
-          <thead>
-            <tr>
-              <th>الرقم</th>
-              <th>العميل / المركبة</th>
-              <th>المندوب</th>
-              <th>السعر</th>
-              <th>الخصم</th>
-              <th>الصافي</th>
-              <th>الهامش</th>
-              <th>الصلاحية</th>
-              <th>الحالة</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 && <tr><td colSpan={10} className="text-center text-muted-foreground py-8">لا توجد عروض مطابقة</td></tr>}
-            {filtered.map(x => {
-              const sp = sps.find(s => s.id === x.salesperson_id);
-              const margin = x.net_price > 0 ? ((x.net_price - x.est_cost) / x.net_price) * 100 : 0;
-              const hLeft = (new Date(x.valid_until).getTime() - Date.now()) / 3600_000;
-              const soon = (x.status === "sent" || x.status === "negotiated") && hLeft >= 0 && hLeft < 72;
-              return (
-                <tr key={x.id}>
-                  <td className="font-mono text-[11px]">
-                    {x.code}
-                    {x.negotiation_notes && <div className="text-[9px] text-muted-foreground mt-0.5 max-w-[140px] truncate" title={x.negotiation_notes}>{x.negotiation_notes}</div>}
-                  </td>
-                  <td>
-                    <div className="text-sm">{x.customer}</div>
-                    <div className="text-[10px] text-muted-foreground">{x.vehicle}</div>
-                  </td>
-                  <td className="text-xs">
-                    <div>{sp?.name ?? "—"}</div>
-                    <div className="text-[10px] text-muted-foreground">{x.branch}</div>
-                  </td>
-                  <td className="num text-xs">{fmtSAR(x.list_price)}</td>
-                  <td className="num text-xs">
-                    <div>{fmtSAR(x.discount)}</div>
-                    <div className={`text-[10px] flex items-center gap-0.5 ${x.discount_requires_approval ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
-                      <Percent className="h-2.5 w-2.5" />{x.discount_pct.toFixed(1)}
-                      {x.discount_requires_approval && <span>· يحتاج اعتماد</span>}
-                    </div>
-                  </td>
-                  <td className="num text-xs font-semibold">{fmtSAR(x.net_price)}</td>
-                  <td className={`num text-xs ${margin > 10 ? "text-success" : margin > 5 ? "text-warning" : "text-destructive"}`}>{margin.toFixed(1)}%</td>
-                  <td className="text-xs">
-                    <div>{fmtDate(x.valid_until)}</div>
-                    <div className={`text-[10px] flex items-center gap-0.5 ${soon ? "text-warning" : "text-muted-foreground"}`}>
-                      {soon && <AlertTriangle className="h-2.5 w-2.5" />} {fmtRelative(x.valid_until)}
-                    </div>
-                  </td>
-                  <td><Badge className={QUOTE_TONE[x.status]}>{QUOTE_LABEL[x.status]}</Badge></td>
-                  <td className="whitespace-nowrap">
-                    {(x.status === "sent" || x.status === "negotiated") && (
+      <div className="px-4">
+        <div className="border border-border rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 border-b border-border">
+              <tr>
+                <th className="text-right px-3 py-2 font-medium">الرقم</th>
+                <th className="text-right px-3 py-2 font-medium">العميل / المركبة</th>
+                <th className="text-right px-3 py-2 font-medium">المندوب</th>
+                <th className="text-right px-3 py-2 font-medium">الإجمالي</th>
+                <th className="text-right px-3 py-2 font-medium">الصلاحية</th>
+                <th className="text-right px-3 py-2 font-medium">الحالة</th>
+                <th className="text-right px-3 py-2 font-medium">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {isLoading ? (
+                <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">جاري التحميل...</td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">لا توجد عروض</td></tr>
+              ) : filtered.map(r => {
+                const veh = r.lines?.[0];
+                const custName = r.contact?.name || r.customer_name || "—";
+                const sm = STATUS_MAP[r.status] ?? { label: r.status, variant: "secondary" };
+                return (
+                  <tr key={r.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-3 py-2 font-mono text-xs">{r.quote_no}</td>
+                    <td className="px-3 py-2">
+                      <div className="font-medium text-sm">{custName}</div>
+                      {veh && <div className="text-xs text-muted-foreground">{veh.brand} {veh.model} {veh.year}</div>}
+                    </td>
+                    <td className="px-3 py-2 text-xs text-muted-foreground">{r.sales_rep_name || "—"}</td>
+                    <td className="px-3 py-2 font-medium text-sm">{fmtSAR(Number(r.total))}</td>
+                    <td className="px-3 py-2 text-xs text-muted-foreground">{r.valid_until || "—"}</td>
+                    <td className="px-3 py-2"><Badge variant={sm.variant}>{sm.label}</Badge></td>
+                    <td className="px-3 py-2">
                       <div className="flex gap-1">
-                        {x.discount_requires_approval && (
-                          <Button size="sm" variant="ghost" className="h-7 px-2 text-success" onClick={() => onApprove(x.id)} title="اعتماد الخصم">
-                            <Check className="h-3.5 w-3.5" />
+                        {(r.status === "sent" || r.status === "negotiating") && (
+                          <>
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-green-600"
+                              onClick={() => approveMut.mutate(r.id)} title="اعتماد">
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive"
+                              onClick={() => rejectMut.mutate(r.id)} title="رفض">
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                        {r.status === "approved" && (
+                          <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-primary"
+                            onClick={() => nav(`/sales/quotations/${r.id}`)} title="تحويل لأمر بيع (مع التحقق من المخزون)">
+                            <ArrowRight className="h-3 w-3 ml-1" /> تحويل
                           </Button>
                         )}
-                        <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive" onClick={() => onReject(x.id)} title="رفض">
-                          <X className="h-3.5 w-3.5" />
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+                          onClick={() => nav(`/sales/quotations/${r.id}`)} title="عرض">
+                          <Eye className="h-4 w-4" />
                         </Button>
                       </div>
-                    )}
-                    {x.status === "approved" && (
-                      <Button size="sm" variant="ghost" className="h-7 px-2 text-primary" onClick={() => onConvert(x.id)} title="تحويل إلى أمر بيع">
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

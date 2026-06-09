@@ -46,7 +46,7 @@ export default function ContactDetail() {
 
   const load = async () => {
     if (!id) return;
-    const { data: c } = await supabase.from("customers").select("*").eq("id", id).maybeSingle();
+    const { data: c } = await supabase.from("contacts").select("*").eq("id", id).maybeSingle();
     if (!c) return;
     const { meta: m, freeText: ft } = parseContactMeta(c.notes);
     setRow(c); setMeta(m); setFreeText(ft);
@@ -70,10 +70,10 @@ export default function ContactDetail() {
     if (!row) return;
     setSaving(true);
     const uid = (await supabase.auth.getUser()).data.user?.id ?? null;
-    const { error } = await supabase.from("customers").update({
+    const { error } = await supabase.from("contacts").update({
       name: row.name, vat_number: row.vat_number, phone: row.phone, email: row.email,
       city: row.city, address: row.address,
-      is_active: row.is_active ?? true,
+      active: row.active ?? true,
       notes: serializeContactMeta(meta, freeText),
       updated_by: uid,
     } as any).eq("id", row.id);
@@ -85,9 +85,9 @@ export default function ContactDetail() {
 
   const toggleActive = async () => {
     if (!row) return;
-    const next = !(row.is_active ?? true);
+    const next = !(row.active ?? true);
     const uid = (await supabase.auth.getUser()).data.user?.id ?? null;
-    const { error } = await supabase.from("customers").update({ is_active: next, updated_by: uid } as any).eq("id", row.id);
+    const { error } = await supabase.from("contacts").update({ active: next, updated_by: uid } as any).eq("id", row.id);
     if (error) { toast.error(error.message); return; }
     toast.success(next ? "تم التفعيل" : "تم التعطيل");
     load();
@@ -142,8 +142,8 @@ export default function ContactDetail() {
               </span>
             )}
             <span className="text-muted-foreground">· اكتمال الملف: <b className={cn(score >= 80 ? "text-success" : score >= 50 ? "text-warning-foreground" : "text-destructive")}>{score}%</b></span>
-            <span className={cn("px-1.5 py-0.5 rounded border text-[10px]", (row.is_active ?? true) ? "border-success/40 text-success" : "border-destructive/40 text-destructive")}>
-              {(row.is_active ?? true) ? "نشط" : "غير نشط"}
+            <span className={cn("px-1.5 py-0.5 rounded border text-[10px]", (row.active ?? true) ? "border-success/40 text-success" : "border-destructive/40 text-destructive")}>
+              {(row.active ?? true) ? "نشط" : "غير نشط"}
             </span>
             {(row.updated_at || updatedByName) && (
               <span className="text-muted-foreground">
@@ -155,8 +155,8 @@ export default function ContactDetail() {
         actions={
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 px-2 py-1 border rounded-md text-xs">
-              <Switch checked={row.is_active ?? true} onCheckedChange={toggleActive} />
-              <span className="text-muted-foreground">{(row.is_active ?? true) ? "نشط" : "غير نشط"}</span>
+              <Switch checked={row.active ?? true} onCheckedChange={toggleActive} />
+              <span className="text-muted-foreground">{(row.active ?? true) ? "نشط" : "غير نشط"}</span>
             </div>
             <Button
               variant="default"
@@ -261,7 +261,7 @@ export default function ContactDetail() {
               <CardHeader className="p-3 pb-1"><CardTitle className="text-xs flex items-center gap-1"><Wallet className="h-3.5 w-3.5" /> الأرصدة (محاسبياً)</CardTitle></CardHeader>
               <CardContent className="p-3 pt-1 text-xs space-y-1.5">
                 <KV k="ذمم مدينة" v={fmtMoney(totalInv(invoices))} />
-                <KV k="حد الائتمان" v={fmtMoney(meta.credit_limit)} />
+                {meta.contact_type !== "individual" && <KV k="حد الائتمان" v={fmtMoney(meta.credit_limit)} />}
                 <KV k="مهلة السداد" v={meta.payment_terms_days ? `${meta.payment_terms_days} يوم` : "—"} />
                 <KV k="الرصيد الافتتاحي" v={fmtMoney(meta.opening_balance)} />
               </CardContent>
@@ -458,7 +458,7 @@ export default function ContactDetail() {
               <CardContent className="p-3 pt-1 space-y-2">
                 <div className="grid grid-cols-2 gap-2">
                   <Field label="مهلة السداد (يوم)" value={meta.payment_terms_days?.toString()} onChange={v=>setMeta({...meta, payment_terms_days: v ? Number(v) : undefined})} ltr type="number" />
-                  <Field label="حد الائتمان" value={meta.credit_limit?.toString()} onChange={v=>setMeta({...meta, credit_limit: v ? Number(v) : undefined})} ltr type="number" />
+                  {meta.contact_type !== "individual" && <Field label="حد الائتمان" value={meta.credit_limit?.toString()} onChange={v=>setMeta({...meta, credit_limit: v ? Number(v) : undefined})} ltr type="number" />}
                 </div>
                 <div>
                   <Label className="text-xs">طريقة الدفع المفضلة</Label>

@@ -89,7 +89,7 @@
 @layer base {
   * { @apply border-border; }
 
-  html { font-family: 'Cairo', 'IBM Plex Sans Arabic', system-ui, sans-serif; }
+  html { font-family: 'Cairo', 'IBM Plex Sans Arabic', system-ui, sans-serif; font-size: clamp(15px, 0.55vw + 11px, 18px); }
 
   body {
     @apply bg-background text-foreground antialiased;
@@ -103,9 +103,9 @@
   ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.5); }
 
   /* ERP table density — tight, predictable, enterprise */
-  .erp-table { @apply w-full text-sm border-collapse; }
+  .erp-table { @apply w-full border-collapse; font-size: 0.9rem; }
   .erp-table thead th {
-    @apply bg-[hsl(var(--table-header))] text-foreground font-semibold text-right px-3 py-1.5 border-b border-[hsl(var(--table-border))] text-[11px] uppercase tracking-wide whitespace-nowrap;
+    @apply bg-[hsl(var(--table-header))] text-foreground font-semibold text-right px-3 py-1.5 border-b border-[hsl(var(--table-border))] uppercase tracking-wide whitespace-nowrap; font-size: 0.72rem;
   }
   .erp-table tbody td {
     @apply px-3 py-1.5 border-b border-[hsl(var(--table-border))] text-foreground align-middle;

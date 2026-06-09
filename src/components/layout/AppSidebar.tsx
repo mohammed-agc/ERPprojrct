@@ -7,7 +7,7 @@ import {
   TrendingUp, ArrowLeftRight, PieChart, Landmark, ArrowDownCircle, ArrowUpCircle, CheckSquare,
   Vault, Banknote, Target, Layers, GitBranch, Share2, Gauge,
   Shield, CalendarRange, CalendarCheck, CalendarX, FileSearch, Lock, Hourglass, AlertTriangle,
-  ClipboardList, FileText, Ship, PackageCheck, Trophy, ShoppingBag, Warehouse, Database, Palette
+  ClipboardList, FileText, Ship, PackageCheck, Trophy, ShoppingBag, Warehouse, Database, Palette, Settings, Send, Briefcase, Heart, DollarSign, Calendar
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -36,6 +36,7 @@ const groups: { title: string; items: NavItem[] }[] = [
     title: "البيانات الرئيسية",
     items: [
       { label: "كتالوج المنتجات", to: "/master/products", icon: Database },
+    { label: "كتالوج المركبات", to: "/vehicle-catalog", icon: BookOpen },
       { label: "ألوان المركبات", to: "/master/colors", icon: Palette },
     ],
   },
@@ -50,7 +51,7 @@ const groups: { title: string; items: NavItem[] }[] = [
       { label: "تنسيق التسليم", to: "/sales/deliveries", icon: PackageCheck, deptCode: "vehicles" },
       { label: "التمويل والتقسيط", to: "/sales/financing", icon: Banknote, deptCode: "vehicles" },
       { label: "تحليلات المبيعات", to: "/sales/analytics", icon: TrendingUp, deptCode: "vehicles" },
-      { label: "الخط الزمني للعميل", to: "/sales/customer-timeline", icon: Contact2, deptCode: "vehicles" },
+      { label: "الخط الزمني للعميل", to: "/sales/customer-timeline", icon: CalendarRange, deptCode: "vehicles" },
       { label: "ائتمان العملاء", to: "/sales/customer-credit", icon: ShieldCheck, deptCode: "vehicles" },
       { label: "دفعات العملاء", to: "/sales/customer-payments", icon: Banknote, deptCode: "vehicles" },
       { label: "الفواتير", to: "/invoices", icon: Receipt },
@@ -67,7 +68,7 @@ const groups: { title: string; items: NavItem[] }[] = [
       { label: "تأكيدات التخصيص", to: "/purchasing/allocation-confirmations", icon: ShieldCheck, deptCode: "vehicles" },
       { label: "فواتير الشراء", to: "/purchasing/invoices", icon: Receipt, deptCode: "vehicles" },
       { label: "ائتمان الموردين", to: "/purchasing/credit", icon: ShieldCheck, deptCode: "vehicles" },
-      { label: "حوافز الموردين", to: "/purchasing/incentives", icon: Trophy, deptCode: "vehicles" },
+      { label: "إدارة حوافز الموردين", to: "/incentives", icon: Trophy, deptCode: "vehicles" },
       { label: "الشحنات", to: "/purchasing/shipments", icon: Ship, deptCode: "vehicles" },
       { label: "ورشة الاستلام والفحص", to: "/purchasing/receiving/workbench", icon: PackageCheck, deptCode: "vehicles" },
       { label: "الاستلام (GRN)", to: "/grn/list", icon: PackageCheck, deptCode: "vehicles" },
@@ -109,6 +110,22 @@ const groups: { title: string; items: NavItem[] }[] = [
       { label: "فواتير الشراء", to: "/accounting/purchase-invoices", icon: Receipt, deptCode: "accounting" },
       { label: "فواتير المبيعات", to: "/accounting/sales-invoices", icon: Receipt, deptCode: "accounting" },
       { label: "دليل الحسابات", to: "/accounts", icon: BookOpen, deptCode: "accounting" },
+      { label: "تحديد الحسابات", to: "/admin/settings/account-determination", icon: Settings, deptCode: "accounting" },
+      { label: "مجموعات الحسابات", to: "/admin/settings/account-groups", icon: Layers, deptCode: "accounting" },
+      { label: "التواصل الإلكتروني", to: "/admin/settings/communications", icon: Send, deptCode: "accounting" },
+    ],
+  },
+  {
+    title: "الموارد البشرية",
+    items: [
+      { label: "لوحة HR", to: "/hr", icon: Users, deptCode: "hr" },
+      { label: "الموظفين", to: "/hr/employees", icon: Users, deptCode: "hr" },
+      { label: "المسميات الوظيفية", to: "/hr/positions", icon: Briefcase, deptCode: "hr" },
+      { label: "أنواع الإجازات", to: "/hr/leave-types", icon: Heart, deptCode: "hr" },
+      { label: "مكونات الراتب", to: "/hr/salary-components", icon: DollarSign, deptCode: "hr" },
+      { label: "طلبات الإجازات", to: "/hr/leaves", icon: Calendar, deptCode: "hr" },
+      { label: "كشوف الرواتب", to: "/hr/payroll", icon: DollarSign, deptCode: "hr" },
+      { label: "السلف والقروض", to: "/hr/loans", icon: DollarSign, deptCode: "hr" },
       { label: "قيود اليومية", to: "/journals", icon: Calculator, deptCode: "accounting" },
       { label: "دفتر الأستاذ", to: "/general-ledger", icon: BookText, deptCode: "accounting" },
       { label: "ميزان المراجعة", to: "/trial-balance", icon: Scale, deptCode: "accounting" },
@@ -124,7 +141,7 @@ const groups: { title: string; items: NavItem[] }[] = [
     items: [
       { label: "الخزينة", to: "/treasury", icon: Vault, deptCode: "accounting" },
       { label: "الصناديق", to: "/treasury/accounts", icon: Banknote, deptCode: "accounting" },
-      { label: "البنوك", to: "/treasury/accounts", icon: Landmark, deptCode: "accounting" },
+      { label: "البنوك", to: "/treasury/accounts?type=bank", icon: Landmark, deptCode: "accounting" },
       { label: "القبض", to: "/treasury/receipts", icon: ArrowDownCircle, deptCode: "accounting" },
       { label: "الصرف", to: "/treasury/payments", icon: ArrowUpCircle, deptCode: "accounting" },
       { label: "التحويلات", to: "/treasury/transfers", icon: ArrowLeftRight, deptCode: "accounting" },
@@ -152,6 +169,7 @@ const groups: { title: string; items: NavItem[] }[] = [
       { label: "إقفال السنة", to: "/governance/year-end-close", icon: CalendarX, deptCode: "accounting" },
       { label: "الاعتمادات", to: "/governance/approvals", icon: ClipboardCheck, deptCode: "accounting" },
       { label: "مركز التدقيق", to: "/governance/audit", icon: FileSearch, deptCode: "accounting" },
+      { label: "القرارات الائتمانية", to: "/governance/credit-decisions", icon: AlertTriangle, deptCode: "accounting" },
     ],
   },
   {
@@ -167,7 +185,7 @@ const groups: { title: string; items: NavItem[] }[] = [
 ];
 
 function BadgeDot({ count, tone }: { count: number; tone: "amber" | "rose" | "emerald" | "slate" }) {
-  if (count <= 0) return null;
+  if (!count || isNaN(count) || count <= 0) return null;
   const toneMap = {
     amber: "bg-amber-500 text-white",
     rose: "bg-rose-500 text-white",
@@ -303,3 +321,11 @@ export function AppSidebar() {
     </aside>
   );
 }
+
+
+
+
+
+
+
+

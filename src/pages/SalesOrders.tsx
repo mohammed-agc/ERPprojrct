@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -38,20 +38,21 @@ export default function SalesOrders() {
   const load = async () => {
     const { data } = await supabase
       .from("sales_orders")
-      .select("*, customers(name, code)")
+      .select("*, contact:contacts(name, code)")
       .order("created_at", { ascending: false });
     setRows(data ?? []);
   };
   useEffect(() => { load(); }, []);
 
   const openDialog = async () => {
-    const { data } = await supabase.from("customers").select("id, name, code").order("name");
-    setCustomers(data ?? []);
-    setCustId("");
-    // default department: user's department if it's a sales dept, else vehicles
-    const userDept = department?.code;
-    setDeptCode(userDept === "spare_parts" ? "spare_parts" : "vehicles");
-    setOpen(true);
+    const uid = (await supabase.auth.getUser()).data.user?.id;
+    const { data: prof } = await supabase.from("profiles").select("department_code").eq("id", uid ?? "").maybeSingle();
+    const dept = prof?.department_code ?? "VEH";
+    const deptCode = dept === "VEH" ? "vehicles" : dept === "PARTS" ? "spare_parts" : "vehicles";
+    const orderNo = "SO-" + new Date().getFullYear() + "-" + String(Math.floor(Math.random()*9000)+1000);
+    const { data, error } = await supabase.from("sales_orders").insert({ order_no: orderNo, department_code: deptCode, created_by: uid }).select().single();
+    if (error) { toast.error(error.message); return; }
+    nav(`/sales-orders/${data.id}`);
   };
 
   const create = async () => {
@@ -156,7 +157,7 @@ export default function SalesOrders() {
               <tr key={r.id}>
                 <td className="font-mono" dir="ltr">{r.order_no}</td>
                 <td className="num">{r.order_date}</td>
-                <td>{r.customers?.name ?? "—"}</td>
+                <td>{r.customer_name ?? (r as any).contact?.name ?? "—"}</td>
                 <td className="text-xs text-muted-foreground">{r.department_code === "spare_parts" ? "قطع الغيار" : "المركبات"}</td>
                 <td className="num text-left font-semibold">{Number(r.total).toLocaleString("ar-SA", { minimumFractionDigits: 2 })}</td>
                 <td><Badge variant={statusMap[r.status]?.variant}>{statusMap[r.status]?.label}</Badge></td>
@@ -169,3 +170,6 @@ export default function SalesOrders() {
     </div>
   );
 }
+
+
+

@@ -93,7 +93,7 @@ export default function AllocationDetail() {
           <div>
             <div className="text-[10px] text-muted-foreground">أمر الشراء</div>
             {po
-              ? <Link to={`/purchasing/orders/${po.id}`} className="font-mono font-semibold text-primary hover:underline">{po.po_no}</Link>
+              ? <Link to={`/purchasing/orders/${po.id}`} className="font-mono font-semibold text-primary hover:underline whitespace-nowrap">{po.po_no}</Link>
               : <div>—</div>}
             <div className="text-[10px] text-muted-foreground">{po ? fmtDate(po.created_at) : "—"}</div>
           </div>

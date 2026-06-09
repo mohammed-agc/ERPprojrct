@@ -1,6 +1,5 @@
 export const fmtSAR = (n: number) =>
-  Number(n || 0).toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-export const fmtCompact = (n: number) => {
+new Intl.NumberFormat("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Number(n || 0)) + " SAR";export const fmtCompact = (n: number) => {
   const abs = Math.abs(n);
   if (abs >= 1_000_000) return (n / 1_000_000).toFixed(2) + "م";
   if (abs >= 1_000) return (n / 1_000).toFixed(1) + "ك";
@@ -19,5 +18,6 @@ export const accountTypeColor: Record<string, string> = {
 export const todayIso = () => new Date().toISOString().slice(0, 10);
 export const startOfYearIso = () => `${new Date().getFullYear()}-01-01`;
 export const startOfMonthIso = () => {
-  const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+  const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, " SAR")}-01`;
 };
+

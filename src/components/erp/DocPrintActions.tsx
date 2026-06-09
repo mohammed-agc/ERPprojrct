@@ -1,8 +1,9 @@
-import { useState, useEffect, ReactNode } from "react";
+﻿import { useState, useEffect, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Eye, Printer, FileDown } from "lucide-react";
+import { exportPageToPDF } from "@/utils/pdfExport";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface Props {
@@ -44,7 +45,7 @@ export function DocPrintActions({ doc, size = "sm" }: Props) {
         <Button size={size} variant="outline" onClick={() => window.print()}>
           <Printer className="h-3.5 w-3.5 ml-1" /> طباعة
         </Button>
-        <Button size={size} variant="outline" onClick={() => window.print()}>
+        <Button size={size} variant="outline" onClick={() => exportPageToPDF("document.pdf")}>
           <FileDown className="h-3.5 w-3.5 ml-1" /> PDF
         </Button>
       </div>
@@ -69,8 +70,8 @@ export function DocPrintActions({ doc, size = "sm" }: Props) {
             <Button size="sm" variant="outline" onClick={() => window.print()}>
               <Printer className="h-3.5 w-3.5 ml-1" /> طباعة
             </Button>
-            <Button size="sm" variant="outline" onClick={() => window.print()}>
-              <FileDown className="h-3.5 w-3.5 ml-1" /> تصدير PDF
+            <Button size="sm" variant="outline" onClick={() => exportPageToPDF("document.pdf")}>
+          <FileDown className="h-3.5 w-3.5 ml-1" /> تصدير PDF
             </Button>
           </div>
           {doc}
@@ -79,3 +80,4 @@ export function DocPrintActions({ doc, size = "sm" }: Props) {
     </>
   );
 }
+

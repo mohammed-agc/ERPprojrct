@@ -16,6 +16,7 @@ import {
   Pencil, Archive, ArchiveRestore, Receipt, Building2, Calendar,
 } from "lucide-react";
 import { accounting, type AccountNode, type AccountRow } from "@/services/erp/accounting";
+import { supabase } from "@/integrations/supabase/client";
 import { accountOverlay, type AccountTypeKey, type AccountStats } from "@/lib/accountOverlay";
 import { fmtSAR, accountTypeLabel, accountTypeColor, todayIso } from "@/lib/erpFormat";
 import { toast } from "sonner";
@@ -301,14 +302,12 @@ export default function Accounts() {
     setDialogParent(undefined);
     setDialogOpen(true);
   };
-  const handleArchive = (n: AccountNode) => {
-    if (n.is_active) {
-      accountOverlay.archive(n.id);
-      toast.success(`تمت أرشفة ${n.name_ar}`);
-    } else {
-      accountOverlay.restore(n.id);
-      toast.success(`تمت استعادة ${n.name_ar}`);
-    }
+  const handleArchive = async (n: AccountNode) => {
+    const { error } = await supabase.from("accounts")
+      .update({ is_archived: n.is_active, updated_at: new Date().toISOString() })
+      .eq("id", n.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(n.is_active ? "تمت الأرشفة" : "تمت الاستعادة");
     load();
   };
 
@@ -401,7 +400,7 @@ export default function Accounts() {
 
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <table className="erp-table">
-          <thead className="sticky top-[148px] z-[5] bg-muted/60 backdrop-blur">
+          <thead className="sticky top-0 z-[5] bg-muted/60 backdrop-blur">
             <tr>
               <th className="w-44">الكود / الهيكل</th>
               <th>الحساب</th>
@@ -460,3 +459,4 @@ export default function Accounts() {
     </div>
   );
 }
+

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Search, Users, Building2, Landmark, ShieldCheck, Truck, ExternalLink } from "lucide-react";
+import { Plus, Search, Users, Building2, Landmark, ShieldCheck, Truck, ExternalLink, Phone, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   parseContactMeta, serializeContactMeta, ContactMeta, ContactType, ContactRole,
@@ -21,6 +21,9 @@ type Row = {
   name: string;
   vat_number: string | null;
   phone: string | null;
+  phone2: string | null;
+  whatsapp: string | null;
+  national_id: string | null;
   email: string | null;
   city: string | null;
   address: string | null;
@@ -46,14 +49,15 @@ export default function Contacts() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     code: "", name: "", contact_type: "company" as ContactType,
-    vat_number: "", cr_number: "", phone: "", email: "", city: "",
+    vat_number: "", cr_number: "", national_id: "",
+    phone: "", phone2: "", whatsapp: "", email: "", city: "",
     roles: [] as ContactRole[],
   });
 
   const load = async () => {
     const { data } = await supabase
-      .from("customers")
-      .select("id,code,name,vat_number,phone,email,city,address,notes,created_at")
+      .from("contacts")
+      .select("id,code,name,vat_number,phone,phone2,whatsapp,national_id,email,city,address,notes,created_at")
       .order("created_at", { ascending: false });
     const mapped: Row[] = (data ?? []).map((r: any) => ({
       ...r,
@@ -76,8 +80,9 @@ export default function Contacts() {
     if (cityFilter !== "all" && r.city !== cityFilter && m.primary_address?.city !== cityFilter) return false;
     if (!q) return true;
     const hay = [
-      r.name, r.code, r.vat_number, m.cr_number, r.phone, m.mobile,
-      r.email, r.city, m.primary_address?.city, m.national_id,
+      r.name, r.code, r.vat_number, m.cr_number, r.phone, r.phone2,
+      r.whatsapp, r.national_id, m.mobile, r.email, r.city,
+      m.primary_address?.city, m.national_id,
     ].filter(Boolean).join(" ").toLowerCase();
     return hay.includes(q.toLowerCase());
   }), [rows, q, typeFilter, roleFilter, cityFilter]);
@@ -96,17 +101,28 @@ export default function Contacts() {
   }, [rows]);
 
   const save = async () => {
-    if (!form.code || !form.name) { toast.error("الكود والاسم مطلوبان"); return; }
+    if (!form.name) { toast.error("الاسم مطلوب"); return; }
     const meta: ContactMeta = {
       contact_type: form.contact_type,
       roles: form.roles,
       cr_number: form.cr_number || undefined,
       vat_registered: !!form.vat_number,
     };
-    const { error } = await supabase.from("customers").insert({
-      code: form.code, name: form.name,
+    // نشتقّ الأعلام من الأدوار ليختار الـ Trigger البادئة الصحيحة (CUST/SUP/...)
+    const isCustomer = form.roles.some(r => r.endsWith("_customer"));
+    const isSupplier = form.roles.includes("vendor" as ContactRole);
+    const { error } = await supabase.from("contacts").insert({
+      // لا نرسل code — يتولّد تلقائياً في قاعدة البيانات
+      ...(form.code.trim() ? { code: form.code.trim() } : {}),
+      name: form.name,
+      is_customer: isCustomer,
+      is_supplier: isSupplier,
       vat_number: form.vat_number || null,
-      phone: form.phone || null, email: form.email || null,
+      phone: form.phone || null,
+      phone2: form.phone2 || null,
+      whatsapp: form.whatsapp || null,
+      national_id: form.national_id || null,
+      email: form.email || null,
       city: form.city || null,
       notes: serializeContactMeta(meta),
       created_by: (await supabase.auth.getUser()).data.user?.id,
@@ -114,13 +130,15 @@ export default function Contacts() {
     if (error) { toast.error(error.message); return; }
     toast.success("تم إنشاء جهة الاتصال");
     setOpen(false);
-    setForm({ code: "", name: "", contact_type: "company", vat_number: "", cr_number: "", phone: "", email: "", city: "", roles: [] });
+    setForm({ code: "", name: "", contact_type: "company", vat_number: "", cr_number: "", national_id: "", phone: "", phone2: "", whatsapp: "", email: "", city: "", roles: [] });
     load();
   };
 
   const toggleFormRole = (r: ContactRole) => {
     setForm(f => ({ ...f, roles: f.roles.includes(r) ? f.roles.filter(x => x !== r) : [...f.roles, r] }));
   };
+
+  const isIndividual = form.contact_type === "individual";
 
   return (
     <div>
@@ -140,14 +158,17 @@ export default function Contacts() {
             <DialogTrigger asChild>
               <Button size="sm"><Plus className="h-4 w-4 ml-1" /> جهة اتصال جديدة</Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader><DialogTitle>جهة اتصال جديدة</DialogTitle></DialogHeader>
               <div className="grid grid-cols-2 gap-3">
-                <div><Label>الكود *</Label><Input value={form.code} onChange={e=>setForm({...form, code:e.target.value})} /></div>
+                {/* Row 1: Code + Name */}
+                <div><Label>الكود</Label><Input value={form.code} onChange={e=>setForm({...form, code:e.target.value})} placeholder="يُولّد تلقائياً" dir="ltr" /></div>
                 <div><Label>الاسم *</Label><Input value={form.name} onChange={e=>setForm({...form, name:e.target.value})} /></div>
+
+                {/* Row 2: Type + City */}
                 <div>
                   <Label>نوع الجهة</Label>
-                  <Select value={form.contact_type} onValueChange={(v)=>setForm({...form, contact_type:v as ContactType})}>
+                  <Select value={form.contact_type} onValueChange={(v)=>setForm({...form, contact_type:v as ContactType, national_id:"", cr_number:"", vat_number:""})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {Object.entries(CONTACT_TYPE_LABELS).map(([k,v])=> <SelectItem key={k} value={k}>{v}</SelectItem>)}
@@ -155,10 +176,41 @@ export default function Contacts() {
                   </Select>
                 </div>
                 <div><Label>المدينة</Label><Input value={form.city} onChange={e=>setForm({...form, city:e.target.value})} /></div>
-                <div><Label>الرقم الضريبي</Label><Input value={form.vat_number} onChange={e=>setForm({...form, vat_number:e.target.value})} dir="ltr" /></div>
-                <div><Label>السجل التجاري</Label><Input value={form.cr_number} onChange={e=>setForm({...form, cr_number:e.target.value})} dir="ltr" /></div>
-                <div><Label>الجوال</Label><Input value={form.phone} onChange={e=>setForm({...form, phone:e.target.value})} dir="ltr" /></div>
-                <div><Label>البريد</Label><Input value={form.email} onChange={e=>setForm({...form, email:e.target.value})} dir="ltr" /></div>
+
+                {/* Row 3: Conditional — individual gets national_id, company gets vat+cr */}
+                {isIndividual ? (
+                  <div className="col-span-2">
+                    <Label>رقم الهوية الوطنية</Label>
+                    <Input value={form.national_id} onChange={e=>setForm({...form, national_id:e.target.value})} dir="ltr" maxLength={10} placeholder="10 أرقام" />
+                  </div>
+                ) : (
+                  <>
+                    <div><Label>الرقم الضريبي</Label><Input value={form.vat_number} onChange={e=>setForm({...form, vat_number:e.target.value})} dir="ltr" /></div>
+                    <div><Label>السجل التجاري</Label><Input value={form.cr_number} onChange={e=>setForm({...form, cr_number:e.target.value})} dir="ltr" /></div>
+                  </>
+                )}
+
+                {/* Row 4: Phone + Phone2 */}
+                <div>
+                  <Label>الجوال</Label>
+                  <Input value={form.phone} onChange={e=>setForm({...form, phone:e.target.value})} dir="ltr" placeholder="05xxxxxxxx" />
+                </div>
+                <div>
+                  <Label>جوال ثانٍ</Label>
+                  <Input value={form.phone2} onChange={e=>setForm({...form, phone2:e.target.value})} dir="ltr" placeholder="05xxxxxxxx" />
+                </div>
+
+                {/* Row 5: WhatsApp + Email */}
+                <div>
+                  <Label>واتساب</Label>
+                  <Input value={form.whatsapp} onChange={e=>setForm({...form, whatsapp:e.target.value})} dir="ltr" placeholder="966xxxxxxxxx" />
+                </div>
+                <div>
+                  <Label>البريد الإلكتروني</Label>
+                  <Input value={form.email} onChange={e=>setForm({...form, email:e.target.value})} dir="ltr" type="email" />
+                </div>
+
+                {/* Roles */}
                 <div className="col-span-2">
                   <Label className="mb-1.5 block">الأدوار</Label>
                   <div className="flex flex-wrap gap-1.5">
@@ -185,7 +237,7 @@ export default function Contacts() {
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[240px] max-w-sm">
             <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input className="pr-8 h-8 text-sm" placeholder="بحث: اسم، كود، ض.ر، س.ت، جوال، هوية..." value={q} onChange={e=>setQ(e.target.value)} />
+            <Input className="pr-8 h-8 text-sm" placeholder="بحث: اسم، كود، هوية، جوال، واتساب..." value={q} onChange={e=>setQ(e.target.value)} />
           </div>
           <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className="h-8 w-36 text-xs"><SelectValue /></SelectTrigger>
@@ -220,10 +272,10 @@ export default function Contacts() {
               <th className="w-8"></th>
               <th>الاسم</th>
               <th>الأدوار</th>
-              <th className="w-32">الرقم الضريبي</th>
-              <th className="w-32">س. تجاري</th>
-              <th className="w-32">الجوال</th>
-              <th className="w-28">المدينة</th>
+              <th className="w-32">الرقم الضريبي / الهوية</th>
+              <th className="w-28">الجوال</th>
+              <th className="w-10 text-center">واتساب</th>
+              <th className="w-24">المدينة</th>
               <th className="w-8"></th>
             </tr>
           </thead>
@@ -234,6 +286,10 @@ export default function Contacts() {
             {filtered.map(r => {
               const m = r._meta;
               const Icon = TYPE_ICONS[m.contact_type ?? "company"];
+              const isInd = m.contact_type === "individual";
+              const idField = isInd ? (r.national_id || m.national_id) : (r.vat_number);
+              const phoneDisplay = r.phone || m.mobile;
+              const hasWhatsapp = !!(r.whatsapp || form.whatsapp);
               return (
                 <tr key={r.id}>
                   <td className="font-mono text-xs">{r.code}</td>
@@ -257,9 +313,25 @@ export default function Contacts() {
                       {!(m.roles ?? []).length && <span className="text-[10px] text-muted-foreground">—</span>}
                     </div>
                   </td>
-                  <td className="num text-xs" dir="ltr">{r.vat_number || "—"}</td>
-                  <td className="num text-xs" dir="ltr">{m.cr_number || "—"}</td>
-                  <td className="num text-xs" dir="ltr">{r.phone || m.mobile || "—"}</td>
+                  <td className="num text-xs" dir="ltr">
+                    {idField || "—"}
+                    {isInd && idField && <div className="text-[9px] text-muted-foreground">هوية</div>}
+                  </td>
+                  <td className="text-xs" dir="ltr">
+                    {phoneDisplay ? (
+                      <div>
+                        <div>{phoneDisplay}</div>
+                        {r.phone2 && <div className="text-[10px] text-muted-foreground">{r.phone2}</div>}
+                      </div>
+                    ) : "—"}
+                  </td>
+                  <td className="text-center">
+                    {r.whatsapp ? (
+                      <a href={`https://wa.me/${r.whatsapp.replace(/\D/g,"")}`} target="_blank" rel="noreferrer" title={r.whatsapp}>
+                        <MessageCircle className="h-3.5 w-3.5 text-green-600 mx-auto" />
+                      </a>
+                    ) : <span className="text-muted-foreground text-[10px]">—</span>}
+                  </td>
                   <td className="text-xs">{r.city || m.primary_address?.city || "—"}</td>
                   <td>
                     <Link to={`/contacts/${r.id}`} className="text-muted-foreground hover:text-primary">

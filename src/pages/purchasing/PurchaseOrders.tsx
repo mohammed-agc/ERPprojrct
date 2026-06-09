@@ -102,7 +102,7 @@ export default function PurchaseOrders() {
                   <td className="font-mono text-[11px] text-primary hover:underline">
                     <div className="flex items-center gap-1.5"><FileText className="h-3 w-3 text-muted-foreground" />{p.po_no}</div>
                   </td>
-                  <td>{s?.name ?? <span className="text-muted-foreground">—</span>}</td>
+                  <td>{(p as any).contact?.name ?? s?.name ?? <span className="text-muted-foreground">—</span>}</td>
                   <td className="text-xs">{fmtDate(p.order_date)}</td>
                   <td className="text-xs">{fmtDate(p.expected_delivery)}</td>
                   <td className="num text-xs font-semibold">{fmtSAR(Number(p.total))}</td>

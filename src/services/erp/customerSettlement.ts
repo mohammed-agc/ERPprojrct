@@ -15,6 +15,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import { auditLogService } from "@/services/erp/auditLog";
+import { governanceLogService } from "@/services/erp/governanceLog";
 
 /* ============================ Settlement policy ============================ */
 
@@ -176,9 +177,10 @@ function dueDateForInvoice(inv: { invoice_date: string; due_date?: string | null
 }
 
 async function loadCustomers(ids?: string[]): Promise<any[]> {
-  let q = supabase.from("customers").select(
-    "id, code, name, vat_number, is_active, credit_limit, payment_terms_days, settlement_policy, grace_days",
+  let q = supabase.from("contacts").select(
+    "id, code, name, vat_number, active, credit_limit, payment_term, settlement_policy, grace_days",
   );
+  q = q.eq("is_customer", true);
   if (ids?.length) q = q.in("id", ids);
   const { data, error } = await q;
   if (error) throw error;
@@ -352,7 +354,7 @@ export const customerSettlementService = {
     payment_terms_days?: number;
     is_active?: boolean;
   }) {
-    const { error } = await supabase.from("customers").update(patch).eq("id", id);
+    const { error } = await supabase.from("contacts").update(patch).eq("id", id);
     if (error) throw error;
     await auditLogService.record({
       module: "sales",
@@ -382,8 +384,8 @@ export const customerSettlementService = {
         requires_override: false, warnings, summary: null,
       };
     }
-    const proposed = summary.utilized + (args.additionalExposure ?? 0);
-    const headroom = summary.credit_limit - proposed;
+    const existingDebt = summary.utilized;                 // المديونية القائمة (فواتير سابقة غير مسدّدة)
+    const proposed = existingDebt + (args.additionalExposure ?? 0);
 
     if (!summary.is_active) {
       warnings.push({
@@ -392,12 +394,17 @@ export const customerSettlementService = {
         message: `حساب العميل ${summary.name} موقوف — لا يمكن إصدار مستندات مبيعات جديدة دون فك الإيقاف.`,
       });
     }
-    if (summary.credit_limit > 0 && headroom < 0) {
+    // الحظر الحرج مبني على المديونية القائمة فقط — الأمر الجديد يُدفع نقداً قبل التسليم
+    const blockedByDebt = summary.credit_limit > 0
+      ? existingDebt > summary.credit_limit
+      : existingDebt > 0;
+    if (blockedByDebt) {
       warnings.push({
         code: "credit_limit_exceeded",
         severity: "critical",
-        message: `الحد الائتماني سيتجاوز بمقدار ${Math.abs(headroom).toLocaleString("ar-SA", { minimumFractionDigits: 2 })} ر.س.`,
-        details: { credit_limit: summary.credit_limit, utilized: summary.utilized, requested: args.additionalExposure ?? 0 },
+        message: summary.credit_limit <= 0
+          ? `يوجد رصيد مدين سابق على العميل بقيمة ${existingDebt.toLocaleString("ar-SA", { minimumFractionDigits: 2 })} ر.س — لا يُسمح ببيع آجل جديد قبل السداد أو بتجاوز مدير.`
+          : `المديونية القائمة (${existingDebt.toLocaleString("ar-SA", { minimumFractionDigits: 2 })} ر.س) تتجاوز الحد الائتماني — يلزم سداد أو تجاوز مدير.`,
       });
     } else if (summary.credit_limit > 0 && proposed >= 0.9 * summary.credit_limit) {
       warnings.push({
@@ -433,6 +440,7 @@ export const customerSettlementService = {
    */
   async logGateDecision(args: {
     customerId: string;
+    customerName?: string;
     customerCode?: string;
     documentType: "sales_order" | "invoice" | "delivery";
     documentId?: string;
@@ -440,19 +448,25 @@ export const customerSettlementService = {
     action: "proceed" | "override" | "blocked";
     warnings: CreditGateWarning[];
     additionalExposure?: number;
+    reason?: string;
+    userRole?: string;
   }) {
-    await auditLogService.record({
+    await governanceLogService.record({
+      event_type: `credit_gate_${args.action}`,
       module: "sales",
-      action: `credit_gate_${args.action}`,
       document_type: args.documentType,
       document_id: args.documentId ?? null,
       document_code: args.documentCode ?? null,
-      payload: {
-        customer_id: args.customerId,
+      subject_id: args.customerId,
+      subject_name: args.customerName ?? null,
+      decision: args.action,
+      reason: args.reason ?? null,
+      user_role: args.userRole ?? null,
+      details: {
         customer_code: args.customerCode,
         additional_exposure: args.additionalExposure,
         warnings: args.warnings,
-      } as any,
+      },
     });
   },
 };
@@ -490,15 +504,15 @@ function buildCreditRow(c: any, invs: any[]): CustomerCreditRow {
     code: c.code,
     name: c.name,
     vat_number: c.vat_number,
-    is_active: c.is_active ?? true,
+    is_active: c.active ?? true,
     credit_limit,
-    payment_terms_days: Number(c.payment_terms_days ?? 30),
+    payment_terms_days: Number(c.payment_term ?? 30),
     settlement_policy: policy,
     grace_days: grace,
     utilized,
     remaining,
     usage_pct,
-    over_limit: utilized > credit_limit && credit_limit > 0,
+    over_limit: utilized > credit_limit,
     due_balance,
     overdue_balance,
     next_due_date,

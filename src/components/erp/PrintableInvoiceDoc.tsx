@@ -83,6 +83,7 @@ export interface PrintableInvoiceDocProps {
   vatAmount: number;
   additionalCharges?: number;
   finalTotal: number;
+  paidAmount?: number;
 
   credit?: InvoiceCreditInfo;  // shown only when payment uses supplier credit
   qrCodeDataUrl?: string;      // optional ZATCA QR
@@ -310,9 +311,11 @@ export function PrintableInvoiceDoc(p: PrintableInvoiceDocProps) {
             <div className="flex justify-between"><span className="text-muted-foreground">الصافي قبل الضريبة</span><span className="font-mono font-semibold">{fmtSAR(p.netBeforeVat)}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">قيمة الضريبة (15%)</span><span className="font-mono font-semibold">{fmtSAR(p.vatAmount)}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">رسوم إضافية</span><span className="font-mono">{p.additionalCharges ? fmtSAR(p.additionalCharges) : "—"}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">المدفوع</span><span className="font-mono">{p.paidAmount ? fmtSAR(p.paidAmount) : "—"}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">المتبقي</span><span className="font-mono font-semibold">{fmtSAR(Math.max(0, p.finalTotal - (p.paidAmount ?? 0)))}</span></div>
             <div className="flex justify-between items-center mt-2 -mx-3 -mb-3 px-3 py-2 bg-primary text-primary-foreground">
               <span className="font-bold text-sm">الإجمالي النهائي</span>
-              <span className="font-mono font-black text-base">{fmtSAR(p.finalTotal)} ر.س</span>
+              <span className="font-mono font-black text-base">{fmtSAR(p.finalTotal)}</span>
             </div>
           </div>
         </div>
