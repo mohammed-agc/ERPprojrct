@@ -54,6 +54,7 @@ export interface POLineInput {
   pr_line_id?: string | null;
   brand: string;
   model: string;
+  trim?: string | null;
   year?: number | null;
   color?: string | null;
   quantity: number;
@@ -83,6 +84,7 @@ export interface PRLineRow {
   line_no: number;
   brand: string;
   model: string;
+  trim: string | null;
   year: number | null;
   color: string | null;
   quantity: number;
@@ -115,6 +117,7 @@ export interface POLineRow {
   line_no: number;
   brand: string;
   model: string;
+  trim: string | null;
   year: number | null;
   color: string | null;
   quantity: number;
@@ -277,6 +280,7 @@ export async function createPurchaseOrder(input: {
     line_no: i + 1,
     brand: l.brand,
     model: l.model,
+    trim: l.trim ?? null,
     year: l.year ?? null,
     color: l.color ?? null,
     quantity: l.quantity,

@@ -25,6 +25,7 @@ type UnitRow = {
   po_line_id: string;
   brand: string;
   model: string;
+  trim: string | null;
   year: number | null;
   color: string | null;
   unit_cost: number;
@@ -47,6 +48,7 @@ function expandLines(lines: POLineRow[], allocated: Record<string, number> = {})
         po_line_id: li.id,
         brand: li.brand,
         model: li.model,
+        trim: li.trim,
         year: li.year,
         color: li.color,
         unit_cost: Number(li.unit_cost) || 0,
@@ -127,6 +129,7 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
         brand: r.brand,
         manufacturer: r.brand,
         model: r.model,
+        trim: r.trim,
         year: r.year,
         color: r.color,
         vin: r.vin,
