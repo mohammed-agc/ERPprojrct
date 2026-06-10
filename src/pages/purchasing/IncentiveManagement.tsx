@@ -17,7 +17,7 @@ import {
 } from "@/services/erp/incentiveEngine";
 import { ensureIncentiveAccess } from "@/lib/incentiveAuthzApi";
 import { useIncentivePermissions } from "@/lib/incentivePermissions";
-import { Trophy, Plus, Pencil, Trash2, Search, Building2, BookOpen, Calculator } from "lucide-react";
+import { Trophy, Plus, Pencil, Trash2, Search, Building2, BookOpen, Calculator, Coins } from "lucide-react";
 
 const fmtSAR = (n: number) => Number(n || 0).toLocaleString("en-US") + " ر.س";
 const fmtDate = (s?: string) => s ? new Date(s).toLocaleDateString("ar-SA") : "—";
@@ -83,6 +83,34 @@ export default function IncentiveManagement() {
     toast.success("تم الحذف"); refresh();
   };
 
+  // احتساب الحافز: يقيس المشتريات المؤكّدة هذا الشهر ثم يُنشئ استحقاقاً (earned)
+  const accrue = async (p: IncentiveProgram) => {
+    try { await ensureIncentiveAccess("manage"); } catch (e) { toast.error((e as Error).message); return; }
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+    const to = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+    const { data: invs } = await supabase
+      .from("purchase_invoices").select("id")
+      .eq("supplier_id", p.supplier_id)
+      .in("status", ["confirmed", "partially_paid", "paid"])
+      .gte("invoice_date", from).lte("invoice_date", to);
+    const ids = (invs ?? []).map((r: any) => r.id);
+    let measured = 0;
+    if (ids.length > 0) {
+      let q = supabase.from("purchase_invoice_lines").select("id", { count: "exact", head: true }).in("invoice_id", ids);
+      if (p.brand) q = q.or(`brand.eq.${p.brand},manufacturer.eq.${p.brand}`);
+      if (p.model) q = q.eq("model", p.model);
+      const { count } = await q;
+      measured = count ?? 0;
+    }
+    if (measured === 0) { toast.error("لا مشتريات مؤكّدة لهذا المورد في الشهر الحالي"); return; }
+    const { data, error } = await incentiveEngine.createAccrual({
+      program_id: p.id, period_from: from, period_to: to, measured_qty: measured,
+    });
+    if (error) { toast.error(error); return; }
+    toast.success(`تم احتساب الحافز: ${data?.code ?? ""} (${measured} مركبة)`); refresh();
+  };
+
   return (
     <div dir="rtl">
       <PageHeader
@@ -146,6 +174,9 @@ export default function IncentiveManagement() {
                   {perms.canManage && (
                     <td className="text-left">
                       <div className="flex items-center justify-end gap-0.5">
+                        <Button size="sm" variant="outline" className="h-7 px-2 text-success border-success/40 hover:bg-success/10 gap-1" onClick={() => accrue(p)} title="احتساب الحافز المستحق">
+                          <Coins className="h-3.5 w-3.5" /> <span className="text-[11px]">احتساب</span>
+                        </Button>
                         <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEdit(p)} title="تعديل">
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>

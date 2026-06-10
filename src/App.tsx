@@ -74,6 +74,7 @@ const PurchaseOrders = lazy(() => import("./pages/purchasing/PurchaseOrders"));
 const PurchaseOrderDetail = lazy(() => import("./pages/purchasing/PurchaseOrderDetail"));
 const PurchaseInvoices = lazy(() => import("./pages/purchasing/PurchaseInvoices"));
 const IncentiveManagement = lazy(() => import("./pages/purchasing/IncentiveManagement"));
+const IncentiveLedger = lazy(() => import("./pages/purchasing/IncentiveLedger"));
 
 const SupplierCredit = lazy(() => import("./pages/purchasing/SupplierCredit"));
 const SupplierIncentives = lazy(() => import("./pages/purchasing/SupplierIncentives"));
@@ -202,6 +203,7 @@ const App = () => (
               <Route path="/purchasing/orders" element={<PurchaseOrders />} />
               <Route path="/purchasing/orders/:id" element={<PurchaseOrderDetail />} />
               <Route path="/purchasing/invoices" element={<PurchaseInvoices />} />
+              <Route path="/incentives/ledger" element={<IncentiveLedger />} />
               <Route path="/incentives" element={<IncentiveManagement />} />
               <Route path="/purchasing/invoices/:id" element={<PurchaseInvoiceDetail />} />
               <Route path="/purchasing/allocations" element={<Allocations />} />

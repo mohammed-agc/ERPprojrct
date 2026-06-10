@@ -101,9 +101,26 @@ function currentMonthWindow(): { from: string; to: string } {
  * مؤقتاً: حتى يكتمل ربط فواتير الشراء، نُرجع 0 (يُحدّث لاحقاً ليقرأ من
  * purchase_invoices / purchase_orders المعتمدة ضمن النافذة الشهرية).
  */
-async function purchasedVehiclesThisMonth(_supplierId: string, _brand?: string, _model?: string): Promise<number> {
-  // TODO(purchasing): اقرأ من فواتير الشراء المعتمدة ضمن currentMonthWindow()
-  return 0;
+async function purchasedVehiclesThisMonth(supplierId: string, brand?: string, model?: string): Promise<number> {
+  const { from, to } = currentMonthWindow();
+  // الفواتير المؤكّدة (وما بعدها) لهذا المورد ضمن الشهر
+  const { data: invoices, error: e1 } = await supabase
+    .from("purchase_invoices")
+    .select("id")
+    .eq("supplier_id", supplierId)
+    .in("status", ["confirmed", "partially_paid", "paid"])
+    .gte("invoice_date", from)
+    .lte("invoice_date", to);
+  if (e1) { console.error(e1); return 0; }
+  const ids = (invoices ?? []).map((r: any) => r.id);
+  if (ids.length === 0) return 0;
+  // عدّ بنود المركبات (مع فلترة الماركة/الموديل إن طُلبت)
+  let q = supabase.from("purchase_invoice_lines").select("id, brand, manufacturer, model", { count: "exact" }).in("invoice_id", ids);
+  if (brand) q = q.or(`brand.eq.${brand},manufacturer.eq.${brand}`);
+  if (model) q = q.eq("model", model);
+  const { count, error: e2 } = await q;
+  if (e2) { console.error(e2); return 0; }
+  return count ?? 0;
 }
 
 export const incentivesService = {

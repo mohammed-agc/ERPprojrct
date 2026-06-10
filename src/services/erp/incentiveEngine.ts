@@ -308,6 +308,17 @@ export const incentiveEngine = {
     const program = await this.getProgram(input.program_id);
     if (!program) return { error: "البرنامج غير موجود" };
 
+    // منع تكرار الاحتساب لنفس البرنامج والفترة (إلا الملغى/المرفوض)
+    const { data: dup } = await supabase
+      .from("incentive_accruals")
+      .select("id, code, stage")
+      .eq("program_id", input.program_id)
+      .eq("period_from", input.period_from)
+      .eq("period_to", input.period_to)
+      .not("stage", "in", "(cancelled,rejected)")
+      .maybeSingle();
+    if (dup) return { error: `سبق احتساب الحافز لهذه الفترة (${dup.code})` };
+
     const calc = computeIncentive(program, input.measured_qty, program.tiers ?? []);
     if (!calc.eligible) return { error: "لم يتحقق الهدف — لا استحقاق" };
     if (calc.amount <= 0) return { error: "قيمة الحافز المحسوبة صفر" };
