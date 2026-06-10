@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Ship, Plus, ChevronDown, ChevronLeft } from "lucide-react";
 import {
-  listShipments, SHIPMENT_LABEL, SHIPMENT_TONE, CUSTOMS_LABEL, CUSTOMS_TONE, fmtDate,
+  listShipments, setShipmentStatus, SHIPMENT_LABEL, SHIPMENT_TONE, CUSTOMS_LABEL, CUSTOMS_TONE, fmtDate,
   type ShipmentStatus,
 } from "@/services/erp/shipmentsDb";
 import { listPurchaseOrders } from "@/services/erp/purchasingDb";
 import { listAllocations } from "@/services/erp/allocationsDb";
 import { supabase } from "@/integrations/supabase/client";
 import { ShipmentCreateDialog } from "@/components/erp/ShipmentCreateDialog";
+import { toast } from "sonner";
 
 const STATUS_OPTS: { value: ShipmentStatus | "all"; label: string }[] = [
   { value: "all", label: "كل الحالات" },
@@ -41,6 +42,25 @@ export default function Shipments() {
   const [open, setOpen] = useState(false);
 
   const { data: shipments = [], refetch } = useQuery({ queryKey: ["shipments"], queryFn: listShipments });
+
+  // الانتقال للحالة التالية (متخطّياً الجمارك — شراء محلي)
+  const NEXT_STATUS: Partial<Record<ShipmentStatus, ShipmentStatus>> = {
+    preparing: "shipped", shipped: "in_transit", in_transit: "arrived",
+  };
+  const NEXT_LABEL: Partial<Record<ShipmentStatus, string>> = {
+    preparing: "تأكيد الشحن", shipped: "بدء النقل", in_transit: "تأكيد الوصول",
+  };
+  const advanceShipment = async (id: string, current: ShipmentStatus) => {
+    const next = NEXT_STATUS[current];
+    if (!next) return;
+    try {
+      await setShipmentStatus(id, next);
+      toast.success(`تم تحديث حالة الشحنة: ${SHIPMENT_LABEL[next]}`);
+      refetch();
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
   const { data: pos = [] } = useQuery({ queryKey: ["pos"], queryFn: listPurchaseOrders });
   const { data: allocs = [] } = useQuery({ queryKey: ["allocations"], queryFn: listAllocations });
   const { data: unitsByAlloc = {} } = useQuery({ queryKey: ["alloc-units"], queryFn: listShipmentUnits });
@@ -95,11 +115,12 @@ export default function Shipments() {
               <th>الوصول</th>
               <th>الجمارك</th>
               <th>الحالة</th>
+              <th>إجراءات</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={11} className="text-center text-muted-foreground py-8">لا توجد شحنات مطابقة</td></tr>
+              <tr><td colSpan={12} className="text-center text-muted-foreground py-8">لا توجد شحنات مطابقة</td></tr>
             )}
             {filtered.map(s => {
               const po = pos.find(p => p.id === s.po_id);
@@ -125,11 +146,18 @@ export default function Shipments() {
                     <td className="text-xs">{fmtDate(s.eta)}</td>
                     <td><Badge className={CUSTOMS_TONE[s.customs_status]}>{CUSTOMS_LABEL[s.customs_status]}</Badge></td>
                     <td><Badge className={SHIPMENT_TONE[s.status]}>{SHIPMENT_LABEL[s.status]}</Badge></td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      {NEXT_STATUS[s.status] ? (
+                        <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => advanceShipment(s.id, s.status)}>
+                          {NEXT_LABEL[s.status]} <ChevronLeft className="h-3 w-3 mr-1" />
+                        </Button>
+                      ) : <span className="text-[10px] text-muted-foreground">—</span>}
+                    </td>
                   </tr>
                   {isOpen && units.length > 0 && (
                     <tr className="bg-muted/20">
                       <td></td>
-                      <td colSpan={10} className="p-2">
+                      <td colSpan={11} className="p-2">
                         <div className="text-[11px] font-semibold mb-1.5">المركبات في هذه الشحنة ({units.length})</div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
                           {units.map(u => (

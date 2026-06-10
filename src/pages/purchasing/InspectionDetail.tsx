@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { ShieldCheck, X, CheckCircle2 } from "lucide-react";
+import { ShieldCheck, X, CheckCircle2, ChevronDown, ChevronLeft, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 import {
   getInspection, setInspectionLineResult, bulkPassInspection,
@@ -14,11 +14,13 @@ import {
   INS_LABEL, INS_TONE, INS_RESULT_LABEL, INS_RESULT_TONE, fmtDate,
   type InspectionResult,
 } from "@/services/erp/receivingDb";
+import { LineChecklistPanel } from "@/components/erp/LineChecklistPanel";
 
 export default function InspectionDetail() {
   const { id = "" } = useParams();
   const qc = useQueryClient();
   const [rejectReason, setRejectReason] = useState("");
+  const [openLine, setOpenLine] = useState<string | null>(null);
 
   const q = useQuery({ queryKey: ["inspection", id], queryFn: () => getInspection(id), enabled: !!id });
 
@@ -120,7 +122,8 @@ export default function InspectionDetail() {
                 <tr><td colSpan={5} className="text-center text-muted-foreground py-6 text-xs">لا توجد بنود</td></tr>
               )}
               {lines.map(l => (
-                <tr key={l.id}>
+                <Fragment key={l.id}>
+                <tr>
                   <td className="num text-xs">{l.line_no}</td>
                   <td className="font-mono text-[11px]" dir="ltr">{l.vin}</td>
                   <td>
@@ -147,8 +150,21 @@ export default function InspectionDetail() {
                         </Button>
                       </div>
                     )}
+                    <Button size="sm" variant="outline" className="h-7 px-2 mt-1 text-[10px]"
+                      onClick={() => setOpenLine(openLine === l.id ? null : l.id)}>
+                      <ClipboardList className="h-3 w-3 ml-1" /> فحص تفصيلي
+                      {openLine === l.id ? <ChevronDown className="h-3 w-3 mr-1" /> : <ChevronLeft className="h-3 w-3 mr-1" />}
+                    </Button>
                   </td>
                 </tr>
+                {openLine === l.id && (
+                  <tr>
+                    <td colSpan={5} className="p-0">
+                      <LineChecklistPanel inspectionLineId={l.id} readOnly={!canDecide} onFinalized={invalidate} />
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               ))}
             </tbody>
           </table>

@@ -262,8 +262,13 @@ export async function createInspectionFromGRN(grnId: string, notes?: string): Pr
     grn_line_id: l.id,
     line_no: i + 1,
     vin: l.vin,
+    brand: l.brand ?? null,
+    model: l.model ?? null,
+    year: l.year ?? null,
+    color: l.color ?? null,
+    engine_no: l.engine_no ?? null,
+    unit_cost: l.unit_cost ?? 0,
     result: "pending" as InspectionResult,
-    condition: l.condition,
   }));
   const { error: eL } = await supabase.from("inspection_lines").insert(payload);
   if (eL) throw eL;
@@ -305,6 +310,92 @@ export async function rejectInspection(inspectionId: string, reason?: string): P
     p_inspection_id: inspectionId, p_reason: reason ?? null,
   });
   if (error) throw error;
+}
+
+// ===== الفحص التفصيلي (PDI) — قائمة بنود الفحص لكل مركبة =====
+export interface ChecklistItem {
+  id: string; section: string; label: string;
+  sort_order: number; is_critical: boolean; input_type: string;
+}
+export interface LineCheck {
+  id: string; inspection_line_id: string; checklist_item_id: string;
+  result: InspectionResult; value_text: string | null; remarks: string | null;
+}
+
+export async function listChecklistItems(): Promise<ChecklistItem[]> {
+  const { data, error } = await supabase
+    .from("inspection_checklist_items").select("*").eq("active", true).order("sort_order");
+  if (error) throw error;
+  return (data ?? []) as ChecklistItem[];
+}
+
+// جلب نتائج فحص مركبة — تُنشأ من القالب أول مرة (بحالة pending)
+export async function getLineChecks(inspectionLineId: string): Promise<LineCheck[]> {
+  const { data: existing, error: e1 } = await supabase
+    .from("inspection_line_checks").select("*").eq("inspection_line_id", inspectionLineId);
+  if (e1) throw e1;
+  if (existing && existing.length > 0) return existing as LineCheck[];
+
+  // أول مرة: أنشئ صفوفاً من القالب
+  const items = await listChecklistItems();
+  if (items.length === 0) return [];
+  const payload = items.map(it => ({
+    inspection_line_id: inspectionLineId,
+    checklist_item_id: it.id,
+    result: "pending" as InspectionResult,
+  }));
+  const { data: created, error: e2 } = await supabase
+    .from("inspection_line_checks").insert(payload).select("*");
+  if (e2) throw e2;
+  return (created ?? []) as LineCheck[];
+}
+
+export async function setLineCheckResult(
+  checkId: string, result: InspectionResult, remarks?: string, value?: string,
+): Promise<void> {
+  const { error } = await supabase.from("inspection_line_checks").update({
+    result, remarks: remarks ?? null, value_text: value ?? null, checked_at: new Date().toISOString(),
+  }).eq("id", checkId);
+  if (error) throw error;
+}
+
+// هل اكتمل فحص كل البنود الحرجة لمركبة؟ (لا pending، ولا بند حرج فاشل)
+export async function lineChecksStatus(inspectionLineId: string): Promise<{ complete: boolean; criticalFailed: boolean; pending: number }> {
+  const { data, error } = await supabase
+    .from("inspection_line_checks")
+    .select("result, checklist_item_id, inspection_checklist_items(is_critical)")
+    .eq("inspection_line_id", inspectionLineId);
+  if (error) throw error;
+  const rows = (data ?? []) as any[];
+  const pending = rows.filter(r => r.result === "pending").length;
+  const criticalFailed = rows.some(r => r.result === "rejected" && r.inspection_checklist_items?.is_critical);
+  return { complete: pending === 0, criticalFailed, pending };
+}
+
+// إنهاء فحص مركبة: يحسب النتيجة من بنود الفحص التفصيلي ويطبّقها على inspection_lines
+// القاعدة: أي بند حرج "مرفوض" => المركبة مرفوضة. غير ذلك (وكل البنود مفحوصة) => ناجحة.
+export async function finalizeLineInspection(inspectionLineId: string): Promise<{ result: InspectionResult; reason?: string }> {
+  const { data, error } = await supabase
+    .from("inspection_line_checks")
+    .select("result, inspection_checklist_items(label, is_critical)")
+    .eq("inspection_line_id", inspectionLineId);
+  if (error) throw error;
+  const rows = (data ?? []) as any[];
+  if (rows.length === 0) throw new Error("لا توجد بنود فحص — افتح الفحص التفصيلي أولاً");
+
+  const pending = rows.filter(r => r.result === "pending");
+  if (pending.length > 0) throw new Error(`يجب إكمال فحص كل البنود (${pending.length} بند متبقٍّ)`);
+
+  const criticalFailed = rows.filter(r => r.result === "rejected" && r.inspection_checklist_items?.is_critical);
+  const result: InspectionResult = criticalFailed.length > 0 ? "rejected" : "passed";
+  const reason = criticalFailed.length > 0
+    ? "فشل بنود حرجة: " + criticalFailed.map(r => r.inspection_checklist_items?.label).join("، ")
+    : undefined;
+
+  const { error: e2 } = await supabase
+    .from("inspection_lines").update({ result }).eq("id", inspectionLineId);
+  if (e2) throw e2;
+  return { result, reason };
 }
 
 export const fmtDate = (s?: string | null) =>
