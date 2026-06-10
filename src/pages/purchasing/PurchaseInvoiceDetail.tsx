@@ -1,18 +1,23 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, FileText, Car } from "lucide-react";
+import { CheckCircle2, XCircle, FileText, Car, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import {
   getInvoice, confirmInvoice, cancelInvoice,
   PINV_STATUS_LABEL, PINV_STATUS_TONE, fmtSAR, fmtDate,
 } from "@/services/erp/purchaseInvoicesDb";
+import { listPaymentsByInvoice, PAYMENT_METHOD_LABEL } from "@/services/erp/purchasePaymentsDb";
+import { PaymentCreateDialog } from "@/components/erp/PaymentCreateDialog";
 
 export default function PurchaseInvoiceDetail() {
   const { id = "" } = useParams();
   const qc = useQueryClient();
+  const [payOpen, setPayOpen] = useState(false);
+  const paymentsQ = useQuery({ queryKey: ["payments", id], queryFn: () => listPaymentsByInvoice(id), enabled: !!id });
 
   const q = useQuery({ queryKey: ["purchase-invoice", id], queryFn: () => getInvoice(id), enabled: !!id });
 
@@ -43,6 +48,8 @@ export default function PurchaseInvoiceDetail() {
   const { header: inv, lines } = q.data;
   const isDraft = inv.status === "draft";
   const remaining = Number(inv.total) - Number(inv.paid_amount);
+  const canPay = (inv.status === "confirmed" || inv.status === "partially_paid") && remaining > 0.01;
+  const payments = paymentsQ.data ?? [];
 
   return (
     <div className="space-y-3">
@@ -66,9 +73,15 @@ export default function PurchaseInvoiceDetail() {
                 </Button>
               </>
             )}
+            {canPay && (
+              <Button size="sm" onClick={() => setPayOpen(true)}>
+                <Wallet className="h-4 w-4 ml-1" /> تسجيل دفعة
+              </Button>
+            )}
           </div>
         }
       />
+      <PaymentCreateDialog open={payOpen} onOpenChange={setPayOpen} invoiceId={id} remaining={remaining} />
 
       {/* بطاقة الحالة + معلومات */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -133,6 +146,31 @@ export default function PurchaseInvoiceDetail() {
           )}
         </div>
       </div>
+
+      {/* سجل الدفعات */}
+      {payments.length > 0 && (
+        <div className="space-y-1.5">
+          <div className="text-xs font-bold text-muted-foreground">سجل الدفعات ({payments.length})</div>
+          <div className="border border-border rounded-lg overflow-x-auto">
+            <table className="erp-table">
+              <thead>
+                <tr><th>رقم الدفعة</th><th>التاريخ</th><th>الطريقة</th><th>المرجع</th><th>المبلغ</th></tr>
+              </thead>
+              <tbody>
+                {payments.map(p => (
+                  <tr key={p.id}>
+                    <td className="font-mono text-[11px]">{p.code}</td>
+                    <td className="text-xs">{fmtDate(p.payment_date)}</td>
+                    <td className="text-xs">{PAYMENT_METHOD_LABEL[p.payment_method as keyof typeof PAYMENT_METHOD_LABEL] ?? p.payment_method}</td>
+                    <td className="font-mono text-[10px]" dir="ltr">{p.reference ?? "—"}</td>
+                    <td className="num text-xs font-semibold text-success">{fmtSAR(p.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {inv.notes && (
         <div className="bg-muted/30 border border-border rounded-md p-3 text-xs">
