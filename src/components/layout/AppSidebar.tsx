@@ -65,7 +65,6 @@ const groups: { title: string; items: NavItem[] }[] = [
       { label: "طلبات الشراء", to: "/purchasing/requests", icon: ClipboardList, deptCode: "vehicles" },
       { label: "أوامر الشراء", to: "/purchasing/orders", icon: FileText, deptCode: "vehicles" },
       { label: "تخصيصات المركبات", to: "/purchasing/allocations", icon: Car, deptCode: "vehicles" },
-      { label: "تأكيدات التخصيص", to: "/purchasing/allocation-confirmations", icon: ShieldCheck, deptCode: "vehicles" },
       { label: "فواتير الشراء", to: "/purchasing/invoices", icon: Receipt, deptCode: "vehicles" },
       { label: "ائتمان الموردين", to: "/purchasing/credit", icon: ShieldCheck, deptCode: "vehicles" },
       { label: "إدارة حوافز الموردين", to: "/incentives", icon: Trophy, deptCode: "vehicles" },
@@ -312,7 +311,6 @@ export function AppSidebar() {
     </aside>
   );
 }
-
 
 
 

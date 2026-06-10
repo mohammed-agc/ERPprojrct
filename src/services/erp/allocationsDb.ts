@@ -128,6 +128,24 @@ export async function getAllocation(
   return { header: header as AllocationRow, lines: (lines ?? []) as AllocationLineRow[] };
 }
 
+// عدد الوحدات المخصّصة سابقاً لكل بند أمر شراء (po_line_id) — لعرض المتبقّي عند التخصيص
+export async function getAllocatedCountByPoLine(poId: string): Promise<Record<string, number>> {
+  // التخصيصات غير الملغاة لهذا الأمر
+  const { data: allocs, error: e1 } = await supabase
+    .from("allocations").select("id").eq("po_id", poId).neq("status", "cancelled");
+  if (e1) throw e1;
+  const ids = (allocs ?? []).map((a: any) => a.id);
+  if (ids.length === 0) return {};
+  const { data: lines, error: e2 } = await supabase
+    .from("allocation_lines").select("po_line_id").in("allocation_id", ids);
+  if (e2) throw e2;
+  const map: Record<string, number> = {};
+  for (const l of (lines ?? []) as any[]) {
+    if (l.po_line_id) map[l.po_line_id] = (map[l.po_line_id] ?? 0) + 1;
+  }
+  return map;
+}
+
 export async function createAllocation(input: {
   po_id: string;
   supplier_id: string;
@@ -146,6 +164,31 @@ export async function createAllocation(input: {
     if (!l.engine_no.trim()) throw new Error(`رقم المحرك مطلوب (VIN ${v})`);
     if (seen.has(v)) throw new Error(`VIN مكرر: ${v}`);
     seen.add(v);
+  }
+
+  // ضبط الكميات: مجموع المخصّص (سابقاً + الجديد) يجب ألا يتجاوز المطلوب في أمر الشراء
+  {
+    const { data: poLines, error: ePo } = await supabase
+      .from("purchase_order_lines").select("qty").eq("po_id", input.po_id);
+    if (ePo) throw ePo;
+    const totalOrdered = (poLines ?? []).reduce((s, r: any) => s + Number(r.qty || 0), 0);
+
+    // المخصّص سابقاً: بنود التخصيص في تخصيصات غير ملغاة لنفس أمر الشراء
+    const { data: prevAllocs, error: eAl } = await supabase
+      .from("allocations").select("id").eq("po_id", input.po_id).neq("status", "cancelled");
+    if (eAl) throw eAl;
+    const allocIds = (prevAllocs ?? []).map((a: any) => a.id);
+    let alreadyAllocated = 0;
+    if (allocIds.length > 0) {
+      const { count, error: eCnt } = await supabase
+        .from("allocation_lines").select("id", { count: "exact", head: true }).in("allocation_id", allocIds);
+      if (eCnt) throw eCnt;
+      alreadyAllocated = count ?? 0;
+    }
+
+    const remaining = totalOrdered - alreadyAllocated;
+    if (remaining <= 0) throw new Error(`أمر الشراء مخصّص بالكامل (${alreadyAllocated}/${totalOrdered}) — لا يمكن إضافة تخصيص جديد`);
+    if (input.lines.length > remaining) throw new Error(`الكمية تتجاوز المتبقّي: المطلوب ${totalOrdered}، المخصّص ${alreadyAllocated}، المتبقّي ${remaining}، وأنت تحاول تخصيص ${input.lines.length}`);
   }
 
   const { data: auth } = await supabase.auth.getUser();
@@ -298,10 +341,6 @@ export async function createConfirmation(allocationId: string, notes?: string): 
     })
     .select("*").single();
   if (error) throw error;
-
-  // ★ نقطة ميلاد المركبات: إنشاؤها في المخزون من بنود التخصيص (حالة on_order)
-  await createInventoryFromAllocation(allocationId);
-
   return toConfirmationRow(data);
 }
 

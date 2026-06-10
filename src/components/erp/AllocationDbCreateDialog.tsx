@@ -11,7 +11,7 @@ import {
   listPurchaseOrders, getPurchaseOrder, listActiveSuppliers, fmtSAR, fmtDate,
   type PORow, type POLineRow,
 } from "@/services/erp/purchasingDb";
-import { createAllocation, type AllocationLineInput } from "@/services/erp/allocationsDb";
+import { createAllocation, getAllocatedCountByPoLine, type AllocationLineInput } from "@/services/erp/allocationsDb";
 
 interface Props {
   open: boolean;
@@ -35,10 +35,12 @@ type UnitRow = {
   engine_no: string;
 };
 
-function expandLines(lines: POLineRow[]): UnitRow[] {
+function expandLines(lines: POLineRow[], allocated: Record<string, number> = {}): UnitRow[] {
   const rows: UnitRow[] = [];
   for (const li of lines) {
-    const total = Math.max(1, Math.floor(Number(li.quantity) || 1));
+    const ordered = Math.max(1, Math.floor(Number(li.quantity) || 1));
+    const already = allocated[li.id] ?? 0;
+    const total = Math.max(0, ordered - already);  // المتبقّي فقط
     for (let i = 0; i < total; i++) {
       rows.push({
         key: `${li.id}_${i}`,
@@ -77,6 +79,12 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
     enabled: open && !!poId,
   });
 
+  const { data: allocatedMap = {} } = useQuery({
+    queryKey: ["po-allocated", poId],
+    queryFn: () => getAllocatedCountByPoLine(poId),
+    enabled: open && !!poId,
+  });
+
   const po: PORow | undefined = poData?.header;
   const supplier = useMemo(() => suppliers.find(s => s.id === po?.supplier_id), [suppliers, po]);
 
@@ -86,9 +94,9 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
   }, [open, defaultPoId, eligible]);
 
   useEffect(() => {
-    if (poData?.lines) setRows(expandLines(poData.lines));
+    if (poData?.lines) setRows(expandLines(poData.lines, allocatedMap));
     else setRows([]);
-  }, [poData]);
+  }, [poData, allocatedMap]);
 
   const update = (key: string, patch: Partial<UnitRow>) =>
     setRows(prev => prev.map(r => (r.key === key ? { ...r, ...patch } : r)));
@@ -100,7 +108,9 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
     if (!rows.length) return toast.error("لا توجد مركبات للتخصيص");
     setSaving(true);
     try {
-      const lines: AllocationLineInput[] = rows.map(r => ({
+      const filled = rows.filter(r => r.vin.trim() && r.engine_no.trim());
+      if (filled.length === 0) { setSaving(false); return toast.error("أدخل بيانات مركبة واحدة على الأقل"); }
+      const lines: AllocationLineInput[] = filled.map(r => ({
         po_line_id: r.po_line_id,
         brand: r.brand,
         manufacturer: r.brand,
@@ -250,8 +260,8 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>إلغاء</Button>
           <Button variant="secondary" onClick={() => submit(false)} disabled={saving || rows.length === 0}>حفظ كمسودة</Button>
-          <Button onClick={() => submit(true)} disabled={saving || rows.length === 0 || filledCount < rows.length}>
-            تأكيد التخصيص ({filledCount}/{rows.length})
+          <Button onClick={() => submit(true)} disabled={saving || rows.length === 0 || filledCount === 0}>
+            {filledCount < rows.length ? `تخصيص ${filledCount} مركبة (جزئي)` : `تأكيد التخصيص (${filledCount}/${rows.length})`}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -80,8 +80,6 @@ const SupplierIncentives = lazy(() => import("./pages/purchasing/SupplierIncenti
 const PurchaseInvoiceDetail = lazy(() => import("./pages/purchasing/PurchaseInvoiceDetail"));
 const Allocations = lazy(() => import("./pages/purchasing/Allocations"));
 const AllocationDetail = lazy(() => import("./pages/purchasing/AllocationDetail"));
-const AllocationConfirmations = lazy(() => import("./pages/purchasing/AllocationConfirmations"));
-const AllocationConfirmationDetail = lazy(() => import("./pages/purchasing/AllocationConfirmationDetail"));
 const Shipments = lazy(() => import("./pages/purchasing/Shipments"));
 const Receiving = lazy(() => import("./pages/purchasing/Receiving"));
 const ReceivingWorkbench = lazy(() => import("./pages/purchasing/ReceivingWorkbench"));
@@ -208,8 +206,6 @@ const App = () => (
               <Route path="/purchasing/invoices/:id" element={<PurchaseInvoiceDetail />} />
               <Route path="/purchasing/allocations" element={<Allocations />} />
               <Route path="/purchasing/allocations/:id" element={<AllocationDetail />} />
-              <Route path="/purchasing/allocation-confirmations" element={<AllocationConfirmations />} />
-              <Route path="/purchasing/allocation-confirmations/:id" element={<AllocationConfirmationDetail />} />
 
               <Route path="/purchasing/credit" element={<SupplierCredit />} />
               <Route path="/purchasing/incentives" element={<SupplierIncentives />} />

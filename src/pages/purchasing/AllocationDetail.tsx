@@ -12,7 +12,6 @@ import {
 } from "@/services/erp/allocationsDb";
 import { getPurchaseOrder, listActiveSuppliers } from "@/services/erp/purchasingDb";
 import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
-import { AllocationDbConfirmationDialog } from "@/components/erp/AllocationDbConfirmationDialog";
 
 export default function AllocationDetail() {
   const { id = "" } = useParams();
@@ -81,7 +80,6 @@ export default function AllocationDetail() {
           ) : undefined
         }
       />
-      <AllocationDbConfirmationDialog open={confOpen} onOpenChange={setConfOpen} allocationId={alloc.id} onCreated={refresh} />
 
       {supplier && (
         <div className="border border-primary/30 bg-primary/5 rounded-md p-3 grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
@@ -173,7 +171,6 @@ export default function AllocationDetail() {
           previous={po ? { kind: "po", id: po.id, code: po.po_no } : undefined}
           nextActions={[
             ...(alloc.status === "draft" ? [{ label: "تأكيد التخصيص", onClick: onConfirm, role: "purchasing_officer" as const }] : []),
-            ...(alloc.status === "confirmed" && !cc ? [{ label: "إصدار وثيقة التأكيد", onClick: () => setConfOpen(true), role: "purchasing_officer" as const }] : []),
           ]}
         />
       </div>
