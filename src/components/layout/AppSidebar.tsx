@@ -118,6 +118,7 @@ const groups: { title: string; items: NavItem[] }[] = [
       { label: "السلف والقروض", to: "/hr/loans", icon: DollarSign, deptCode: "hr" },
       { label: "قيود اليومية", to: "/journals", icon: Calculator, deptCode: "accounting" },
       { label: "دفتر الأستاذ", to: "/general-ledger", icon: BookText, deptCode: "accounting" },
+      { label: "دفتر الأستاذ المساعد", to: "/accounting/partner-ledger", icon: BookText, deptCode: "accounting" },
       { label: "ميزان المراجعة", to: "/trial-balance", icon: Scale, deptCode: "accounting" },
       { label: "قائمة الدخل", to: "/income-statement", icon: TrendingUp, deptCode: "accounting" },
       { label: "الميزانية العمومية", to: "/balance-sheet", icon: Scale, deptCode: "accounting" },

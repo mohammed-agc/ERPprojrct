@@ -113,6 +113,7 @@ const ColorsMaster = lazy(() => import("./pages/master/Colors"));
 const PurchaseInvoicesRegistry = lazy(() => import("./pages/accounting/PurchaseInvoicesRegistry"));
 const PurchaseInvoiceAccountingDetail = lazy(() => import("./pages/accounting/PurchaseInvoiceAccountingDetail"));
 const SalesInvoicesRegistry = lazy(() => import("./pages/accounting/SalesInvoicesRegistry"));
+const PartnerLedger = lazy(() => import("./pages/accounting/PartnerLedger"));
 
 // Admin module
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
@@ -247,6 +248,7 @@ const App = () => (
               <Route path="/sales/credit-notes/:id" element={<CreditNoteDetail />} />
 
               <Route path="/accounts" element={<Accounts />} />
+              <Route path="/accounting/partner-ledger" element={<PartnerLedger />} />
               <Route path="/accounting/purchase-invoices" element={<PurchaseInvoicesRegistry />} />
               <Route path="/accounting/purchase-invoices/:id" element={<PurchaseInvoiceAccountingDetail />} />
               <Route path="/accounting/sales-invoices" element={<SalesInvoicesRegistry />} />
