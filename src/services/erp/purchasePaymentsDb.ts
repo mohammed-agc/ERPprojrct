@@ -2,11 +2,12 @@
 // كل دفعة تُنشئ قيد يومية تلقائياً (تريجر trg_supplier_payment_je): مدين ذمم / دائن خزينة.
 import { supabase } from "@/integrations/supabase/client";
 
-export type PaymentMethod = "cash" | "bank_transfer";
+export type PaymentMethod = "cash" | "bank_transfer" | "incentive";
 
 export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   cash: "نقد",
   bank_transfer: "تحويل بنكي",
+  incentive: "خصم من الحوافز (إشعار دائن)",
 };
 
 export interface PurchasePaymentRow {
@@ -60,6 +61,16 @@ export async function createPayment(input: {
     throw new Error(`المبلغ يتجاوز المتبقّي (${remaining.toFixed(2)} ر.س)`);
   }
 
+  // الدفع بخصم الحوافز: تحقّق من توفّر رصيد كافٍ للمورد
+  if (input.payment_method === "incentive") {
+    const supId = inv.supplier_id;
+    if (!supId) throw new Error("لا يمكن خصم الحوافز — المورد غير محدّد");
+    const bal = await incentiveBalance(supId);
+    if (amount > bal + 0.01) {
+      throw new Error(`المبلغ يتجاوز رصيد الحوافز المتاح (${bal.toFixed(2)} ر.س)`);
+    }
+  }
+
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth.user?.id ?? null;
 
@@ -90,7 +101,31 @@ export async function createPayment(input: {
     .eq("id", input.invoice_id);
   if (eUpd) throw eUpd;
 
+  // الدفع بالحوافز: تسجيل حركة "استخدام" في دفتر الحوافز (تُنقص الرصيد)
+  if (input.payment_method === "incentive" && inv.supplier_id) {
+    const { error: eLedger } = await supabase.from("incentive_ledger").insert({
+      supplier_id: inv.supplier_id,
+      movement: "utilized",
+      reference: payment.code,
+      description: `خصم حافز لسداد فاتورة ${inv.code ?? ""}`,
+      debit: 0,
+      credit: amount,           // دائن: يُنقص الرصيد المستحق
+      created_by: uid,
+    });
+    if (eLedger) throw eLedger;
+  }
+
   return payment as PurchasePaymentRow;
+}
+
+// رصيد الحوافز المتاح للمورد (المستحق − المستخدم/المستلم)
+export async function incentiveBalance(supplierId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from("incentive_ledger").select("debit, credit").eq("supplier_id", supplierId);
+  if (error) return 0;
+  const debit = (data ?? []).reduce((s, r: any) => s + Number(r.debit), 0);
+  const credit = (data ?? []).reduce((s, r: any) => s + Number(r.credit), 0);
+  return Math.max(0, debit - credit);
 }
 
 export const fmtSAR = (n: number) =>

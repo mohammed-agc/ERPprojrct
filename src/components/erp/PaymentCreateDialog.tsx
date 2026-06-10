@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
-  createPayment, PAYMENT_METHOD_LABEL, fmtSAR,
+  createPayment, incentiveBalance, PAYMENT_METHOD_LABEL, fmtSAR,
   type PaymentMethod,
 } from "@/services/erp/purchasePaymentsDb";
 
@@ -16,15 +16,26 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   invoiceId: string;
   remaining: number;      // المتبقّي على الفاتورة
+  supplierId?: string | null;  // لجلب رصيد الحوافز
 }
 
-export function PaymentCreateDialog({ open, onOpenChange, invoiceId, remaining }: Props) {
+export function PaymentCreateDialog({ open, onOpenChange, invoiceId, remaining, supplierId }: Props) {
   const qc = useQueryClient();
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<PaymentMethod>("bank_transfer");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
+
+  // رصيد الحوافز المتاح للمورد
+  const { data: incBalance = 0 } = useQuery({
+    queryKey: ["incentive-balance", supplierId],
+    queryFn: () => incentiveBalance(supplierId!),
+    enabled: open && !!supplierId,
+  });
+
+  // السقف حسب الطريقة: الحوافز محدودة بالرصيد، غيرها بالمتبقّي
+  const cap = method === "incentive" ? Math.min(remaining, incBalance) : remaining;
 
   useEffect(() => {
     if (open) {
@@ -33,6 +44,14 @@ export function PaymentCreateDialog({ open, onOpenChange, invoiceId, remaining }
       setDate(new Date().toISOString().slice(0, 10));
     }
   }, [open, remaining]);
+
+  // عند تغيير الطريقة للحوافز، اضبط المبلغ على السقف المتاح
+  useEffect(() => {
+    if (method === "incentive") {
+      const c = Math.min(remaining, incBalance);
+      setAmount(c > 0 ? String(Math.round(c * 100) / 100) : "0");
+    }
+  }, [method, incBalance, remaining]);
 
   const pay = useMutation({
     mutationFn: () => createPayment({
@@ -54,7 +73,9 @@ export function PaymentCreateDialog({ open, onOpenChange, invoiceId, remaining }
   });
 
   const amountNum = Number(amount) || 0;
-  const invalid = amountNum <= 0 || amountNum > remaining + 0.01;
+  const overRemaining = amountNum > remaining + 0.01;
+  const overIncentive = method === "incentive" && amountNum > incBalance + 0.01;
+  const invalid = amountNum <= 0 || overRemaining || overIncentive;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -67,6 +88,13 @@ export function PaymentCreateDialog({ open, onOpenChange, invoiceId, remaining }
             <span className="num font-bold text-warning">{fmtSAR(remaining)}</span>
           </div>
 
+          {method === "incentive" && (
+            <div className="bg-success/5 border border-success/30 rounded-md p-2.5 text-xs flex items-center justify-between">
+              <span className="text-muted-foreground">رصيد الحوافز المتاح</span>
+              <span className="num font-bold text-success">{fmtSAR(incBalance)}</span>
+            </div>
+          )}
+
           <div>
             <Label className="text-xs">المبلغ</Label>
             <div className="flex gap-2">
@@ -74,12 +102,15 @@ export function PaymentCreateDialog({ open, onOpenChange, invoiceId, remaining }
                 onChange={e => setAmount(e.target.value)}
                 className={`h-9 flex-1 ${invalid && amount ? "border-destructive" : ""}`} />
               <Button type="button" variant="outline" size="sm" className="h-9 text-[11px] whitespace-nowrap"
-                onClick={() => setAmount(String(Math.round(remaining * 100) / 100))}>
-                المتبقّي كاملاً
+                onClick={() => setAmount(String(Math.round(cap * 100) / 100))}>
+                {method === "incentive" ? "الحد الأقصى" : "المتبقّي كاملاً"}
               </Button>
             </div>
-            {amountNum > remaining + 0.01 && (
+            {overRemaining && (
               <div className="text-[10px] text-destructive mt-0.5">المبلغ يتجاوز المتبقّي</div>
+            )}
+            {overIncentive && (
+              <div className="text-[10px] text-destructive mt-0.5">المبلغ يتجاوز رصيد الحوافز المتاح</div>
             )}
           </div>
 
