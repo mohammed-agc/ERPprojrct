@@ -29,9 +29,20 @@ export function GRNDbCreateDialog({ open, onOpenChange, defaultShipmentId, onCre
   const [shipmentId, setShipmentId] = useState<string>("");
   const [lines, setLines] = useState<ALine[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [warehouse, setWarehouse] = useState("المستودع الرئيسي");
+  const [warehouse, setWarehouse] = useState("");
+  const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([]);
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // جلب المستودعات
+  useEffect(() => {
+    if (!open) return;
+    supabase.from("warehouses").select("id, name").order("name").then(({ data }) => {
+      const ws = (data ?? []) as { id: string; name: string }[];
+      setWarehouses(ws);
+      setWarehouse(prev => prev || ws[0]?.name || "");
+    });
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -108,7 +119,12 @@ export function GRNDbCreateDialog({ open, onOpenChange, defaultShipmentId, onCre
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label className="text-xs">المستودع</Label>
-              <Input className="h-9" value={warehouse} onChange={e => setWarehouse(e.target.value)} />
+              <Select value={warehouse} onValueChange={setWarehouse}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="اختر المستودع" /></SelectTrigger>
+                <SelectContent>
+                  {warehouses.map(w => <SelectItem key={w.id} value={w.name}>{w.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label className="text-xs">ملاحظات</Label>
