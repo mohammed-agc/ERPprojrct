@@ -129,6 +129,26 @@ export async function getAllocation(
 }
 
 // عدد الوحدات المخصّصة سابقاً لكل بند أمر شراء (po_line_id) — لعرض المتبقّي عند التخصيص
+// فحص توفّر VIN: هل مستخدم في المخزون الدائم أو تخصيص نشط؟ يُرجع سبب التعارض أو null
+export async function checkVinAvailable(vin: string, excludeAllocationId?: string): Promise<string | null> {
+  const v = (vin || "").trim();
+  if (!v) return null;
+  // 1) المخزون الدائم
+  const { data: inv } = await supabase
+    .from("inventory_items").select("id").eq("vin", v).maybeSingle();
+  if (inv) return "موجود في المخزون";
+  // 2) تخصيص نشط (غير ملغى)
+  let q = supabase
+    .from("allocation_lines")
+    .select("id, allocation_id, allocations!inner(status)")
+    .eq("vin", v)
+    .neq("allocations.status", "cancelled");
+  const { data: al } = await q;
+  const conflict = (al ?? []).filter((r: any) => r.allocation_id !== excludeAllocationId);
+  if (conflict.length > 0) return "محجوز في تخصيص آخر";
+  return null;
+}
+
 export async function getAllocatedCountByPoLine(poId: string): Promise<Record<string, number>> {
   // التخصيصات غير الملغاة لهذا الأمر
   const { data: allocs, error: e1 } = await supabase

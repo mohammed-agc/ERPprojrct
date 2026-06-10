@@ -11,7 +11,7 @@ import {
   listPurchaseOrders, getPurchaseOrder, listActiveSuppliers, fmtSAR, fmtDate,
   type PORow, type POLineRow,
 } from "@/services/erp/purchasingDb";
-import { createAllocation, getAllocatedCountByPoLine, type AllocationLineInput } from "@/services/erp/allocationsDb";
+import { createAllocation, getAllocatedCountByPoLine, checkVinAvailable, type AllocationLineInput } from "@/services/erp/allocationsDb";
 
 interface Props {
   open: boolean;
@@ -100,6 +100,18 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
 
   const update = (key: string, patch: Partial<UnitRow>) =>
     setRows(prev => prev.map(r => (r.key === key ? { ...r, ...patch } : r)));
+
+  const [vinErrors, setVinErrors] = useState<Record<string, string>>({});
+
+  const verifyVin = async (key: string, vin: string) => {
+    const v = (vin || "").trim();
+    if (!v) { setVinErrors(p => { const n = { ...p }; delete n[key]; return n; }); return; }
+    // تكرار داخل النافذة نفسها
+    const dupLocal = rows.some(r => r.key !== key && r.vin.trim().toUpperCase() === v.toUpperCase());
+    if (dupLocal) { setVinErrors(p => ({ ...p, [key]: "مكرّر في هذه الفاتورة" })); return; }
+    const reason = await checkVinAvailable(v);
+    setVinErrors(p => { const n = { ...p }; if (reason) n[key] = reason; else delete n[key]; return n; });
+  };
 
   const filledCount = rows.filter(r => r.vin.trim() && r.engine_no.trim()).length;
 
@@ -229,12 +241,16 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
                           </Badge>
                         </div>
                         <Input
-                          className="h-8 text-[11px] font-mono uppercase"
+                          className={`h-8 text-[11px] font-mono uppercase ${vinErrors[u.key] ? "border-destructive focus-visible:ring-destructive" : ""}`}
                           placeholder="VIN (17 خانة)"
                           maxLength={17}
                           value={u.vin}
                           onChange={e => update(u.key, { vin: e.target.value.toUpperCase() })}
+                          onBlur={e => verifyVin(u.key, e.target.value)}
                         />
+                        {vinErrors[u.key] && (
+                          <div className="text-[10px] text-destructive px-1">{vinErrors[u.key]}</div>
+                        )}
                         <Input
                           className="h-8 text-[11px] font-mono uppercase"
                           placeholder="رقم المحرك"
@@ -260,7 +276,7 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>إلغاء</Button>
           <Button variant="secondary" onClick={() => submit(false)} disabled={saving || rows.length === 0}>حفظ كمسودة</Button>
-          <Button onClick={() => submit(true)} disabled={saving || rows.length === 0 || filledCount === 0}>
+          <Button onClick={() => submit(true)} disabled={saving || rows.length === 0 || filledCount === 0 || Object.keys(vinErrors).length > 0}>
             {filledCount < rows.length ? `تخصيص ${filledCount} مركبة (جزئي)` : `تأكيد التخصيص (${filledCount}/${rows.length})`}
           </Button>
         </DialogFooter>

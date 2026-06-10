@@ -13,10 +13,13 @@ import {
 import { getPurchaseOrder, listActiveSuppliers } from "@/services/erp/purchasingDb";
 import { DocGovernancePanel } from "@/components/erp/DocGovernancePanel";
 
+import { PurchaseInvoiceCreateDialog } from "@/components/erp/PurchaseInvoiceCreateDialog";
+
 export default function AllocationDetail() {
   const { id = "" } = useParams();
   const qc = useQueryClient();
   const [confOpen, setConfOpen] = useState(false);
+  const [invOpen, setInvOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["allocation", id],
@@ -80,6 +83,7 @@ export default function AllocationDetail() {
           ) : undefined
         }
       />
+      <PurchaseInvoiceCreateDialog open={invOpen} onOpenChange={setInvOpen} allocationId={alloc.id} />
 
       {supplier && (
         <div className="border border-primary/30 bg-primary/5 rounded-md p-3 grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
@@ -171,6 +175,7 @@ export default function AllocationDetail() {
           previous={po ? { kind: "po", id: po.id, code: po.po_no } : undefined}
           nextActions={[
             ...(alloc.status === "draft" ? [{ label: "تأكيد التخصيص", onClick: onConfirm, role: "purchasing_officer" as const }] : []),
+            ...(alloc.status === "confirmed" ? [{ label: "إنشاء فاتورة شراء", onClick: () => setInvOpen(true), role: "purchasing_officer" as const }] : []),
           ]}
         />
       </div>
