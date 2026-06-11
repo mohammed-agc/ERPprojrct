@@ -198,6 +198,24 @@ async function loadOpenExposure(customerIds: string[]) {
   return data ?? [];
 }
 
+// خريطة المقاصّات (SETTLEMENT/WRITE_OFF/ADJUSTMENT) لكل فاتورة — من Open Items
+async function loadSettlementMap(invIds: string[]): Promise<Map<string, number>> {
+  const map = new Map<string, number>();
+  if (!invIds.length) return map;
+  const { data } = await supabase
+    .from("open_item_allocations")
+    .select("target_document_id, allocated_amount")
+    .eq("target_document_type", "sales_invoice")
+    .eq("status", "active")
+    .in("allocation_type", ["SETTLEMENT", "WRITE_OFF", "ADJUSTMENT"])
+    .in("target_document_id", invIds);
+  for (const a of data ?? []) {
+    const k = (a as any).target_document_id;
+    map.set(k, (map.get(k) ?? 0) + Number((a as any).allocated_amount || 0));
+  }
+  return map;
+}
+
 /* ============================ Service ============================ */
 
 export const customerSettlementService = {
@@ -216,7 +234,8 @@ export const customerSettlementService = {
     const c = customers[0];
     if (!c) return null;
     const invs = await loadOpenExposure([customerId]);
-    return buildCreditRow(c, invs);
+    const settleMap = await loadSettlementMap(invs.map((i: any) => i.id));
+    return buildCreditRow(c, invs, settleMap);
   },
 
   async listCustomerCredit(): Promise<CustomerCreditRow[]> {
@@ -229,7 +248,8 @@ export const customerSettlementService = {
       arr.push(i);
       byCust.set(i.customer_id, arr);
     }
-    return customers.map(c => buildCreditRow(c, byCust.get(c.id) ?? []))
+    const settleMap = await loadSettlementMap(invs.map((i: any) => i.id));
+    return customers.map(c => buildCreditRow(c, byCust.get(c.id) ?? [], settleMap))
       .sort((a, b) => (b.utilized - a.utilized));
   },
 
@@ -290,6 +310,31 @@ export const customerSettlementService = {
         debit: 0,
         credit: Number(p.amount) || 0,
       });
+    }
+    // المقاصّات (SETTLEMENT) من Open Items — حركات دائنة لا تظهر في جدول payments
+    {
+      const invIds = (invs ?? []).map((i: any) => i.id);
+      if (invIds.length > 0) {
+        const { data: setAllocs } = await supabase
+          .from("open_item_allocations")
+          .select("allocation_number, allocation_date, allocated_amount, target_document_id, allocation_type")
+          .eq("target_document_type", "sales_invoice")
+          .eq("status", "active")
+          .in("allocation_type", ["SETTLEMENT", "WRITE_OFF", "ADJUSTMENT"])
+          .in("target_document_id", invIds);
+        for (const a of setAllocs ?? []) {
+          const ref = invMap.get((a as any).target_document_id)?.invoice_no;
+          events.push({
+            id: `set-${(a as any).allocation_number}`,
+            at: (a as any).allocation_date,
+            kind: "payment",
+            reference: (a as any).allocation_number,
+            description: ref ? `مقاصّة مقابل ${ref}` : "مقاصّة عميل/مورد",
+            debit: 0,
+            credit: Number((a as any).allocated_amount) || 0,
+          });
+        }
+      }
     }
     for (const c of (cns ?? [])) {
       if (c.status !== "posted") continue;
@@ -473,7 +518,7 @@ export const customerSettlementService = {
 
 /* ============================ Internal builder ============================ */
 
-function buildCreditRow(c: any, invs: any[]): CustomerCreditRow {
+function buildCreditRow(c: any, invs: any[], settlementByInv?: Map<string, number>): CustomerCreditRow {
   const policy = normalizePolicy(c.settlement_policy);
   const grace = Number(c.grace_days ?? 0);
   let utilized = 0, due_balance = 0, overdue_balance = 0, max_days_overdue = 0;
@@ -482,7 +527,7 @@ function buildCreditRow(c: any, invs: any[]): CustomerCreditRow {
     if (inv.status === "cancelled") continue;
     const outstanding = Math.max(
       0,
-      Number(inv.total) - Number(inv.paid_amount ?? 0) - Number(inv.credited_amount ?? 0),
+      Number(inv.total) - Number(inv.paid_amount ?? 0) - Number(inv.credited_amount ?? 0) - (settlementByInv?.get(inv.id) ?? 0),
     );
     if (outstanding < 0.001) continue;
     utilized += outstanding;

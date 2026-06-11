@@ -37,12 +37,13 @@ export async function listPartners(kind?: "customer" | "supplier"): Promise<Part
 
 /** دفتر الأستاذ المساعد لطرف */
 export async function getPartnerSubledger(
-  partnerId: string, from?: string, to?: string
+  partnerId: string, from?: string, to?: string, kind?: "customer" | "supplier"
 ): Promise<SubledgerRow[]> {
   const { data, error } = await supabase.rpc("partner_subledger" as any, {
     p_partner_id: partnerId,
     p_from: from || null,
     p_to: to || null,
+    p_kind: kind ?? null,
   });
   if (error) { console.error(error); return []; }
   return (data ?? []) as SubledgerRow[];
@@ -107,3 +108,67 @@ export async function createPartnerSettlement(
   if (error) throw error;
   return data as SettlementResult;
 }
+// ───────── استعلام تخصيصات فاتورة (Allocation Inquiry) ─────────
+export interface AllocationRow {
+  allocation_number: string;
+  allocation_type: string;
+  allocated_amount: number;
+  allocation_date: string;
+  status: string;
+  remarks: string | null;
+}
+
+export interface DocAllocationSummary {
+  total: number;
+  payment_allocated: number;
+  settlement_allocated: number;
+  credit_note_allocated: number;
+  other_allocated: number;
+  remaining: number;
+  allocations: AllocationRow[];
+}
+
+export async function getDocumentAllocations(
+  docType: "purchase_invoice" | "sales_invoice", docId: string, total: number
+): Promise<DocAllocationSummary> {
+  const { data, error } = await supabase
+    .from("open_item_allocations")
+    .select("allocation_number, allocation_type, allocated_amount, allocation_date, status, remarks")
+    .eq("target_document_type", docType)
+    .eq("target_document_id", docId)
+    .eq("status", "active")
+    .order("allocation_date", { ascending: true });
+  if (error) throw error;
+
+  const rows = (data ?? []) as AllocationRow[];
+  const sum = (t: string) =>
+    rows.filter(r => r.allocation_type === t).reduce((s, r) => s + Number(r.allocated_amount), 0);
+
+  const payment = sum("PAYMENT");
+  const settlement = sum("SETTLEMENT");
+  const creditNote = sum("CREDIT_NOTE");
+  const other = rows
+    .filter(r => !["PAYMENT", "SETTLEMENT", "CREDIT_NOTE"].includes(r.allocation_type))
+    .reduce((s, r) => s + Number(r.allocated_amount), 0);
+
+  const totalAllocated = payment + settlement + creditNote + other;
+
+  return {
+    total,
+    payment_allocated: payment,
+    settlement_allocated: settlement,
+    credit_note_allocated: creditNote,
+    other_allocated: other,
+    remaining: total - totalAllocated,
+    allocations: rows.map(r => ({ ...r, allocated_amount: Number(r.allocated_amount) })),
+  };
+}
+
+export const ALLOC_TYPE_LABEL: Record<string, string> = {
+  PAYMENT: "دفعة",
+  SETTLEMENT: "مقاصّة",
+  CREDIT_NOTE: "إشعار دائن",
+  DEBIT_NOTE: "إشعار مدين",
+  WRITE_OFF: "إعدام دين",
+  ADJUSTMENT: "تسوية",
+};

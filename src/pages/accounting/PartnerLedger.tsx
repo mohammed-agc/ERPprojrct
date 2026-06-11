@@ -28,8 +28,8 @@ export default function PartnerLedger() {
   );
 
   const { data: rows = [], isFetching } = useQuery({
-    queryKey: ["partner-subledger", partnerId, from, to],
-    queryFn: () => getPartnerSubledger(partnerId, from || undefined, to || undefined),
+    queryKey: ["partner-subledger", partnerId, from, to, kind],
+    queryFn: () => getPartnerSubledger(partnerId, from || undefined, to || undefined, kind === "all" ? undefined : kind),
     enabled: !!partnerId,
   });
 

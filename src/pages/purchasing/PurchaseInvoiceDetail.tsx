@@ -12,6 +12,7 @@ import {
 } from "@/services/erp/purchaseInvoicesDb";
 import { listPaymentsByInvoice, PAYMENT_METHOD_LABEL } from "@/services/erp/purchasePaymentsDb";
 import { PaymentCreateDialog } from "@/components/erp/PaymentCreateDialog";
+import { AllocationInquiry } from "@/components/erp/AllocationInquiry";
 
 export default function PurchaseInvoiceDetail() {
   const { id = "" } = useParams();
@@ -147,6 +148,9 @@ export default function PurchaseInvoiceDetail() {
           )}
         </div>
       </div>
+
+      {/* تفصيل التصفية والتخصيصات (Open Items) */}
+      {inv.id && <AllocationInquiry docType="purchase_invoice" docId={inv.id} total={Number(inv.total)} />}
 
       {/* سجل الدفعات */}
       {payments.length > 0 && (

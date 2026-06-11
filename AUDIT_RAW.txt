@@ -1,0 +1,259 @@
+﻿
+=== components\erp\AccountStatement.tsx (1) ===
+  98: if (i.status === "paid") {
+
+=== components\erp\CreditGateBanner.tsx (1) ===
+  101: <Stat label="المستخدم" value={fmtSAR(summary.utilized)} tone="warning" />
+
+=== components\erp\CreditNoteDialog.tsx (8) ===
+  86: credited_amount: number;
+  87: paid_amount: number;
+  101: const outstanding = Math.max(0, Number(invoice.total) - Number(invoice.credited_amount));
+  165: const overOutstanding = totals.total > outstanding + 0.01;
+  210: supabase.from("invoices").select("credited_amount, status").eq("id", invoice.id).maybeSingle(),
+  225: invoiceCreditedAfter: Number(invRow?.credited_amount ?? 0),
+  265: <div className="bg-muted/40 rounded p-2"><div className="text-muted-foreground">إشعارات سابقة</div><div className="num font-semibold">{fmt(Number(invoice.credited_amount))}</div></div>
+  483: <div>• سيرتفع رصيد عمود <code>credited_amount</code> من <span className="num">{fmt(Number(invoice.credited_amount))}</span> إلى <b className="num">{fmt(Number(invoice.credited_amount) + totals.total)}</b>.</div>
+
+=== components\erp\CustomerPolicyDialog.tsx (1) ===
+  89: <span>المستخدم: <b className="num">{fmtSAR(customer.utilized)} ر.س</b></span>
+
+=== components\erp\IncentivePrograms.tsx (1) ===
+  83: <Stat label="مستخدَم" value={fmtSAR(balance.utilized)} />
+
+=== components\erp\PaymentCreateDialog.tsx (1) ===
+  76: const overRemaining = amountNum > remaining + 0.01;
+
+=== components\erp\PaymentDialog.tsx (6) ===
+  48: paid_amount?: number;
+  97: const alreadyPaid = invoice?.paid_amount ?? 0;
+  98: const outstanding = Math.max(0, total - alreadyPaid);
+  115: const creditRemaining = supplierCredit?.credit_remaining ?? 0;
+  159: const remaining = Math.max(0, outstanding - numericAmount);
+  436: <div className={`h-9 rounded-md border bg-muted/40 px-3 flex items-center font-mono tabular-nums text-sm ${remaining === 0 && numericAmount > 0 ? "text-success" : ""}`} dir="ltr">
+
+=== components\erp\PrintableInvoiceDoc.tsx (1) ===
+  315: <div className="flex justify-between"><span className="text-muted-foreground">المتبقي</span><span className="font-mono font-semibold">{fmtSAR(Math.max(0, p.finalTotal - (p.paidAmount ?? 0)))}</span></div>
+
+=== components\erp\PurchaseOrderDialog.tsx (2) ===
+  81: const overCredit = supplier ? supplier.utilized + grand > supplier.credit_limit
+  191: مستخدم: <span className="num">{fmtSAR(supplier.utilized)}</span> ·
+
+=== components\erp\SupplierIntelligence.tsx (1) ===
+  77: const remaining = creditLimit != null ? creditLimit - (creditUsed ?? 0) : null;
+
+=== components\erp\SupplierPolicyDialog.tsx (1) ===
+  74: <span>المستخدم: <b className="num whitespace-nowrap">{fmtSAR(supplier.utilized)} ر.س</b></span>
+
+=== components\erp\SupplierStatementDialog.tsx (2) ===
+  68: outstanding: isInvoice ? Math.max(0, meta!.total - meta!.paid) : 0,
+  161: const outstanding = isInvoice ? Math.max(0, meta!.total - meta!.paid) : 0;
+
+=== integrations\supabase\types.ts (13) ===
+  905: credited_amount: number
+  913: paid_amount: number
+  930: credited_amount?: number
+  938: paid_amount?: number
+  955: credited_amount?: number
+  963: paid_amount?: number
+  1286: paid_amount: number
+  1306: paid_amount?: number
+  1326: paid_amount?: number
+  2252: paid_amount: number | null
+  2263: paid_amount?: number | null
+  2274: paid_amount?: number | null
+  2299: paid_amount: number | null
+
+=== pages\accounting\PurchaseInvoiceAccountingDetail.tsx (1) ===
+  78: <div><div className="text-[10px] text-muted-foreground">المدفوع</div><div className="text-success">{fmtSAR(inv.paid_amount)}</div></div>
+
+=== pages\accounting\PurchaseInvoicesRegistry.tsx (3) ===
+  68: paid: filtered.reduce((s, r) => s + r.paid_amount, 0),
+  75: subtitle={`${totals.count} فاتورة · إجمالي ${fmtSAR(totals.total)} · مدفوع ${fmtSAR(totals.paid)} · متبقي ${fmtSAR(totals.total - totals.paid)}`}
+  150: <td className="num text-xs text-left">{fmtSAR(totals.total - totals.paid)}</td>
+
+=== pages\accounting\SalesInvoicesRegistry.tsx (10) ===
+  81: total: Number(r.total), paid_amount: Number(r.paid_amount ?? 0),
+  114: const totalAfter = Number(row.paid_amount ?? 0) + p.amount;
+  152: const paid = filtered.reduce((s, r) => s + Number(r.paid_amount ?? 0), 0);
+  153: const credited = filtered.reduce((s, r) => s + Number(r.credited_amount ?? 0), 0);
+  154: return { count: filtered.length, total: t, paid, credited, outstanding: Math.max(0, t - paid - credited) };
+  201: const paid = Number(r.paid_amount ?? 0);
+  202: const credited = Number(r.credited_amount ?? 0);
+  203: const remaining = Math.max(0, total - paid - credited);
+  205: const payPerm = canPerform("receive_payment", (payStatus === "paid" ? "paid" : "invoiced") as any, role);
+  239: onClick={() => openPayment(r)} disabled={payStatus === "paid" || r.status === "cancelled"}>
+
+=== pages\purchasing\PurchaseInvoiceDetail.tsx (3) ===
+  51: // المتبقّي من محرك التخصيصات (Open Items) — يقع على paid_amount إن لم يتوفّر
+  52: const remaining = (inv as any).remaining_amount ?? (Number(inv.total) - Number(inv.paid_amount));
+  145: <Row label="المدفوع" value={fmtSAR(inv.paid_amount)} tone="text-success" />
+
+=== pages\purchasing\PurchaseInvoices.tsx (3) ===
+  38: .reduce((s, i) => s + (Number(i.total) - Number(i.paid_amount)), 0);
+  74: const remaining = Number(inv.total) - Number(inv.paid_amount);
+  86: <td className="num text-xs text-success">{fmtSAR(inv.paid_amount)}</td>
+
+=== pages\purchasing\PurchasingDashboard.tsx (1) ===
+  81: <td className="num text-xs">{fmtSAR(s.utilized)}</td>
+
+=== pages\purchasing\SupplierCredit.tsx (3) ===
+  29: const used = suppliers.reduce((s, x) => s + x.utilized, 0);
+  34: over: suppliers.filter(s => s.utilized > s.credit_limit).length };
+  100: <Cell label="المستخدم" value={fmtSAR(s.utilized)} tone="warning" />
+
+=== pages\sales\CustomerCredit.tsx (2) ===
+  45: used: rows.reduce((s, x) => s + x.utilized, 0),
+  133: <Cell label="المستخدم" value={fmtSAR(c.utilized)} tone="warning" />
+
+=== pages\sales\CustomerPayments.tsx (6) ===
+  30: invoice?: { id: string; invoice_no: string; invoice_date: string; total: number; paid_amount: number; credited_amount: number } | null;
+  66: ? supabase.from("invoices").select("id, invoice_no, invoice_date, total, paid_amount, credited_amount").in("id", invIds)
+  150: const outstandingAfter = inv ? Math.max(0, Number(inv.total) - Number(inv.paid_amount ?? 0) - Number(inv.credited_amount ?? 0)) : undefined;
+  331: const credited = g.invoice ? Number(g.invoice.credited_amount ?? 0) : 0;
+  332: const paid = g.invoice ? Number(g.invoice.paid_amount ?? 0) : g.amount;
+  333: const remaining = g.invoice ? Math.max(0, total - paid - credited) : 0;
+
+=== pages\sales\CustomerTimeline.tsx (1) ===
+  117: const outstanding = Math.max(0, summary.invoiced - summary.paid - summary.credited);
+
+=== pages\sales\Deliveries.tsx (1) ===
+  309: <Badge variant={o.status === "paid" ? "default" : "secondary"}>{o.status === "paid" ? "مدفوع" : "مفوتر"}</Badge>
+
+=== pages\sales\SalesAnalytics.tsx (5) ===
+  18: paid_amount: number; status: string; invoice_date: string; customer_id: string | null;
+  46: .select("id, total, subtotal, vat_amount, paid_amount, status, invoice_date, customer_id")
+  74: const paid = invoices.filter(i => i.status === "paid");
+  81: const outstanding = unpaid.reduce((s, i) => s + (Number(i.total) - Number(i.paid_amount ?? 0)), 0);
+  83: .reduce((s, i) => s + Number(i.paid_amount ?? 0), 0);
+
+=== pages\AccountsPayable.tsx (2) ===
+  24: paid: rows.reduce((s, r) => s + r.paid_amount, 0),
+  80: <td className="num text-left text-success">{fmtSAR(r.paid_amount)}</td>
+
+=== pages\AccountsReceivable.tsx (3) ===
+  18: r.total_receivable, r.paid_amount, r.remaining_balance, r.overdue_amount,
+  51: paid: a.paid + r.paid_amount,
+  136: <td className="num text-left text-success">{fmt(r.paid_amount)}</td>
+
+=== pages\ERPReports.tsx (3) ===
+  126: .select("total, paid_amount, due_date, status")
+  140: pending_amount:   pending.reduce((s, i) => s + i.total - i.paid_amount, 0),
+  142: overdue_amount:   overdue.reduce((s, i) => s + i.total - i.paid_amount, 0),
+
+=== pages\InvoiceDetail.tsx (5) ===
+  79: const credited = Number(inv.credited_amount ?? 0);
+  80: const paid = Number(inv.paid_amount ?? 0);
+  81: const outstanding = Math.max(0, total - credited);
+  232: <div className="text-[12.5px] text-muted-foreground mt-0.5">متبقٍ: {fmt(Math.max(0, total - paid))}</div>
+  326: invoice={{ id: inv.id, invoice_no: inv.invoice_no, customer_id: inv.customer_id, total, credited_amount: credited, paid_amount: paid }}
+
+=== pages\InvoicePrint.tsx (5) ===
+  74: <div style={{ marginTop: "6px", padding: "4px 10px", background: inv.status === "paid" ? "#dcfce7" : "#fef9c3", borderRadius: "4px", fontSize: "12px", fontWeight: "600", color: inv.status === "paid" ? "#166534" : "#854d0e", display: "inline-block" }}>
+  172: {Number(inv.paid_amount) > 0 && (
+  176: <span style={{ fontFamily: "monospace", color: "#166534" }}>{fmtSAR(Number(inv.paid_amount))} ر.س</span>
+  178: <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 16px", background: Number(inv.total) - Number(inv.paid_amount) > 0 ? "#fef2f2" : "#f0fdf4" }}>
+  180: <span style={{ fontFamily: "monospace", fontWeight: "600" }}>{fmtSAR(Number(inv.total) - Number(inv.paid_amount))} ر.س</span>
+
+=== pages\Invoices.tsx (8) ===
+  27: if (status === "paid")    return <Badge className="bg-success text-success-foreground hover:bg-success/90">مدفوعة</Badge>;
+  99: paid_amount: Number(r.paid_amount ?? 0),
+  141: const previouslyPaid = Number(row.paid_amount ?? 0);
+  166: const paid = Number(r.paid_amount ?? 0);
+  167: const remaining = Math.max(0, total - paid);
+  344: const paidSoFar = Number(r.paid_amount ?? 0);
+  347: const woState = payStatus === "paid" ? "paid" : "invoiced";
+  393: disabled={payStatus === "paid"}
+
+=== pages\SalesOrderDetail.tsx (2) ===
+  473: .select("total, paid_amount, credited_amount, status")
+  481: Number(i.paid_amount ?? 0) >= Number(i.total) - Number(i.credited_amount ?? 0) - 0.01);
+
+=== services\erp\accounting.ts (21) ===
+  232: paid_amount: number;
+  279: // التخصيصات النشطة (Open Items) — المصدر الصحيح للمتبقّي بدل paid_amount
+  303: paid_amount: 0,
+  315: const remaining = total - paid;
+  318: row.paid_amount += paid;
+  412: *   - derived_remaining: sum(invoices.total - paid_amount - credited_amount)
+  424: supabase.from("invoices").select("id, customer_id, total, paid_amount, credited_amount, status"),
+  464: Number(inv.total || 0) - Number(inv.paid_amount || 0) - Number(inv.credited_amount || 0);
+  499: r.derived_remaining = Number(r.derived_remaining.toFixed(2));
+  544: paid_amount: number;
+  574: paid_amount: number;
+  626: .select("id, supplier_id, invoice_date, due_date, total, paid_amount, status")
+  644: paid_amount: 0,
+  655: const paid = Number(inv.paid_amount || 0);
+  656: const remaining = Math.max(0, total - paid);
+  659: row.paid_amount += paid;
+  761: paid_amount: Number(r.paid_amount || 0),
+  762: remaining: Number(r.total || 0) - Number(r.paid_amount || 0),
+  805: const paid = Number(r.paid_amount || 0);
+  819: paid_amount: paid,
+  820: remaining: total - paid,
+
+=== services\erp\allocationsDb.ts (1) ===
+  208: const remaining = totalOrdered - alreadyAllocated;
+
+=== services\erp\creditNotes.ts (5) ===
+  29: const { data: _inv } = await supabase.from("invoices").select("credited_amount").eq("id", _cn.invoice_id).single();
+  30: await supabase.from("invoices").update({ credited_amount: Number(_inv?.credited_amount ?? 0) + Number(_cn.total ?? 0) }).eq("id", _cn.invoice_id);
+  64: .select("id, customer_id, total, vat_amount, subtotal, credited_amount, status, invoice_no, sales_order_id")
+  71: const credited = Number(inv.credited_amount ?? 0);
+  72: const remaining = Number((total - credited).toFixed(2));
+
+=== services\erp\customerSettlement.ts (9) ===
+  194: .select("id, customer_id, invoice_no, invoice_date, due_date, total, paid_amount, credited_amount, status")
+  253: .sort((a, b) => (b.utilized - a.utilized));
+  266: .select("id, invoice_no, invoice_date, due_date, total, paid_amount, credited_amount, status, notes")
+  289: const outstanding = Math.max(0, Number(inv.total) - Number(inv.paid_amount ?? 0) - Number(inv.credited_amount ?? 0));
+  375: const credit_used = customer?.utilized ?? 0;
+  432: const existingDebt = summary.utilized;                 // المديونية القائمة (فواتير سابقة غير مسدّدة)
+  528: const outstanding = Math.max(
+  530: Number(inv.total) - Number(inv.paid_amount ?? 0) - Number(inv.credited_amount ?? 0) - (settlementByInv?.get(inv.id) ?? 0),
+  545: const remaining = credit_limit - utilized;
+
+=== services\erp\incentiveEngine.ts (3) ===
+  200: received_amount: Number(r.received_amount), utilized_amount: Number(r.utilized_amount),
+  204: utilized_at: r.utilized_at ?? undefined, rejection_reason: r.rejection_reason ?? undefined,
+  371: patch.utilized_amount = amount; patch.utilized_at = now;
+
+=== services\erp\purchaseInvoicesDb.ts (2) ===
+  40: paid_amount: number;
+  193: paid_amount: 0,
+
+=== services\erp\purchasePaymentsDb.ts (8) ===
+  36: // تسجيل دفعة + تحديث paid_amount وحالة الفاتورة
+  55: if (inv.status === "paid") throw new Error("الفاتورة مدفوعة بالكامل");
+  57: const already = Number(inv.paid_amount) || 0;
+  59: const remaining = total - already;
+  95: // تحديث الفاتورة: paid_amount + الحالة
+  97: const newStatus = newPaid >= total - 0.01 ? "paid" : "partially_paid";
+  100: .update({ paid_amount: newPaid, status: newStatus })
+  119: // المصدر الموحّد للمتبقّي بدل paid_amount (معمارية SAP Open Item)
+
+=== services\erp\purchasing.ts (18) ===
+  283: * `credit_delta` is the change applied to supplier.utilized (positive
+  827: *   outstanding = 0          → paid
+  837: const outstanding = Math.max(0, (inv.total ?? 0) - (inv.paid ?? 0));
+  996: const remaining = s.credit_limit - s.utilized;
+  997: const usage = s.credit_limit > 0 ? Math.min(100, (s.utilized / s.credit_limit) * 100) : 0;
+  998: const over = s.utilized > s.credit_limit;
+  1019: i.total - i.paid > 0.001,
+  1025: const outstanding = Math.max(0, inv.total - inv.paid);
+  1160: const remaining = Math.max(0, target - purchased);
+  1264: if (sup) sup.utilized = Math.max(0, sup.utilized - claim.amount);
+  1535: if (inv.status === "paid" || inv.status === "cancelled") return undefined;
+  1536: const remaining = inv.total - inv.paid;
+  1554: if (sup) sup.utilized = Math.max(0, sup.utilized + amount);
+  1598: if (inv.status === "paid" || inv.status === "cancelled") return { error: "الفاتورة مغلقة" };
+  1636: const invoice = invoices.find(i => i.status === "paid")
+  1650: const fullyPaid = invs.length > 0 && invs.every(i => i.status === "paid");
+  1723: const remaining = Math.max(0, li.qty - received);
+  1981: const over_limit = db.suppliers.filter(s => s.utilized > s.credit_limit).length;
+
+=== services\erp\sales.ts (3) ===
+  886: if (inv.status === "paid" || inv.status === "cancelled") return undefined;
+  887: const remaining = inv.total - inv.paid;
+  908: return { billed, paid, fullyPaid: invs.length > 0 && invs.every(i => i.status === "paid"), anyIssued: invs.length > 0, remaining: billed - paid };
+

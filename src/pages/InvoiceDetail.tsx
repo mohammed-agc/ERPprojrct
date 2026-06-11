@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowRight, FileMinus, Printer } from "lucide-react";
 import { CreditNoteDialog } from "@/components/erp/CreditNoteDialog";
 import { CreditGateBanner } from "@/components/erp/CreditGateBanner";
+import { AllocationInquiry } from "@/components/erp/AllocationInquiry";
 
 const fmt = (n: number) => Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtDate = (s?: string) => s ? new Date(s).toLocaleDateString("ar-SA") : "—";
@@ -297,6 +298,8 @@ export default function InvoiceDetail() {
             </tbody>
           </table>
         </div>
+
+        {inv.id && <AllocationInquiry docType="sales_invoice" docId={inv.id} total={Number(inv.total)} />}
 
         <div className="bg-card border border-border rounded-lg overflow-hidden">
           <div className="px-3 py-2 border-b border-border text-sm font-semibold">الدفعات</div>

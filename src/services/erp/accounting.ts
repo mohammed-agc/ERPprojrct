@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Accounting adapter — frontend-only consumer layer.
  *
  * Reads directly from the backend (Supabase tables) today. When a dedicated
@@ -275,6 +275,23 @@ Object.assign(accountingService, {
       .neq("status", "cancelled");
     if (ie) throw ie;
 
+
+    // التخصيصات النشطة (Open Items) — المصدر الصحيح للمتبقّي بدل paid_amount
+    const invIds = (invoices ?? []).map((i: any) => i.id);
+    const allocByInv = new Map<string, number>();
+    if (invIds.length > 0) {
+      const { data: allocs } = await supabase
+        .from("open_item_allocations")
+        .select("target_document_id, allocated_amount")
+        .eq("target_document_type", "sales_invoice")
+        .eq("status", "active")
+        .in("target_document_id", invIds);
+      for (const a of allocs ?? []) {
+        const k = (a as any).target_document_id;
+        allocByInv.set(k, (allocByInv.get(k) ?? 0) + Number((a as any).allocated_amount || 0));
+      }
+    }
+
     const byCust = new Map<string, ARCustomerBalance>();
     for (const c of customers ?? []) {
       byCust.set(c.id, {
@@ -294,7 +311,7 @@ Object.assign(accountingService, {
       const row = byCust.get(inv.customer_id);
       if (!row) continue;
       const total = Number(inv.total || 0);
-      const paid = inv.status === "paid" ? total : 0;
+      const paid = allocByInv.get(inv.id) ?? 0;   // من Open Items (دفعات + مقاصّات + إشعارات)
       const remaining = total - paid;
       row.invoice_count += 1;
       row.total_receivable += total;
@@ -342,15 +359,32 @@ Object.assign(accountingService, {
         credit: 0,
         source_id: inv.id,
       });
-      if (inv.status === "paid") {
+    }
+
+    // حركات التصفية من Open Items (دفعات + مقاصّات + إشعارات) كبنود دائنة
+    const invIds = (invoices ?? []).map((i: any) => i.id);
+    if (invIds.length > 0) {
+      const { data: allocs } = await supabase
+        .from("open_item_allocations")
+        .select("allocation_number, allocation_type, allocation_date, allocated_amount, target_document_id")
+        .eq("target_document_type", "sales_invoice")
+        .eq("status", "active")
+        .in("target_document_id", invIds);
+      const TYPE_DESC: Record<string, string> = {
+        PAYMENT: "دفعة", SETTLEMENT: "مقاصّة عميل/مورد", CREDIT_NOTE: "إشعار دائن",
+        DEBIT_NOTE: "إشعار مدين", WRITE_OFF: "إعدام دين", ADJUSTMENT: "تسوية",
+      };
+      const invByIdMap = new Map((invoices ?? []).map((i: any) => [i.id, i]));
+      for (const a of allocs ?? []) {
+        const inv = invByIdMap.get((a as any).target_document_id);
         events.push({
-          date: inv.invoice_date,
+          date: (a as any).allocation_date,
           type: "payment",
-          reference: inv.invoice_no,
-          description: "دفعة مقابل فاتورة",
+          reference: (a as any).allocation_number,
+          description: TYPE_DESC[(a as any).allocation_type] ?? (a as any).allocation_type,
           debit: 0,
-          credit: Number(inv.total || 0),
-          source_id: inv.id,
+          credit: Number((a as any).allocated_amount || 0),
+          source_id: (a as any).target_document_id,
         });
       }
     }
@@ -584,20 +618,32 @@ const DEFAULT_AP_NET_DAYS = 30;
 Object.assign(accountingService, {
   async listPayables(asOf?: string): Promise<APVendorBalance[]> {
     const today = asOf ? new Date(asOf) : new Date();
-    const [{ data: suppliers, error: se }, { data: invoices, error: ie }, { data: payments, error: pe }] =
+    const [{ data: suppliers, error: se }, { data: invoices, error: ie }] =
       await Promise.all([
         supabase.from("suppliers").select("id, code, name"),
         supabase
           .from("purchase_invoices")
           .select("id, supplier_id, invoice_date, due_date, total, paid_amount, status")
           .neq("status", "cancelled"),
-        supabase
-          .from("supplier_payments")
-          .select("supplier_id, amount, status"),
       ]);
     if (se) throw se;
     if (ie) throw ie;
-    if (pe) throw pe;
+
+    // التخصيصات النشطة (Open Items) لفواتير الشراء — المصدر الصحيح للمتبقّي
+    const apInvIds = (invoices ?? []).map((i: any) => i.id);
+    const allocByPInv = new Map<string, number>();
+    if (apInvIds.length > 0) {
+      const { data: apAllocs } = await supabase
+        .from("open_item_allocations")
+        .select("target_document_id, allocated_amount")
+        .eq("target_document_type", "purchase_invoice")
+        .eq("status", "active")
+        .in("target_document_id", apInvIds);
+      for (const a of apAllocs ?? []) {
+        const k = (a as any).target_document_id;
+        allocByPInv.set(k, (allocByPInv.get(k) ?? 0) + Number((a as any).allocated_amount || 0));
+      }
+    }
 
     const byVendor = new Map<string, APVendorBalance>();
     for (const s of (suppliers ?? []) as any[]) {
@@ -618,7 +664,7 @@ Object.assign(accountingService, {
       const row = byVendor.get(inv.supplier_id);
       if (!row) continue;
       const total = Number(inv.total || 0);
-      const paid = Number(inv.paid_amount || 0);
+      const paid = allocByPInv.get(inv.id) ?? 0;   // من Open Items (دفعات + مقاصّات)
       const remaining = Math.max(0, total - paid);
       row.bill_count += 1;
       row.total_payable += total;
@@ -657,10 +703,10 @@ Object.assign(accountingService, {
         .eq("supplier_id", vendorId)
         .neq("status", "cancelled"),
       supabase
-        .from("supplier_payments")
-        .select("id, payment_no, payment_date, amount, status, notes, reference")
+        .from("purchase_payments")
+        .select("id, code, payment_date, amount, payment_method")
         .eq("supplier_id", vendorId)
-        .neq("status", "cancelled"),
+        ,
     ]);
 
     const events: Omit<VendorStatementLine, "running_balance">[] = [];
@@ -1114,8 +1160,3 @@ export interface AccountingServiceExt {
 }
 
 export const accounting = accountingService as unknown as AccountingServiceExt;
-
-
-
-
-
