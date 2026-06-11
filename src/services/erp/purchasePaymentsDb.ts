@@ -115,6 +115,22 @@ export async function createPayment(input: {
     if (eLedger) throw eLedger;
   }
 
+  // إنشاء سجلّ التخصيص (Open Item Allocation) — نوع PAYMENT
+  // المصدر الموحّد للمتبقّي بدل paid_amount (معمارية SAP Open Item)
+  const { error: eAlloc } = await supabase.rpc("create_allocation" as any, {
+    p_allocation_type: "PAYMENT",
+    p_partner_id: inv.contact_id ?? inv.supplier_id,
+    p_source_document_type: "purchase_payment",
+    p_source_document_id: payment.id,
+    p_target_document_type: "purchase_invoice",
+    p_target_document_id: input.invoice_id,
+    p_amount: amount,
+    p_allocation_date: input.payment_date ?? new Date().toISOString().slice(0, 10),
+    p_remarks: `دفعة ${payment.code ?? ""}`,
+    p_created_by: uid,
+  });
+  if (eAlloc) throw eAlloc;
+
   return payment as PurchasePaymentRow;
 }
 

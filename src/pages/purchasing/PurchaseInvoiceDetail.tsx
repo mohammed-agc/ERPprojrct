@@ -47,7 +47,8 @@ export default function PurchaseInvoiceDetail() {
 
   const { header: inv, lines } = q.data;
   const isDraft = inv.status === "draft";
-  const remaining = Number(inv.total) - Number(inv.paid_amount);
+  // المتبقّي من محرك التخصيصات (Open Items) — يقع على paid_amount إن لم يتوفّر
+  const remaining = (inv as any).remaining_amount ?? (Number(inv.total) - Number(inv.paid_amount));
   const canPay = (inv.status === "confirmed" || inv.status === "partially_paid") && remaining > 0.01;
   const payments = paymentsQ.data ?? [];
 

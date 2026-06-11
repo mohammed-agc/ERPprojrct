@@ -240,7 +240,21 @@ export async function getInvoice(id: string): Promise<{ header: PurchaseInvoiceR
   const { data: lines, error: e2 } = await supabase
     .from("purchase_invoice_lines").select("*").eq("invoice_id", id).order("line_no");
   if (e2) throw e2;
-  return { header: header as PurchaseInvoiceRow, lines: (lines ?? []) as PurchaseInvoiceLineRow[] };
+  // اسم المورد من السجلّ الموحّد (Business Partner) إن لم يكن مخزّناً
+  const h = header as PurchaseInvoiceRow;
+  if (!h.supplier_name && (h.contact_id || h.supplier_id)) {
+    const { data: c } = await supabase
+      .from("contacts").select("name").eq("id", h.contact_id ?? h.supplier_id).maybeSingle();
+    if (c?.name) h.supplier_name = c.name;
+  }
+
+  // المتبقّي الحقيقي من محرك التخصيصات (Open Items) — المصدر المحاسبي الصحيح
+  const { data: rem } = await supabase.rpc("document_remaining" as any, {
+    p_doc_type: "purchase_invoice", p_doc_id: id, p_total: Number(h.total),
+  });
+  if (rem !== null && rem !== undefined) (h as any).remaining_amount = Number(rem);
+
+  return { header: h, lines: (lines ?? []) as PurchaseInvoiceLineRow[] };
 }
 
 // تأكيد الفاتورة → إنشاء المركبات في المخزون (on_order) + حالة غير مدفوعة
