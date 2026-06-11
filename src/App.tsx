@@ -114,6 +114,7 @@ const PurchaseInvoicesRegistry = lazy(() => import("./pages/accounting/PurchaseI
 const PurchaseInvoiceAccountingDetail = lazy(() => import("./pages/accounting/PurchaseInvoiceAccountingDetail"));
 const SalesInvoicesRegistry = lazy(() => import("./pages/accounting/SalesInvoicesRegistry"));
 const PartnerLedger = lazy(() => import("./pages/accounting/PartnerLedger"));
+const AgingReport = lazy(() => import("./pages/accounting/AgingReport"));
 
 // Admin module
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
@@ -249,6 +250,7 @@ const App = () => (
 
               <Route path="/accounts" element={<Accounts />} />
               <Route path="/accounting/partner-ledger" element={<PartnerLedger />} />
+              <Route path="/accounting/aging" element={<AgingReport />} />
               <Route path="/accounting/purchase-invoices" element={<PurchaseInvoicesRegistry />} />
               <Route path="/accounting/purchase-invoices/:id" element={<PurchaseInvoiceAccountingDetail />} />
               <Route path="/accounting/sales-invoices" element={<SalesInvoicesRegistry />} />
