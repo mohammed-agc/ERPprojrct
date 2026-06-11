@@ -61,3 +61,49 @@ export const DOC_TYPE_LABEL: Record<string, string> = {
   credit_note: "إشعار دائن",
   journal: "قيد يدوي",
 };
+
+// ───────── ملخّص أرصدة الأطراف + المقاصّة (Partner Balance + Settlement) ─────────
+export interface PartnerBalance {
+  partner_id: string;
+  partner_code: string | null;
+  partner_name: string;
+  is_customer: boolean;
+  is_supplier: boolean;
+  customer_balance: number;
+  vendor_balance: number;
+  net_position: number;
+}
+
+export async function getPartnerBalances(): Promise<PartnerBalance[]> {
+  const { data, error } = await supabase.rpc("partner_balance_summary" as any);
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({
+    partner_id: r.partner_id,
+    partner_code: r.partner_code,
+    partner_name: r.partner_name,
+    is_customer: r.is_customer,
+    is_supplier: r.is_supplier,
+    customer_balance: Number(r.customer_balance) || 0,
+    vendor_balance: Number(r.vendor_balance) || 0,
+    net_position: Number(r.net_position) || 0,
+  }));
+}
+
+export interface SettlementResult {
+  journal_entry_id: string;
+  entry_no: string;
+  settled_amount: number;
+  allocations_created: number;
+}
+
+export async function createPartnerSettlement(
+  partnerId: string, amount?: number | null, reason?: string
+): Promise<SettlementResult> {
+  const { data, error } = await supabase.rpc("create_partner_settlement" as any, {
+    p_partner_id: partnerId,
+    p_amount: amount ?? null,
+    p_reason: reason ?? null,
+  });
+  if (error) throw error;
+  return data as SettlementResult;
+}
