@@ -115,14 +115,14 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
     setVinErrors(p => { const n = { ...p }; if (reason) n[key] = reason; else delete n[key]; return n; });
   };
 
-  const filledCount = rows.filter(r => r.vin.trim() && r.engine_no.trim()).length;
+  const filledCount = rows.filter(r => r.vin.trim()).length;
 
   const submit = async (confirm: boolean) => {
     if (!po) return toast.error("اختر أمر الشراء");
     if (!rows.length) return toast.error("لا توجد مركبات للتخصيص");
     setSaving(true);
     try {
-      const filled = rows.filter(r => r.vin.trim() && r.engine_no.trim());
+      const filled = rows.filter(r => r.vin.trim());
       if (filled.length === 0) { setSaving(false); return toast.error("أدخل بيانات مركبة واحدة على الأقل"); }
       const lines: AllocationLineInput[] = filled.map(r => ({
         po_line_id: r.po_line_id,
@@ -235,7 +235,7 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
                 </div>
                 <div className="divide-y divide-border">
                   {units.map(u => {
-                    const filled = u.vin.trim() && u.engine_no.trim();
+                    const filled = u.vin.trim();
                     return (
                       <div key={u.key} className="grid grid-cols-[90px_1fr_1fr_70px] gap-2 items-center px-3 py-2">
                         <div className="flex items-center gap-1.5">

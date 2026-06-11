@@ -181,7 +181,6 @@ export async function createAllocation(input: {
   for (const l of input.lines) {
     const v = l.vin.trim().toUpperCase();
     if (!v) throw new Error("VIN مطلوب لكل مركبة");
-    if (!l.engine_no.trim()) throw new Error(`رقم المحرك مطلوب (VIN ${v})`);
     if (seen.has(v)) throw new Error(`VIN مكرر: ${v}`);
     seen.add(v);
   }

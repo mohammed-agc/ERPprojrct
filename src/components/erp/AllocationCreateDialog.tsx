@@ -94,7 +94,7 @@ export function AllocationCreateDialog({ open, onOpenChange, defaultPoId, onCrea
   const update = (key: string, patch: Partial<UnitRow>) =>
     setRows(prev => prev.map(r => (r.key === key ? { ...r, ...patch } : r)));
 
-  const filledCount = rows.filter(r => r.vin.trim() && r.engine_no.trim()).length;
+  const filledCount = rows.filter(r => r.vin.trim()).length;
 
   const submit = (confirm: boolean) => {
     if (!poId) return toast.error("اختر أمر الشراء");
@@ -106,7 +106,6 @@ export function AllocationCreateDialog({ open, onOpenChange, defaultPoId, onCrea
       const vin = r.vin.trim().toUpperCase();
       const eng = r.engine_no.trim().toUpperCase();
       if (!vin) return toast.error(`الوحدة ${r.unit_index} من ${r.model}: VIN مطلوب`);
-      if (!eng) return toast.error(`الوحدة ${r.unit_index} من ${r.model}: رقم المحرك مطلوب`);
       if (vin.length < 11) return toast.error(`VIN غير صالح: ${vin}`);
       if (seen.has(vin)) return toast.error(`VIN مكرر داخل الطلب: ${vin}`);
       seen.add(vin);
@@ -227,7 +226,7 @@ export function AllocationCreateDialog({ open, onOpenChange, defaultPoId, onCrea
                 {/* Per-unit VIN rows */}
                 <div className="divide-y divide-border">
                   {units.map(u => {
-                    const filled = u.vin.trim() && u.engine_no.trim();
+                    const filled = u.vin.trim();
                     return (
                       <div key={u.key} className="grid grid-cols-[90px_1fr_1fr_70px] gap-2 items-center px-3 py-2">
                         <div className="flex items-center gap-1.5">
