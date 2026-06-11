@@ -89,13 +89,28 @@ export default function SalesInvoicesRegistry() {
       const row = rows.find(r => r.id === p.invoiceId);
       if (!row) throw new Error("الفاتورة غير موجودة");
       const userId = (await supabase.auth.getUser()).data.user?.id;
-      const { error } = await supabase.from("payments").insert({
+      const { data: payRow, error } = await supabase.from("payments").insert({
         payment_no: "PMT-" + Date.now().toString().slice(-10),
         customer_id: row.customer_id, invoice_id: p.invoiceId,
         amount: p.amount, payment_date: p.paymentDate, method: p.method,
         reference: p.reference || null, notes: p.notes || null, created_by: userId,
-      });
+      }).select("id").single();
       if (error) throw error;
+
+      // إنشاء سجلّ التخصيص (Open Item Allocation) — نوع PAYMENT
+      const { error: eAlloc } = await supabase.rpc("create_allocation" as any, {
+        p_allocation_type: "PAYMENT",
+        p_partner_id: row.customer_id,
+        p_source_document_type: "sales_payment",
+        p_source_document_id: payRow.id,
+        p_target_document_type: "sales_invoice",
+        p_target_document_id: p.invoiceId,
+        p_amount: p.amount,
+        p_allocation_date: p.paymentDate,
+        p_remarks: "دفعة مبيعات",
+        p_created_by: userId,
+      });
+      if (eAlloc) throw eAlloc;
       const totalAfter = Number(row.paid_amount ?? 0) + p.amount;
       if (totalAfter >= Number(row.total)) {
         await salesVehicleStatus.markSoldForInvoice(p.invoiceId);

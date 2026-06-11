@@ -3,11 +3,12 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ActionButton } from "@/components/erp/ActionButton";
 import { useErpSession } from "@/contexts/ErpSessionContext";
 import { canPerform } from "@/lib/erpPermissions";
-import { Banknote, FileMinus, Printer } from "lucide-react";
+import { Banknote, FileMinus, Printer, Search } from "lucide-react";
 import { toast } from "sonner";
 import { PaymentDialog, PaymentSubmitPayload, PaymentInvoiceContext } from "@/components/erp/PaymentDialog";
 
@@ -30,6 +31,7 @@ function paymentBadge(status: "unpaid" | "partial" | "paid") {
 
 export default function Invoices() {
   const [rows, setRows] = useState<any[]>([]);
+  const [q, setQ] = useState("");
   const { role } = useErpSession();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeInvoice, setActiveInvoice] = useState<PaymentInvoiceContext | null>(null);
@@ -108,7 +110,7 @@ export default function Invoices() {
       const userId = (await supabase.auth.getUser()).data.user?.id;
       const paymentNo = "PMT-" + Date.now().toString().slice(-10);
 
-      const { error } = await supabase.from("payments").insert({
+      const { data: payRow, error } = await supabase.from("payments").insert({
         payment_no: paymentNo,
         customer_id: row.customer_id,
         invoice_id: p.invoiceId,
@@ -118,8 +120,23 @@ export default function Invoices() {
         reference: p.reference || null,
         notes: p.notes || null,
         created_by: userId,
-      });
+      }).select("id").single();
       if (error) throw error;
+
+      // إنشاء سجلّ التخصيص (Open Item Allocation) — نوع PAYMENT
+      const { error: eAlloc } = await supabase.rpc("create_allocation" as any, {
+        p_allocation_type: "PAYMENT",
+        p_partner_id: row.customer_id,
+        p_source_document_type: "sales_payment",
+        p_source_document_id: payRow.id,
+        p_target_document_type: "sales_invoice",
+        p_target_document_id: p.invoiceId,
+        p_amount: p.amount,
+        p_allocation_date: p.paymentDate,
+        p_remarks: `دفعة ${paymentNo}`,
+        p_created_by: userId,
+      });
+      if (eAlloc) throw eAlloc;
 
       const previouslyPaid = Number(row.paid_amount ?? 0);
       const totalAfter = previouslyPaid + p.amount;
@@ -286,9 +303,20 @@ export default function Invoices() {
     setTimeout(() => w.print(), 500);
   };
 
+  const filtered = rows.filter(r => {
+    if (!q) return true;
+    const vehs = (r._vehicles ?? r._lines ?? []).map((v: any) => `${v.vin ?? ""} ${v.brand ?? ""} ${v.model ?? ""}`).join(" ");
+    const hay = `${r.invoice_no ?? ""} ${r.contact?.name ?? r.customer_name ?? ""} ${vehs}`.toLowerCase();
+    return hay.includes(q.toLowerCase());
+  });
+
   return (
     <div>
       <PageHeader title="الفواتير الضريبية" subtitle="فواتير متوافقة مع هيئة الزكاة (ZATCA Phase 1) — تسجيل الدفعات متاح للمحاسبة فقط" />
+      <div className="relative mb-3 max-w-md">
+        <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input className="pr-9 h-9" placeholder="بحث: رقم الفاتورة، عميل، VIN..." value={q} onChange={e => setQ(e.target.value)} />
+      </div>
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <table className="erp-table">
           <thead>
@@ -311,7 +339,7 @@ export default function Invoices() {
             {rows.length === 0 && (
               <tr><td colSpan={12} className="text-center text-muted-foreground py-8">لا توجد فواتير</td></tr>
             )}
-            {rows.map(r => {
+            {filtered.map(r => {
               const total = Number(r.total);
               const paidSoFar = Number(r.paid_amount ?? 0);
               const payStatus: "unpaid" | "partial" | "paid" =
