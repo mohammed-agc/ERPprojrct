@@ -305,7 +305,6 @@ export default function SalesOrderDetail() {
 
   const generateInvoice = async () => {
     if (!order) return;
-    const invNo = "INV-" + Date.now().toString().slice(-8);
     const sellerName = "أرض المبارك للسيارات";
     const vatNum = "300000000000003";
     const tlv = (tag: number, val: string) => {
@@ -322,7 +321,7 @@ export default function SalesOrderDetail() {
     const qr = btoa(String.fromCharCode(...full));
 
     const { data: inv, error } = await supabase.from("invoices").insert({
-      invoice_no: invNo, customer_id: order.customer_id, sales_order_id: id,
+      customer_id: order.customer_id, sales_order_id: id,
       subtotal: totals.subtotal, vat_amount: totals.vat, total: totals.total,
       qr_code: qr, status: "issued",
       created_by: (await supabase.auth.getUser()).data.user?.id,
