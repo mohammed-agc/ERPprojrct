@@ -1,42 +1,66 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, AlertTriangle, CalendarClock, ShieldCheck, FileText, Clock, Settings } from "lucide-react";
-import { purchasingService, fmtSAR, fmtDate, SETTLEMENT_LABEL } from "@/services/erp/purchasing";
-import { SupplierStatementDialog } from "@/components/erp/SupplierStatementDialog";
-import { SupplierPolicyDialog } from "@/components/erp/SupplierPolicyDialog";
+import { EmptyState } from "@/components/erp/EmptyState";
+import {
+  Search, AlertTriangle, ShieldCheck, FileText, Clock, RotateCw,
+} from "lucide-react";
+import {
+  supplierSettlementService, fmtSAR, fmtDate, SETTLEMENT_LABEL,
+  type SupplierCreditRow,
+} from "@/services/erp/supplierSettlement";
 
+/**
+ * Supplier Credit Governance — full parity with /sales/customer-credit.
+ *
+ * يعرض حدود الائتمان، الاستخدام (من Open Items)، الأرصدة المتأخرة،
+ * ويربط بكشف حساب المورد الموثوق (دفتر الأستاذ المساعد).
+ */
 export default function SupplierCredit() {
+  const nav = useNavigate();
   const [q, setQ] = useState("");
-  const [stmtId, setStmtId] = useState<string | null>(null);
-  const [policyId, setPolicyId] = useState<string | null>(null);
-  const [tick, setTick] = useState(0);
-  const suppliers = useMemo(() => purchasingService.listSuppliers(), [stmtId, tick]);
-  const policySupplier = policyId ? suppliers.find(s => s.id === policyId) ?? null : null;
+  const [rows, setRows] = useState<SupplierCreditRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = () => {
+    setLoading(true);
+    supplierSettlementService.listSupplierCredit()
+      .then(setRows)
+      .finally(() => setLoading(false));
+  };
+  useEffect(load, []);
 
   const filtered = useMemo(() => {
     const qv = q.trim().toLowerCase();
-    if (!qv) return suppliers;
-    return suppliers.filter(s =>
-      `${s.code} ${s.name} ${s.country}`.toLowerCase().includes(qv),
-    );
-  }, [suppliers, q]);
+    if (!qv) return rows;
+    return rows.filter(r => `${r.code} ${r.name}`.toLowerCase().includes(qv));
+  }, [rows, q]);
 
-  const totals = useMemo(() => {
-    const limit = suppliers.reduce((s, x) => s + x.credit_limit, 0);
-    const used = suppliers.reduce((s, x) => s + x.utilized, 0);
-    const aging = suppliers.map(s => purchasingService.supplierAging(s.id));
-    const due = aging.reduce((s, a) => s + a.due_balance, 0);
-    const overdue = aging.reduce((s, a) => s + a.overdue_balance, 0);
-    return { limit, used, remaining: limit - used, due, overdue,
-      over: suppliers.filter(s => s.utilized > s.credit_limit).length };
-  }, [suppliers]);
+  const totals = useMemo(() => ({
+    limit: rows.reduce((s, x) => s + x.credit_limit, 0),
+    used: rows.reduce((s, x) => s + x.utilized, 0),
+    remaining: rows.reduce((s, x) => s + Math.max(0, x.remaining), 0),
+    due: rows.reduce((s, x) => s + x.due_balance, 0),
+    overdue: rows.reduce((s, x) => s + x.overdue_balance, 0),
+    over: rows.filter(x => x.over_limit).length,
+    blocked: rows.filter(x => !x.is_active).length,
+  }), [rows]);
 
   return (
     <div>
-      <PageHeader title="إدارة ائتمان الموردين" subtitle="حدود الائتمان، الاستخدام، وتجديد الاتفاقيات" />
+      <PageHeader
+        title="إدارة ائتمان الموردين"
+        subtitle="حدود الائتمان، الاستخدام، والأرصدة المتأخرة — مصدرها الموثوق دفتر الذمم"
+        sticky
+        actions={
+          <Button variant="outline" size="sm" onClick={load}>
+            <RotateCw className="h-3.5 w-3.5 ml-1" /> تحديث
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-4">
         <Kpi icon={ShieldCheck} label="إجمالي الحدود" value={fmtSAR(totals.limit)} tone="primary" />
@@ -44,10 +68,10 @@ export default function SupplierCredit() {
         <Kpi icon={ShieldCheck} label="المتبقي" value={fmtSAR(totals.remaining)} tone="success" />
         <Kpi icon={Clock} label="رصيد مستحق" value={fmtSAR(totals.due)} />
         <Kpi icon={AlertTriangle} label="رصيد متأخر" value={fmtSAR(totals.overdue)} tone={totals.overdue > 0 ? "destructive" : "default"} />
-        <Kpi icon={AlertTriangle} label="موردون متجاوزون" value={totals.over} tone={totals.over > 0 ? "destructive" : "default"} />
+        <Kpi icon={AlertTriangle} label="متجاوزون / موقوفون" value={`${totals.over} / ${totals.blocked}`} tone={(totals.over + totals.blocked) > 0 ? "destructive" : "default"} />
       </div>
 
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border border-border rounded-lg p-3 mb-3 flex items-center gap-2">
+      <div className="sticky top-[64px] z-10 bg-background/95 backdrop-blur border border-border rounded-lg p-3 mb-3 flex items-center gap-2">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input className="pr-9 h-9" placeholder="بحث عن مورد..." value={q} onChange={e => setQ(e.target.value)} />
@@ -55,94 +79,82 @@ export default function SupplierCredit() {
         <div className="text-xs text-muted-foreground ml-auto">{filtered.length} مورد</div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {filtered.map(s => {
-          const c = purchasingService.creditSummary(s);
-          const expiringSoon = c.daysToExpiry <= 60 && c.daysToExpiry >= 0;
-          return (
-            <div key={s.id} className="bg-card border border-border rounded-lg p-4">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <div className="font-semibold text-sm">{s.name}</div>
-                  <div className="text-[11px] text-muted-foreground flex items-center gap-1 flex-wrap">
-                    <span>{s.code} · {s.country} · {s.agreement_type === "framework" ? "إطارية" : s.agreement_type === "spot" ? "فورية" : "أمانة"}</span>
-                    {s.settlement_policy && (
+      {loading ? (
+        <div className="text-center text-muted-foreground py-10 text-sm">جارٍ التحميل…</div>
+      ) : filtered.length === 0 ? (
+        <EmptyState title="لا يوجد موردون" description="لا توجد بيانات ائتمان موردين." />
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {filtered.map(c => {
+            const usage = c.usage_pct;
+            return (
+              <div key={c.id} className="bg-card border border-border rounded-lg p-4">
+                <div className="flex items-start justify-between mb-3 gap-2">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-sm truncate">{c.name}</div>
+                    <div className="text-[11px] text-muted-foreground flex items-center gap-1 flex-wrap">
+                      <span className="font-mono">{c.code}</span>
                       <Badge variant="outline" className="text-[10px] h-4 px-1">
-                        سداد: {SETTLEMENT_LABEL[s.settlement_policy]}
-                        {s.settlement_policy === "custom" && s.custom_settlement_days ? ` ${s.custom_settlement_days}ي` : ""}
-                        {s.grace_days ? ` · سماح ${s.grace_days}ي` : ""}
+                        {SETTLEMENT_LABEL[c.settlement_policy]}
+                        {c.grace_days ? ` · سماح ${c.grace_days}ي` : ""}
+                      </Badge>
+                      {!c.is_active && (
+                        <Badge className="text-[10px] h-4 px-1 bg-destructive/10 text-destructive border border-destructive/40">
+                          موقوف
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {c.overdue_balance > 0 && (
+                      <Badge className="bg-destructive/10 text-destructive border border-destructive/40 gap-1 text-[10px]">
+                        <Clock className="h-3 w-3" /> متأخر {c.max_days_overdue}ي
                       </Badge>
                     )}
+                    {c.over_limit && (
+                      <Badge className="bg-destructive/10 text-destructive border border-destructive/40 gap-1 text-[10px]">
+                        <AlertTriangle className="h-3 w-3" /> تجاوز
+                      </Badge>
+                    )}
+                    <Button
+                      size="sm" variant="outline" className="h-7 px-2 text-[11px]"
+                      onClick={() => nav(`/accounting/partner-ledger?partner=${c.id}`)}
+                    >
+                      <FileText className="h-3 w-3 ml-1" /> كشف
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {c.overdue_balance > 0 && (
-                    <Badge className="bg-destructive/10 text-destructive border border-destructive/40 gap-1">
-                      <Clock className="h-3 w-3" /> متأخر {c.max_days_overdue}ي
-                    </Badge>
-                  )}
-                  {c.over && (
-                    <Badge className="bg-destructive/10 text-destructive border border-destructive/40 gap-1">
-                      <AlertTriangle className="h-3 w-3" /> تجاوز الحد
-                    </Badge>
-                  )}
-                  <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => setStmtId(s.id)}>
-                    <FileText className="h-3 w-3 ml-1" /> كشف حساب
-                  </Button>
-                  <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => setPolicyId(s.id)}>
-                    <Settings className="h-3 w-3 ml-1" /> تعديل السياسة
-                  </Button>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-3 gap-2 mb-2">
-                <Cell label="الحد" value={fmtSAR(s.credit_limit)} />
-                <Cell label="المستخدم" value={fmtSAR(s.utilized)} tone="warning" />
-                <Cell label="المتبقي" value={fmtSAR(c.remaining)} tone={c.remaining < 0 ? "destructive" : "success"} />
-              </div>
-              <div className="grid grid-cols-3 gap-2 mb-3">
-                <Cell label="رصيد مستحق" value={fmtSAR(c.due_balance)} />
-                <Cell label="رصيد متأخر" value={fmtSAR(c.overdue_balance)} tone={c.overdue_balance > 0 ? "destructive" : "default"} />
-                <Cell label="أقرب استحقاق" value={c.next_due_date ? fmtDate(c.next_due_date) : "—"} />
-              </div>
+                <div className="grid grid-cols-3 gap-2 mb-2">
+                  <Cell label="الحد" value={fmtSAR(c.credit_limit)} />
+                  <Cell label="المستخدم" value={fmtSAR(c.utilized)} tone="warning" />
+                  <Cell label="المتبقي" value={fmtSAR(c.remaining)} tone={c.remaining < 0 ? "destructive" : "success"} />
+                </div>
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  <Cell label="مستحق" value={fmtSAR(c.due_balance)} />
+                  <Cell label="متأخر" value={fmtSAR(c.overdue_balance)} tone={c.overdue_balance > 0 ? "destructive" : "default"} />
+                  <Cell label="أقرب استحقاق" value={c.next_due_date ? fmtDate(c.next_due_date) : "—"} />
+                </div>
 
-              <div className="mb-3">
-                <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
-                  <span>نسبة الاستخدام</span>
-                  <span className={`num font-semibold ${c.over ? "text-destructive" : c.usage > 80 ? "text-warning" : "text-success"}`}>
-                    {c.usage.toFixed(1)}%
-                  </span>
-                </div>
-                <div className="h-2 bg-muted rounded overflow-hidden">
-                  <div className={`h-full ${c.over ? "bg-destructive" : c.usage > 80 ? "bg-warning" : "bg-success"}`} style={{ width: `${Math.min(100, c.usage)}%` }} />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between text-[11px] border-t border-border pt-2">
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <CalendarClock className="h-3 w-3" />
-                  ينتهي: {fmtDate(s.agreement_expiry)}
-                </div>
-                <div className={expiringSoon ? "text-warning font-semibold" : "text-muted-foreground"}>
-                  {c.daysToExpiry >= 0 ? `${c.daysToExpiry} يوم متبقي` : `منتهية منذ ${Math.abs(c.daysToExpiry)} يوم`}
+                <div>
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
+                    <span>نسبة الاستخدام</span>
+                    <span className={`num font-semibold ${c.over_limit ? "text-destructive" : usage > 80 ? "text-warning" : "text-success"}`}>
+                      {usage.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="h-2 bg-muted rounded overflow-hidden">
+                    <div
+                      className={`h-full ${c.over_limit ? "bg-destructive" : usage > 80 ? "bg-warning" : "bg-success"}`}
+                      style={{ width: `${Math.min(100, usage)}%` }}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <SupplierStatementDialog
-        supplierId={stmtId}
-        open={!!stmtId}
-        onOpenChange={(v) => !v && setStmtId(null)}
-      />
-      <SupplierPolicyDialog
-        supplier={policySupplier}
-        open={!!policyId}
-        onOpenChange={(v) => !v && setPolicyId(null)}
-        onSaved={() => { setPolicyId(null); setTick(t => t + 1); }}
-      />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
