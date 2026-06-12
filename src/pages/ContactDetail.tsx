@@ -23,7 +23,6 @@ import {
 } from "@/lib/contactMeta";
 import { SupplierIntelligence } from "@/components/erp/SupplierIntelligence";
 import { PartnerAccountStatement } from "@/components/erp/PartnerAccountStatement";
-import { AccountStatement } from "@/components/erp/AccountStatement";
 import { cn } from "@/lib/utils";
 
 
