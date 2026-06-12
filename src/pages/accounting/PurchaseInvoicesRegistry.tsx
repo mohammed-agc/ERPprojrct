@@ -96,10 +96,10 @@ export default function PurchaseInvoicesRegistry() {
               <th>مرجع المورد</th>
               <th>الإصدار</th>
               <th>الاستحقاق</th>
-              <th className="text-left">المبلغ</th>
-              <th className="text-left">الضريبة</th>
-              <th className="text-left">الإجمالي</th>
-              <th className="text-left">المتبقي</th>
+              <th className="text-right">المبلغ</th>
+              <th className="text-right">الضريبة</th>
+              <th className="text-right">الإجمالي</th>
+              <th className="text-right">المتبقي</th>
               <th>قيد GL</th>
               <th>الحالة</th>
             </tr>
@@ -124,10 +124,10 @@ export default function PurchaseInvoicesRegistry() {
                   <td className="font-mono text-[11.5px] text-muted-foreground">{r.supplier_invoice_ref ?? "—"}</td>
                   <td className="text-xs">{fmtDate(r.invoice_date)}</td>
                   <td className={`text-xs ${overdue ? "text-destructive font-semibold" : ""}`}>{fmtDate(r.due_date)}</td>
-                  <td className="num text-xs text-left">{fmtSAR(r.subtotal)}</td>
-                  <td className="num text-xs text-left">{fmtSAR(r.vat_amount)}</td>
-                  <td className="num text-xs text-left font-semibold">{fmtSAR(r.total)}</td>
-                  <td className="num text-xs text-left">{fmtSAR(r.remaining)}</td>
+                  <td className="num text-xs text-right">{fmtSAR(r.subtotal)}</td>
+                  <td className="num text-xs text-right">{fmtSAR(r.vat_amount)}</td>
+                  <td className="num text-xs text-right font-semibold">{fmtSAR(r.total)}</td>
+                  <td className="num text-xs text-right">{fmtSAR(r.remaining)}</td>
                   <td>
                     {r.journal_entry_id ? (
                       <Link to={`/journals/${r.journal_entry_id}`} className="inline-flex items-center gap-1 text-primary text-[12px] hover:underline">
@@ -144,10 +144,10 @@ export default function PurchaseInvoicesRegistry() {
             <tfoot>
               <tr className="bg-muted/60 font-semibold">
                 <td colSpan={5} className="text-left text-xs">الإجمالي</td>
-                <td className="num text-xs text-left">{fmtSAR(totals.sub)}</td>
-                <td className="num text-xs text-left">{fmtSAR(totals.vat)}</td>
-                <td className="num text-xs text-left">{fmtSAR(totals.total)}</td>
-                <td className="num text-xs text-left">{fmtSAR(totals.total - totals.paid)}</td>
+                <td className="num text-xs text-right">{fmtSAR(totals.sub)}</td>
+                <td className="num text-xs text-right">{fmtSAR(totals.vat)}</td>
+                <td className="num text-xs text-right">{fmtSAR(totals.total)}</td>
+                <td className="num text-xs text-right">{fmtSAR(totals.total - totals.paid)}</td>
                 <td colSpan={2}><FileText className="h-3 w-3 text-muted-foreground" /></td>
               </tr>
             </tfoot>

@@ -99,10 +99,10 @@ export default function PurchaseInvoiceAccountingDetail() {
               <th>#</th>
               <th>الوصف</th>
               <th>المركبة</th>
-              <th className="text-left">الكمية</th>
-              <th className="text-left">تكلفة الوحدة</th>
-              <th className="text-left">الضريبة %</th>
-              <th className="text-left">الإجمالي</th>
+              <th className="text-right">الكمية</th>
+              <th className="text-right">تكلفة الوحدة</th>
+              <th className="text-right">الضريبة %</th>
+              <th className="text-right">الإجمالي</th>
             </tr>
           </thead>
           <tbody>
@@ -120,10 +120,10 @@ export default function PurchaseInvoiceAccountingDetail() {
                     </Link>
                   ) : "—"}
                 </td>
-                <td className="num text-left">{l.quantity}</td>
-                <td className="num text-left">{fmtSAR(l.unit_cost)}</td>
-                <td className="num text-left">{l.vat_pct}%</td>
-                <td className="num text-left font-semibold">{fmtSAR(l.line_total)}</td>
+                <td className="num text-right">{l.quantity}</td>
+                <td className="num text-right">{fmtSAR(l.unit_cost)}</td>
+                <td className="num text-right">{l.vat_pct}%</td>
+                <td className="num text-right font-semibold">{fmtSAR(l.line_total)}</td>
               </tr>
             ))}
           </tbody>
@@ -141,7 +141,7 @@ export default function PurchaseInvoiceAccountingDetail() {
               <th>التاريخ</th>
               <th>الطريقة</th>
               <th>المرجع</th>
-              <th className="text-left">المبلغ</th>
+              <th className="text-right">المبلغ</th>
               <th>قيد GL</th>
               <th>الحالة</th>
             </tr>
@@ -156,7 +156,7 @@ export default function PurchaseInvoiceAccountingDetail() {
                 <td>{fmtDate(p.payment_date)}</td>
                 <td>{METHOD_LABEL[p.method] ?? p.method}</td>
                 <td className="font-mono text-[11.5px] text-muted-foreground">{p.reference ?? "—"}</td>
-                <td className="num text-left font-semibold">{fmtSAR(p.amount)}</td>
+                <td className="num text-right font-semibold">{fmtSAR(p.amount)}</td>
                 <td>
                   {p.journal_entry_id ? (
                     <Link to={`/journals/${p.journal_entry_id}`} className="inline-flex items-center gap-1 text-primary text-[12px] hover:underline">

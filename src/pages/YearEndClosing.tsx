@@ -128,12 +128,12 @@ export default function YearEndClosing() {
             <div className="border rounded-lg bg-card overflow-hidden">
               <div className="px-4 py-2 border-b bg-muted/40 text-sm font-bold">صورة مالية مقارنة</div>
               <table className="erp-table">
-                <thead><tr><th>البند</th><th className="text-left">{fy.year}</th><th className="text-left">{fy.year - 1}</th></tr></thead>
+                <thead><tr><th>البند</th><th className="text-right">{fy.year}</th><th className="text-right">{fy.year - 1}</th></tr></thead>
                 <tbody>
-                  <tr><td>الإيرادات</td><td className="num text-left">{fmtSAR(snapshot.revenue)}</td><td className="num text-left">{fmtSAR(snapshot.revenue * 0.88)}</td></tr>
-                  <tr><td>تكلفة المبيعات</td><td className="num text-left">{fmtSAR(snapshot.cogs)}</td><td className="num text-left">{fmtSAR(snapshot.cogs * 0.9)}</td></tr>
-                  <tr><td>المصاريف التشغيلية</td><td className="num text-left">{fmtSAR(snapshot.opex)}</td><td className="num text-left">{fmtSAR(snapshot.opex * 0.93)}</td></tr>
-                  <tr className="bg-muted/40 font-bold"><td>صافي الربح</td><td className="num text-left text-emerald-700">{fmtSAR(snapshot.net)}</td><td className="num text-left">{fmtSAR(snapshot.net * 0.82)}</td></tr>
+                  <tr><td>الإيرادات</td><td className="num text-right">{fmtSAR(snapshot.revenue)}</td><td className="num text-right">{fmtSAR(snapshot.revenue * 0.88)}</td></tr>
+                  <tr><td>تكلفة المبيعات</td><td className="num text-right">{fmtSAR(snapshot.cogs)}</td><td className="num text-right">{fmtSAR(snapshot.cogs * 0.9)}</td></tr>
+                  <tr><td>المصاريف التشغيلية</td><td className="num text-right">{fmtSAR(snapshot.opex)}</td><td className="num text-right">{fmtSAR(snapshot.opex * 0.93)}</td></tr>
+                  <tr className="bg-muted/40 font-bold"><td>صافي الربح</td><td className="num text-right text-emerald-700">{fmtSAR(snapshot.net)}</td><td className="num text-right">{fmtSAR(snapshot.net * 0.82)}</td></tr>
                 </tbody>
               </table>
               <div className="p-3 border-t text-xs text-muted-foreground space-y-1">

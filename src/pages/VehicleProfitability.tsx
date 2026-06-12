@@ -393,10 +393,10 @@ export default function VehicleProfitability() {
               <th className="text-right p-2">VIN</th>
               <th className="text-right p-2">الحالة</th>
               <th className="text-right p-2">أيام في المخزون</th>
-              <th className="text-left p-2">صافي الإيراد</th>
-              <th className="text-left p-2">التكلفة الكلية</th>
+              <th className="text-right p-2">صافي الإيراد</th>
+              <th className="text-right p-2">التكلفة الكلية</th>
               <th className="text-right p-2">COGS</th>
-              <th className="text-left p-2">صافي الربح</th>
+              <th className="text-right p-2">صافي الربح</th>
               <th className="text-right p-2 w-32">الهامش</th>
               <th className="text-right p-2">الحوكمة</th>
             </tr>

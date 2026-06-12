@@ -107,10 +107,10 @@ export default function ARReconciliation() {
               <th></th>
               <th>الكود</th>
               <th>العميل</th>
-              <th className="text-left">الرصيد المشتق</th>
-              <th className="text-left">إشعارات دائنة</th>
-              <th className="text-left">AR 1200 مرحَّل</th>
-              <th className="text-left">الفرق</th>
+              <th className="text-right">الرصيد المشتق</th>
+              <th className="text-right">إشعارات دائنة</th>
+              <th className="text-right">AR 1200 مرحَّل</th>
+              <th className="text-right">الفرق</th>
               <th>الحالة</th>
             </tr>
           </thead>
@@ -156,11 +156,11 @@ export default function ARReconciliation() {
                           {r.customer_name}
                         </Link>
                       </td>
-                      <td className="num text-left">{fmt(r.derived_remaining)}</td>
-                      <td className="num text-left">{fmt(r.cn_posted_total)}</td>
-                      <td className="num text-left">{fmt(r.ar_ledger_credit)}</td>
+                      <td className="num text-right">{fmt(r.derived_remaining)}</td>
+                      <td className="num text-right">{fmt(r.cn_posted_total)}</td>
+                      <td className="num text-right">{fmt(r.ar_ledger_credit)}</td>
                       <td
-                        className={`num text-left font-semibold ${bad ? "text-destructive" : "text-success"}`}
+                        className={`num text-right font-semibold ${bad ? "text-destructive" : "text-success"}`}
                       >
                         {fmt(r.mismatch)}
                       </td>
@@ -187,9 +187,9 @@ export default function ARReconciliation() {
                               <thead>
                                 <tr>
                                   <th>الإشعار</th>
-                                  <th className="text-left">قيمة الإشعار</th>
+                                  <th className="text-right">قيمة الإشعار</th>
                                   <th>قيد اليومية</th>
-                                  <th className="text-left">دائن 1200</th>
+                                  <th className="text-right">دائن 1200</th>
                                   <th>الحالة</th>
                                 </tr>
                               </thead>
@@ -211,7 +211,7 @@ export default function ARReconciliation() {
                                         <FileText className="h-3 w-3" /> {n.credit_note_no}
                                       </Link>
                                     </td>
-                                    <td className="num text-left">{fmt(n.total)}</td>
+                                    <td className="num text-right">{fmt(n.total)}</td>
                                     <td className="font-mono">
                                       {n.journal_entry_id ? (
                                         <Link
@@ -224,7 +224,7 @@ export default function ARReconciliation() {
                                         <span className="text-destructive">— لا يوجد قيد —</span>
                                       )}
                                     </td>
-                                    <td className="num text-left">{fmt(n.ar_credit)}</td>
+                                    <td className="num text-right">{fmt(n.ar_credit)}</td>
                                     <td>
                                       {n.ok ? (
                                         <Badge variant="outline" className="text-success border-success/30">
@@ -254,11 +254,11 @@ export default function ARReconciliation() {
                 <td colSpan={3} className="text-left">
                   الإجمالي
                 </td>
-                <td className="num text-left">{fmt(totals.derived)}</td>
-                <td className="num text-left">{fmt(totals.cn)}</td>
-                <td className="num text-left">{fmt(totals.ledger)}</td>
+                <td className="num text-right">{fmt(totals.derived)}</td>
+                <td className="num text-right">{fmt(totals.cn)}</td>
+                <td className="num text-right">{fmt(totals.ledger)}</td>
                 <td
-                  className={`num text-left ${Math.abs(totals.mismatch) > 0.01 ? "text-destructive" : "text-success"}`}
+                  className={`num text-right ${Math.abs(totals.mismatch) > 0.01 ? "text-destructive" : "text-success"}`}
                 >
                   {fmt(totals.mismatch)}
                 </td>

@@ -125,7 +125,7 @@ export default function AccountDetail() {
           <thead>
             <tr>
               <th>التاريخ</th><th>القيد</th><th>المرجع</th><th>البيان</th>
-              <th className="text-left">مدين</th><th className="text-left">دائن</th><th className="text-left">الرصيد</th>
+              <th className="text-right">مدين</th><th className="text-right">دائن</th><th className="text-right">الرصيد</th>
             </tr>
           </thead>
           <tbody>
@@ -137,9 +137,9 @@ export default function AccountDetail() {
                 <td className="font-mono"><Link to={`/journals/${r.entry_id}`} className="text-primary hover:underline">{r.entry_no}</Link></td>
                 <td className="text-xs">{r.reference || "—"}</td>
                 <td className="max-w-[280px] truncate">{r.description || "—"}</td>
-                <td className="num text-left">{r.debit ? fmtSAR(r.debit) : "—"}</td>
-                <td className="num text-left">{r.credit ? fmtSAR(r.credit) : "—"}</td>
-                <td className={`num text-left font-semibold ${r.running_balance < 0 ? "text-destructive" : ""}`}>{fmtSAR(r.running_balance)}</td>
+                <td className="num text-right">{r.debit ? fmtSAR(r.debit) : "—"}</td>
+                <td className="num text-right">{r.credit ? fmtSAR(r.credit) : "—"}</td>
+                <td className={`num text-right font-semibold ${r.running_balance < 0 ? "text-destructive" : ""}`}>{fmtSAR(r.running_balance)}</td>
               </tr>
             ))}
           </tbody>

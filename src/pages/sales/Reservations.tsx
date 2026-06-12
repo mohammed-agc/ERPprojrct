@@ -140,7 +140,7 @@ export default function Reservations() {
                 <th className="text-right px-3 py-2 font-medium">العميل</th>
                 <th className="text-right px-3 py-2 font-medium">أمر البيع</th>
                 <th className="text-right px-3 py-2 font-medium">تاريخ الحجز</th>
-                <th className="text-left px-3 py-2 font-medium">السعر</th>
+                <th className="text-right px-3 py-2 font-medium">السعر</th>
                 <th className="text-right px-3 py-2 font-medium">الحالة</th>
                 <th className="text-right px-3 py-2 font-medium w-10"></th>
               </tr>
@@ -176,7 +176,7 @@ export default function Reservations() {
                       ) : <span className="text-muted-foreground text-xs">—</span>}
                     </td>
                     <td className="px-3 py-2 text-xs text-muted-foreground">{fmtDate(r.order_date)}</td>
-                    <td className="px-3 py-2 text-left num font-medium">{fmtSAR(r.sale_price)}</td>
+                    <td className="px-3 py-2 text-right num font-medium">{fmtSAR(r.sale_price)}</td>
                     <td className="px-3 py-2"><Badge variant={sm.variant}>{sm.label}</Badge></td>
                     <td className="px-3 py-2">
                       {r.order_id && (

@@ -117,7 +117,7 @@ export default function Transfers() {
           <thead>
             <tr>
               <th>الرقم</th><th>التاريخ</th><th>النوع</th>
-              <th>المسار</th><th className="text-left">المبلغ</th><th className="text-left">الرسوم</th>
+              <th>المسار</th><th className="text-right">المبلغ</th><th className="text-right">الرسوم</th>
               <th>المرجع</th><th>الحالة</th><th></th>
             </tr>
           </thead>
@@ -136,8 +136,8 @@ export default function Transfers() {
                     <span className="font-medium">{accMap.get(r.to_account_id)?.name_ar ?? "—"}</span>
                   </div>
                 </td>
-                <td className="num text-left font-semibold">{fmtSAR(r.amount)}</td>
-                <td className="num text-left text-xs">{r.fees ? fmtSAR(r.fees) : "—"}</td>
+                <td className="num text-right font-semibold">{fmtSAR(r.amount)}</td>
+                <td className="num text-right text-xs">{r.fees ? fmtSAR(r.fees) : "—"}</td>
                 <td className="text-xs">{r.reference ?? "—"}</td>
                 <td>
                   {r.status === "completed" && <Badge className="text-[11.5px] bg-success">مكتمل</Badge>}

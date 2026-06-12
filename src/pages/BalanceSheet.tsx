@@ -19,21 +19,21 @@ function Section({ sec, extraRow }: { sec: ReportSection; extraRow?: { label: st
             <tr key={r.account_id} className="hover:bg-muted/40">
               <td className="font-mono text-xs w-20"><Link to={`/accounts/${r.account_id}`} className="hover:text-primary">{r.code}</Link></td>
               <td>{r.name_ar}</td>
-              <td className="num text-left w-32">{fmtSAR(r.amount)}</td>
+              <td className="num text-right w-32">{fmtSAR(r.amount)}</td>
             </tr>
           ))}
           {extraRow && (
             <tr className="bg-accent/30 italic">
               <td className="font-mono text-xs">—</td>
               <td>{extraRow.label}</td>
-              <td className="num text-left">{fmtSAR(extraRow.amount)}</td>
+              <td className="num text-right">{fmtSAR(extraRow.amount)}</td>
             </tr>
           )}
         </tbody>
         <tfoot>
           <tr className="bg-muted/60 font-bold">
             <td colSpan={2}>إجمالي {sec.label}</td>
-            <td className="num text-left">{fmtSAR(sec.total + (extraRow?.amount ?? 0))}</td>
+            <td className="num text-right">{fmtSAR(sec.total + (extraRow?.amount ?? 0))}</td>
           </tr>
         </tfoot>
       </table>

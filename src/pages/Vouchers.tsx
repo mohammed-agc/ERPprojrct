@@ -137,7 +137,7 @@ export default function VouchersPage({ type }: Props) {
           <thead>
             <tr>
               <th>الرقم</th><th>التاريخ</th><th>النوع</th><th>{isReceipt ? "الدافع" : "المستفيد"}</th>
-              <th>الحساب</th><th className="text-left">المبلغ</th><th>طريقة الدفع</th>
+              <th>الحساب</th><th className="text-right">المبلغ</th><th>طريقة الدفع</th>
               <th>المرجع</th><th>الفاتورة</th><th>الحالة</th><th></th>
             </tr>
           </thead>
@@ -153,7 +153,7 @@ export default function VouchersPage({ type }: Props) {
                   <td className="text-xs">{kindLabels[r.kind as keyof typeof kindLabels] ?? r.kind}</td>
                   <td className="font-medium">{r.counterparty}</td>
                   <td className="text-xs">{acc?.name_ar ?? "—"}</td>
-                  <td className={`num text-left font-semibold ${isReceipt ? "text-emerald-600" : "text-rose-600"}`}>{fmtSAR(r.amount)}</td>
+                  <td className={`num text-right font-semibold ${isReceipt ? "text-emerald-600" : "text-rose-600"}`}>{fmtSAR(r.amount)}</td>
                   <td className="text-xs">{methodLabel[r.method]}</td>
                   <td className="text-xs">{r.reference ?? "—"}</td>
                   <td className="text-xs font-mono">{r.linked_invoice ?? "—"}</td>
@@ -178,7 +178,7 @@ export default function VouchersPage({ type }: Props) {
             <tfoot>
               <tr className="bg-muted/60 font-semibold">
                 <td colSpan={5} className="text-left">الإجمالي (المُرحَّل)</td>
-                <td className="num text-left">{fmtSAR(totals)}</td>
+                <td className="num text-right">{fmtSAR(totals)}</td>
                 <td colSpan={5} />
               </tr>
             </tfoot>

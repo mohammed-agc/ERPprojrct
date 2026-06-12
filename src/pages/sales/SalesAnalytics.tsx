@@ -185,7 +185,7 @@ export default function SalesAnalytics() {
                     <th className="text-right px-3 py-2 font-medium">#</th>
                     <th className="text-right px-3 py-2 font-medium">العميل</th>
                     <th className="text-center px-3 py-2 font-medium">عدد الفواتير</th>
-                    <th className="text-left px-3 py-2 font-medium">الإجمالي</th>
+                    <th className="text-right px-3 py-2 font-medium">الإجمالي</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -198,7 +198,7 @@ export default function SalesAnalytics() {
                         <Link to={`/ar/${c.id}`} className="hover:underline font-medium">{c.name}</Link>
                       </td>
                       <td className="px-3 py-2 text-center num">{c.count}</td>
-                      <td className="px-3 py-2 text-left num font-semibold text-success">{fmtSAR(c.revenue)}</td>
+                      <td className="px-3 py-2 text-right num font-semibold text-success">{fmtSAR(c.revenue)}</td>
                     </tr>
                   ))}
                 </tbody>

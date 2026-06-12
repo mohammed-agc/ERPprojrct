@@ -129,7 +129,7 @@ export default function ApprovalsPage({ scope }: Props) {
           <thead>
             <tr>
               <th>المرجع</th><th>النوع</th><th>الوصف</th><th>التاريخ</th>
-              <th className="text-left">المبلغ</th><th>مقدم الطلب</th><th>المراجع</th>
+              <th className="text-right">المبلغ</th><th>مقدم الطلب</th><th>المراجع</th>
               <th>الحالة</th><th className="text-left">الإجراءات</th>
             </tr>
           </thead>
@@ -141,7 +141,7 @@ export default function ApprovalsPage({ scope }: Props) {
                 <td className="text-xs">{entityTypeLabel[r.entity_type]}</td>
                 <td className="font-medium">{r.entity_label}</td>
                 <td className="num text-xs">{r.date}</td>
-                <td className="num text-left font-semibold">{fmtSAR(r.amount)}</td>
+                <td className="num text-right font-semibold">{fmtSAR(r.amount)}</td>
                 <td className="text-xs">{r.requester}</td>
                 <td className="text-xs">{r.reviewer ?? "—"}</td>
                 <td>

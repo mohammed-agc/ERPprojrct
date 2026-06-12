@@ -127,7 +127,7 @@ export default function BankReconciliation() {
           </div>
           <table className="erp-table">
             <thead>
-              <tr><th>التاريخ</th><th>الوصف</th><th className="text-left">مدين</th><th className="text-left">دائن</th><th></th></tr>
+              <tr><th>التاريخ</th><th>الوصف</th><th className="text-right">مدين</th><th className="text-right">دائن</th><th></th></tr>
             </thead>
             <tbody>
               {loading && <tr><td colSpan={5} className="text-center text-muted-foreground py-6">…</td></tr>}
@@ -136,8 +136,8 @@ export default function BankReconciliation() {
                 <tr key={l.id}>
                   <td className="num">{l.date}</td>
                   <td className="text-xs max-w-[180px] truncate">{l.description}</td>
-                  <td className="num text-left">{l.debit ? fmtSAR(l.debit) : "—"}</td>
-                  <td className="num text-left">{l.credit ? fmtSAR(l.credit) : "—"}</td>
+                  <td className="num text-right">{l.debit ? fmtSAR(l.debit) : "—"}</td>
+                  <td className="num text-right">{l.credit ? fmtSAR(l.credit) : "—"}</td>
                   <td className="flex gap-1">
                     <Button size="sm" variant="outline" className="h-6 px-2 text-[11.5px]" onClick={() => setMatchLine(l)}>
                       <LinkIcon className="h-3 w-3 ml-0.5" /> مطابقة
@@ -160,7 +160,7 @@ export default function BankReconciliation() {
           </div>
           <table className="erp-table">
             <thead>
-              <tr><th>التاريخ</th><th>الوصف</th><th>سند ERP</th><th className="text-left">المبلغ</th><th></th></tr>
+              <tr><th>التاريخ</th><th>الوصف</th><th>سند ERP</th><th className="text-right">المبلغ</th><th></th></tr>
             </thead>
             <tbody>
               {!loading && matched.length === 0 && <EmptyState inTable colSpan={5} title="لا توجد مطابقات بعد" />}
@@ -171,7 +171,7 @@ export default function BankReconciliation() {
                     <td className="num">{l.date}</td>
                     <td className="text-xs max-w-[160px] truncate">{l.description}</td>
                     <td className="font-mono text-xs">{v?.number ?? "—"}</td>
-                    <td className="num text-left">{fmtSAR(l.credit - l.debit)}</td>
+                    <td className="num text-right">{fmtSAR(l.credit - l.debit)}</td>
                     <td>
                       <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={async () => { await treasuryService.matchStatementLine(l.id, null); loadData(); }}>
                         <Trash2 className="h-3 w-3" />
@@ -255,7 +255,7 @@ function MatchDialog({ line, onClose, vouchers, onSaved }: { line: BankStatement
         {candidates.length > 0 && <div className="text-xs font-semibold text-success mb-1">مقترحات قريبة</div>}
         <div className="border rounded-md max-h-80 overflow-y-auto">
           <table className="erp-table">
-            <thead><tr><th>الرقم</th><th>التاريخ</th><th>الجهة</th><th>النوع</th><th className="text-left">المبلغ</th><th></th></tr></thead>
+            <thead><tr><th>الرقم</th><th>التاريخ</th><th>الجهة</th><th>النوع</th><th className="text-right">المبلغ</th><th></th></tr></thead>
             <tbody>
               {[...candidates, ...others].map(v => (
                 <tr key={v.id} className={candidates.includes(v) ? "bg-success/5" : ""}>
@@ -263,7 +263,7 @@ function MatchDialog({ line, onClose, vouchers, onSaved }: { line: BankStatement
                   <td className="num text-xs">{v.date}</td>
                   <td className="text-xs">{v.counterparty}</td>
                   <td className="text-xs">{v.type === "receipt" ? "قبض" : "صرف"}</td>
-                  <td className="num text-left">{fmtSAR(v.amount)}</td>
+                  <td className="num text-right">{fmtSAR(v.amount)}</td>
                   <td>
                     <Button size="sm" className="h-6 px-2 text-[11.5px]" onClick={async () => { await treasuryService.matchStatementLine(line.id, v.id); toast.success("تمت المطابقة"); onClose(); onSaved(); }}>
                       مطابقة

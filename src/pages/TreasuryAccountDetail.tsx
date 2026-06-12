@@ -133,7 +133,7 @@ export default function TreasuryAccountDetail() {
           <thead>
             <tr>
               <th>التاريخ</th><th>النوع</th><th>المرجع</th><th>الوصف</th>
-              <th className="text-left">وارد</th><th className="text-left">صادر</th><th className="text-left">الرصيد</th><th>الحالة</th>
+              <th className="text-right">وارد</th><th className="text-right">صادر</th><th className="text-right">الرصيد</th><th>الحالة</th>
             </tr>
           </thead>
           <tbody>
@@ -145,9 +145,9 @@ export default function TreasuryAccountDetail() {
                 <td><div className="flex items-center gap-1.5 text-xs">{movementIcon(m.type)}{movementLabel[m.type]}</div></td>
                 <td className="font-mono text-xs">{m.reference}</td>
                 <td className="text-xs max-w-[280px] truncate">{m.description}</td>
-                <td className="num text-left text-emerald-600">{m.amount > 0 ? fmtSAR(m.amount) : "—"}</td>
-                <td className="num text-left text-rose-600">{m.amount < 0 ? fmtSAR(-m.amount) : "—"}</td>
-                <td className={`num text-left font-semibold ${m.running < 0 ? "text-destructive" : ""}`}>{fmtSAR(m.running)}</td>
+                <td className="num text-right text-emerald-600">{m.amount > 0 ? fmtSAR(m.amount) : "—"}</td>
+                <td className="num text-right text-rose-600">{m.amount < 0 ? fmtSAR(-m.amount) : "—"}</td>
+                <td className={`num text-right font-semibold ${m.running < 0 ? "text-destructive" : ""}`}>{fmtSAR(m.running)}</td>
                 <td><Badge variant="secondary" className="text-[11.5px]">{statusLabel[m.status] ?? m.status}</Badge></td>
               </tr>
             ))}

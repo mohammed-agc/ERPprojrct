@@ -144,7 +144,7 @@ export default function SalesOrders() {
               <th>التاريخ</th>
               <th>العميل</th>
               <th>القسم</th>
-              <th className="text-left">الإجمالي (ر.س)</th>
+              <th className="text-right">الإجمالي (ر.س)</th>
               <th>الحالة</th>
               <th></th>
             </tr>
@@ -159,7 +159,7 @@ export default function SalesOrders() {
                 <td className="num">{r.order_date}</td>
                 <td>{r.customer_name ?? (r as any).contact?.name ?? "—"}</td>
                 <td className="text-xs text-muted-foreground">{r.department_code === "spare_parts" ? "قطع الغيار" : "المركبات"}</td>
-                <td className="num text-left font-semibold">{Number(r.total).toLocaleString("ar-SA", { minimumFractionDigits: 2 })}</td>
+                <td className="num text-right font-semibold">{Number(r.total).toLocaleString("ar-SA", { minimumFractionDigits: 2 })}</td>
                 <td><Badge variant={statusMap[r.status]?.variant}>{statusMap[r.status]?.label}</Badge></td>
                 <td><Button variant="ghost" size="sm" onClick={()=>nav(`/sales-orders/${r.id}`)}><Eye className="h-4 w-4" /></Button></td>
               </tr>
@@ -170,6 +170,5 @@ export default function SalesOrders() {
     </div>
   );
 }
-
 
 

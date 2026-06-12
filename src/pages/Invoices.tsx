@@ -339,10 +339,10 @@ export default function Invoices() {
               <th>التاريخ</th>
               <th>العميل</th>
               <th>المركبة / VIN</th>
-              <th className="text-left">قبل الضريبة</th>
-              <th className="text-left">VAT 15%</th>
-              <th className="text-left">الإجمالي</th>
-              <th className="text-left">المدفوع</th>
+              <th className="text-right">قبل الضريبة</th>
+              <th className="text-right">VAT 15%</th>
+              <th className="text-right">الإجمالي</th>
+              <th className="text-right">المدفوع</th>
               <th>QR</th>
               <th>الحالة</th>
               <th>الدفع</th>
@@ -387,10 +387,10 @@ export default function Invoices() {
                       </div>
                     )}
                   </td>
-                  <td className="num text-left">{Number(r.subtotal).toLocaleString("ar-SA", {minimumFractionDigits:2})}</td>
-                  <td className="num text-left">{Number(r.vat_amount).toLocaleString("ar-SA", {minimumFractionDigits:2})}</td>
-                  <td className="num text-left font-bold">{total.toLocaleString("ar-SA", {minimumFractionDigits:2})}</td>
-                  <td className="num text-left">{paidSoFar.toLocaleString("ar-SA", {minimumFractionDigits:2})}</td>
+                  <td className="num text-right">{Number(r.subtotal).toLocaleString("ar-SA", {minimumFractionDigits:2})}</td>
+                  <td className="num text-right">{Number(r.vat_amount).toLocaleString("ar-SA", {minimumFractionDigits:2})}</td>
+                  <td className="num text-right font-bold">{total.toLocaleString("ar-SA", {minimumFractionDigits:2})}</td>
+                  <td className="num text-right">{paidSoFar.toLocaleString("ar-SA", {minimumFractionDigits:2})}</td>
                   <td>{r.qr_code ? <span className="text-xs text-success">✓ متوفر</span> : <span className="text-xs text-muted-foreground">—</span>}</td>
                   <td><Badge variant={statusMap[r.status]?.variant}>{statusMap[r.status]?.label ?? r.status}</Badge></td>
                   <td>{paymentBadge(payStatus)}</td>

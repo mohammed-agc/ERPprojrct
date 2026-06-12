@@ -292,10 +292,10 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
               <tr>
                 <th style={{ width: 32 }}></th>
                 <th>الوصف</th>
-                <th style={{ width: 80 }} className="text-left">الكمية</th>
-                <th style={{ width: 110 }} className="text-left">سعر الوحدة</th>
-                <th style={{ width: 70 }} className="text-left">VAT%</th>
-                <th style={{ width: 110 }} className="text-left">الإجمالي</th>
+                <th style={{ width: 80 }} className="text-right">الكمية</th>
+                <th style={{ width: 110 }} className="text-right">سعر الوحدة</th>
+                <th style={{ width: 70 }} className="text-right">VAT%</th>
+                <th style={{ width: 110 }} className="text-right">الإجمالي</th>
                 <th style={{ width: 36 }}></th>
               </tr>
             </thead>
@@ -319,7 +319,7 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
                       {err && <div className="text-[11.5px] text-destructive mt-0.5">{err}</div>}
                     </td>
                     <td>
-                      <Input className={`h-7 text-left num ${qtyBad ? "border-destructive" : ""}`}
+                      <Input className={`h-7 text-right num ${qtyBad ? "border-destructive" : ""}`}
                         type="number" min={0} max={l._maxQty}
                         value={l.quantity}
                         onChange={e => update(i, { quantity: Math.max(0, Number(e.target.value) || 0) })} />
@@ -328,7 +328,7 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
                       )}
                     </td>
                     <td>
-                      <Input className={`h-7 text-left num ${priceBad ? "border-destructive" : ""}`}
+                      <Input className={`h-7 text-right num ${priceBad ? "border-destructive" : ""}`}
                         type="number" min={0} max={l._maxUnit}
                         value={l.unit_price}
                         onChange={e => update(i, { unit_price: Math.max(0, Number(e.target.value) || 0) })} />
@@ -336,10 +336,10 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
                         <div className="text-[11.5px] text-muted-foreground mt-0.5">حد: {fmt(l._maxUnit)}</div>
                       )}
                     </td>
-                    <td><Input className="h-7 text-left num" type="number" min={0} max={100}
+                    <td><Input className="h-7 text-right num" type="number" min={0} max={100}
                       value={l.vat_pct}
                       onChange={e => update(i, { vat_pct: Math.max(0, Number(e.target.value) || 0) })} /></td>
-                    <td className="num text-left font-semibold">{fmt(lineTotal)}</td>
+                    <td className="num text-right font-semibold">{fmt(lineTotal)}</td>
                     <td>
                       <Button size="sm" variant="ghost" onClick={() => removeLine(i)}>
                         <Trash2 className="h-3.5 w-3.5" />
@@ -408,22 +408,22 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
             {previewView === "aggregate" ? (
               <table className="erp-table">
                 <thead>
-                  <tr><th>الحساب</th><th className="text-left">مدين</th><th className="text-left">دائن</th></tr>
+                  <tr><th>الحساب</th><th className="text-right">مدين</th><th className="text-right">دائن</th></tr>
                 </thead>
                 <tbody>
                   {glRows.map((r, i) => (
                     <tr key={i}>
                       <td>{r.account}</td>
-                      <td className="num text-left">{r.debit ? fmt(r.debit) : "—"}</td>
-                      <td className="num text-left">{r.credit ? fmt(r.credit) : "—"}</td>
+                      <td className="num text-right">{r.debit ? fmt(r.debit) : "—"}</td>
+                      <td className="num text-right">{r.credit ? fmt(r.credit) : "—"}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr className="bg-muted/60 font-semibold">
                     <td className="text-left">الإجمالي</td>
-                    <td className="num text-left">{fmt(glDebit)}</td>
-                    <td className="num text-left">{fmt(glCredit)}</td>
+                    <td className="num text-right">{fmt(glDebit)}</td>
+                    <td className="num text-right">{fmt(glCredit)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -434,8 +434,8 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
                     <th style={{ width: 32 }}>#</th>
                     <th>البند</th>
                     <th>الحساب</th>
-                    <th className="text-left">مدين</th>
-                    <th className="text-left">دائن</th>
+                    <th className="text-right">مدين</th>
+                    <th className="text-right">دائن</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -444,26 +444,26 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
                       <td rowSpan={3} className="align-top">{r.line_no}</td>
                       <td rowSpan={3} className="align-top">{r.description}</td>
                       <td>{ACC_RETURNS}</td>
-                      <td className="num text-left">{fmt(r.subtotal)}</td>
-                      <td className="num text-left">—</td>
+                      <td className="num text-right">{fmt(r.subtotal)}</td>
+                      <td className="num text-right">—</td>
                     </tr>,
                     <tr key={`v-${r.line_no}`}>
                       <td>{ACC_VAT}</td>
-                      <td className="num text-left">{fmt(r.vat)}</td>
-                      <td className="num text-left">—</td>
+                      <td className="num text-right">{fmt(r.vat)}</td>
+                      <td className="num text-right">—</td>
                     </tr>,
                     <tr key={`a-${r.line_no}`} className="border-b-2 border-border">
                       <td>{ACC_AR}</td>
-                      <td className="num text-left">—</td>
-                      <td className="num text-left">{fmt(r.total)}</td>
+                      <td className="num text-right">—</td>
+                      <td className="num text-right">{fmt(r.total)}</td>
                     </tr>,
                   ])}
                 </tbody>
                 <tfoot>
                   <tr className="bg-muted/60 font-semibold">
                     <td className="text-left" colSpan={3}>الإجمالي</td>
-                    <td className="num text-left">{fmt(glDebit)}</td>
-                    <td className="num text-left">{fmt(glCredit)}</td>
+                    <td className="num text-right">{fmt(glDebit)}</td>
+                    <td className="num text-right">{fmt(glCredit)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -512,7 +512,7 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
           <div className="bg-card border border-border rounded-lg overflow-hidden mb-3">
             <table className="erp-table">
               <thead>
-                <tr><th>القيمة</th><th className="text-left">المتوقع</th><th className="text-left">من قاعدة البيانات</th><th>الحالة</th></tr>
+                <tr><th>القيمة</th><th className="text-right">المتوقع</th><th className="text-right">من قاعدة البيانات</th><th>الحالة</th></tr>
               </thead>
               <tbody>
                 {([
@@ -524,8 +524,8 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
                   return (
                     <tr key={label}>
                       <td>{label}</td>
-                      <td className="num text-left">{fmt(exp)}</td>
-                      <td className="num text-left">{fmt(act)}</td>
+                      <td className="num text-right">{fmt(exp)}</td>
+                      <td className="num text-right">{fmt(act)}</td>
                       <td className={ok ? "text-success" : "text-destructive"}>{ok ? "✓" : "✗"}</td>
                     </tr>
                   );

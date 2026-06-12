@@ -67,9 +67,9 @@ export default function TrialBalance() {
               <th className="w-24">الكود</th>
               <th>الحساب</th>
               <th className="w-28">النوع</th>
-              <th className="text-left w-32">مدين</th>
-              <th className="text-left w-32">دائن</th>
-              <th className="text-left w-32">الرصيد</th>
+              <th className="text-right w-32">مدين</th>
+              <th className="text-right w-32">دائن</th>
+              <th className="text-right w-32">الرصيد</th>
             </tr>
           </thead>
           <tbody>
@@ -80,9 +80,9 @@ export default function TrialBalance() {
                 <td className="font-mono text-xs">{r.code}</td>
                 <td className="font-medium">{r.name_ar}</td>
                 <td><span className="text-xs text-muted-foreground">{typeLabel[r.type]}</span></td>
-                <td className="num text-left">{r.debit ? fmt(r.debit) : "—"}</td>
-                <td className="num text-left">{r.credit ? fmt(r.credit) : "—"}</td>
-                <td className={`num text-left font-semibold ${r.balance < 0 ? "text-destructive" : ""}`}>{fmt(r.balance)}</td>
+                <td className="num text-right">{r.debit ? fmt(r.debit) : "—"}</td>
+                <td className="num text-right">{r.credit ? fmt(r.credit) : "—"}</td>
+                <td className={`num text-right font-semibold ${r.balance < 0 ? "text-destructive" : ""}`}>{fmt(r.balance)}</td>
               </tr>
             ))}
           </tbody>
@@ -90,9 +90,9 @@ export default function TrialBalance() {
             <tfoot>
               <tr className="bg-muted/60 font-semibold">
                 <td colSpan={3} className="text-left">الإجمالي</td>
-                <td className="num text-left">{fmt(totals.d)}</td>
-                <td className="num text-left">{fmt(totals.c)}</td>
-                <td className="num text-left">{fmt(totals.d - totals.c)}</td>
+                <td className="num text-right">{fmt(totals.d)}</td>
+                <td className="num text-right">{fmt(totals.c)}</td>
+                <td className="num text-right">{fmt(totals.d - totals.c)}</td>
               </tr>
             </tfoot>
           )}

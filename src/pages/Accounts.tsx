@@ -174,9 +174,9 @@ function NodeRow(p: RowProps) {
           </td>
 
           {/* amounts */}
-          <td className="num text-left text-xs">{node.debit ? fmtSAR(node.debit) : <span className="text-muted-foreground/40">—</span>}</td>
-          <td className="num text-left text-xs">{node.credit ? fmtSAR(node.credit) : <span className="text-muted-foreground/40">—</span>}</td>
-          <td className={`num text-left font-semibold ${node.rollup < 0 ? "text-destructive" : node.rollup > 0 ? "" : "text-muted-foreground/50"}`}>
+          <td className="num text-right text-xs">{node.debit ? fmtSAR(node.debit) : <span className="text-muted-foreground/40">—</span>}</td>
+          <td className="num text-right text-xs">{node.credit ? fmtSAR(node.credit) : <span className="text-muted-foreground/40">—</span>}</td>
+          <td className={`num text-right font-semibold ${node.rollup < 0 ? "text-destructive" : node.rollup > 0 ? "" : "text-muted-foreground/50"}`}>
             {fmtSAR(node.rollup)}
           </td>
 
@@ -409,9 +409,9 @@ export default function Accounts() {
               <th className="w-16">الحالة</th>
               <th className="w-16 text-center">القيود</th>
               <th className="w-28">آخر حركة</th>
-              <th className="text-left w-24">مدين</th>
-              <th className="text-left w-24">دائن</th>
-              <th className="text-left w-32">الرصيد التجميعي</th>
+              <th className="text-right w-24">مدين</th>
+              <th className="text-right w-24">دائن</th>
+              <th className="text-right w-32">الرصيد التجميعي</th>
               <th className="w-8"></th>
             </tr>
           </thead>
@@ -459,4 +459,3 @@ export default function Accounts() {
     </div>
   );
 }
-

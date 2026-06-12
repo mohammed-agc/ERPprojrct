@@ -150,10 +150,10 @@ export default function SupplierIncentives() {
               <th className="text-center">الهدف</th>
               <th className="text-center">المُشترى</th>
               <th className="text-center">التحقق</th>
-              <th className="text-left">حافز/مركبة</th>
-              <th className="text-left">مكتسب</th>
-              <th className="text-left">مُطالب به</th>
-              <th className="text-left">متبقي</th>
+              <th className="text-right">حافز/مركبة</th>
+              <th className="text-right">مكتسب</th>
+              <th className="text-right">مُطالب به</th>
+              <th className="text-right">متبقي</th>
               <th>الحالة</th>
               <th></th>
             </tr>
@@ -195,10 +195,10 @@ export default function SupplierIncentives() {
                     </div>
                   </div>
                 </td>
-                <td className="num text-left tabular-nums">{fmtSAR(program.incentive_per_vehicle)}</td>
-                <td className="num text-left tabular-nums font-semibold text-success">{fmtSAR(perf.earned)}</td>
-                <td className="num text-left tabular-nums text-warning">{fmtSAR(perf.claimed)}</td>
-                <td className="num text-left tabular-nums font-semibold">{fmtSAR(perf.remaining_incentive)}</td>
+                <td className="num text-right tabular-nums">{fmtSAR(program.incentive_per_vehicle)}</td>
+                <td className="num text-right tabular-nums font-semibold text-success">{fmtSAR(perf.earned)}</td>
+                <td className="num text-right tabular-nums text-warning">{fmtSAR(perf.claimed)}</td>
+                <td className="num text-right tabular-nums font-semibold">{fmtSAR(perf.remaining_incentive)}</td>
                 <td>
                   <div className="flex flex-col gap-0.5 items-start">
                     <Badge className={STATUS_TONE[program.status]}>{STATUS_LABEL[program.status]}</Badge>

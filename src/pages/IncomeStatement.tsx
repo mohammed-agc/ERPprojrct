@@ -70,9 +70,9 @@ export default function IncomeStatementPage() {
       <>
         <tr className={`font-semibold ${tone === "rev" ? "bg-emerald-50" : "bg-rose-50"}`}>
           <td colSpan={2}>{sec.label}</td>
-          <td className="num text-left">{fmtSAR(sec.total)}</td>
-          {prevSec && <td className="num text-left">{fmtSAR(prevSec.total)}</td>}
-          {prevSec && <td className="num text-left text-xs">{pct(sec.total, prevSec.total)?.toFixed(1) ?? "—"}%</td>}
+          <td className="num text-right">{fmtSAR(sec.total)}</td>
+          {prevSec && <td className="num text-right">{fmtSAR(prevSec.total)}</td>}
+          {prevSec && <td className="num text-right text-xs">{pct(sec.total, prevSec.total)?.toFixed(1) ?? "—"}%</td>}
         </tr>
         {sec.rows.map(r => {
           const p = prevMap.get(r.account_id);
@@ -80,9 +80,9 @@ export default function IncomeStatementPage() {
             <tr key={r.account_id} className="hover:bg-muted/40">
               <td className="font-mono text-xs pr-6"><Link to={`/accounts/${r.account_id}`} className="hover:text-primary">{r.code}</Link></td>
               <td>{r.name_ar}</td>
-              <td className="num text-left">{fmtSAR(r.amount)}</td>
-              {prevSec && <td className="num text-left text-muted-foreground">{p !== undefined ? fmtSAR(p) : "—"}</td>}
-              {prevSec && <td className="num text-left text-xs">{p !== undefined ? `${pct(r.amount, p)?.toFixed(1) ?? "—"}%` : "—"}</td>}
+              <td className="num text-right">{fmtSAR(r.amount)}</td>
+              {prevSec && <td className="num text-right text-muted-foreground">{p !== undefined ? fmtSAR(p) : "—"}</td>}
+              {prevSec && <td className="num text-right text-xs">{p !== undefined ? `${pct(r.amount, p)?.toFixed(1) ?? "—"}%` : "—"}</td>}
             </tr>
           );
         })}
@@ -135,9 +135,9 @@ export default function IncomeStatementPage() {
             <tr>
               <th className="w-24">الكود</th>
               <th>البند</th>
-              <th className="text-left w-32">الفترة الحالية</th>
-              {prev && <th className="text-left w-32">المقارنة</th>}
-              {prev && <th className="text-left w-20">التغير</th>}
+              <th className="text-right w-32">الفترة الحالية</th>
+              {prev && <th className="text-right w-32">المقارنة</th>}
+              {prev && <th className="text-right w-20">التغير</th>}
             </tr>
           </thead>
           <tbody>
@@ -148,9 +148,9 @@ export default function IncomeStatementPage() {
                 {renderSection(report.expense, prev?.expense, "exp")}
                 <tr className="bg-muted font-bold text-base">
                   <td colSpan={2}>صافي الربح / الخسارة</td>
-                  <td className={`num text-left ${report.net_income < 0 ? "text-destructive" : "text-success"}`}>{fmtSAR(report.net_income)}</td>
-                  {prev && <td className={`num text-left ${prev.net_income < 0 ? "text-destructive" : "text-success"}`}>{fmtSAR(prev.net_income)}</td>}
-                  {prev && <td className="num text-left text-xs">{pct(report.net_income, prev.net_income)?.toFixed(1) ?? "—"}%</td>}
+                  <td className={`num text-right ${report.net_income < 0 ? "text-destructive" : "text-success"}`}>{fmtSAR(report.net_income)}</td>
+                  {prev && <td className={`num text-right ${prev.net_income < 0 ? "text-destructive" : "text-success"}`}>{fmtSAR(prev.net_income)}</td>}
+                  {prev && <td className="num text-right text-xs">{pct(report.net_income, prev.net_income)?.toFixed(1) ?? "—"}%</td>}
                 </tr>
               </>
             )}

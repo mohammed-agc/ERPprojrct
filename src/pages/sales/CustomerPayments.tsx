@@ -228,7 +228,7 @@ export default function CustomerPayments() {
                   <th>الفاتورة</th>
                   <th>الطريقة</th>
                   <th>المرجع</th>
-                  <th className="num text-left">المبلغ</th>
+                  <th className="num text-right">المبلغ</th>
                   <th>القيد</th>
                   <th className="text-left w-32">إجراءات</th>
                 </tr>
@@ -255,7 +255,7 @@ export default function CustomerPayments() {
                     </td>
                     <td><Badge variant="outline" className="text-[11.5px]">{METHOD_LABEL[r.method] ?? r.method}</Badge></td>
                     <td className="font-mono text-[11.5px]">{r.reference || "—"}</td>
-                    <td className="num text-left font-semibold">{fmtSAR(Number(r.amount || 0))}</td>
+                    <td className="num text-right font-semibold">{fmtSAR(Number(r.amount || 0))}</td>
                     <td>
                       {r.journal_entry ? (
                         <Link to={`/journals/${r.journal_entry.id}`} className="inline-flex items-center gap-1 text-xs hover:underline">
@@ -286,8 +286,8 @@ export default function CustomerPayments() {
                   <th>الكود</th>
                   <th className="num">عدد الدفعات</th>
                   <th>آخر دفعة</th>
-                  <th className="num text-left">الإجمالي</th>
-                  <th className="text-left">كشف الحساب</th>
+                  <th className="num text-right">الإجمالي</th>
+                  <th className="text-right">كشف الحساب</th>
                 </tr>
               </thead>
               <tbody>
@@ -298,7 +298,7 @@ export default function CustomerPayments() {
                     <td className="font-mono text-xs">{g.customer?.code ?? "—"}</td>
                     <td className="num">{g.count}</td>
                     <td className="num text-xs">{fmtDate(g.last)}</td>
-                    <td className="num text-left font-semibold">{fmtSAR(g.amount)}</td>
+                    <td className="num text-right font-semibold">{fmtSAR(g.amount)}</td>
                     <td className="text-left">
                       {g.customer && (
                         <Button asChild size="sm" variant="outline"><Link to={`/ar/${g.customer.id}`}><ReceiptIcon className="h-3.5 w-3.5 ml-1" /> كشف الحساب</Link></Button>
@@ -320,8 +320,8 @@ export default function CustomerPayments() {
                   <th>العميل</th>
                   <th className="num">إجمالي الفاتورة</th>
                   <th className="num">عدد الدفعات</th>
-                  <th className="num text-left">المحصّل</th>
-                  <th className="num text-left">المتبقي</th>
+                  <th className="num text-right">المحصّل</th>
+                  <th className="num text-right">المتبقي</th>
                 </tr>
               </thead>
               <tbody>
@@ -341,8 +341,8 @@ export default function CustomerPayments() {
                       <td>{g.customer?.name ?? "—"}</td>
                       <td className="num">{g.invoice ? fmtSAR(total) : "—"}</td>
                       <td className="num">{g.count}</td>
-                      <td className="num text-left font-semibold">{fmtSAR(g.amount)}</td>
-                      <td className="num text-left">{g.invoice ? fmtSAR(remaining) : "—"}</td>
+                      <td className="num text-right font-semibold">{fmtSAR(g.amount)}</td>
+                      <td className="num text-right">{g.invoice ? fmtSAR(remaining) : "—"}</td>
                     </tr>
                   );
                 })}

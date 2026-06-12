@@ -86,10 +86,10 @@ export default function PartnerBalanceSummary() {
             <tr>
               <th>الطرف</th>
               <th>الصفة</th>
-              <th className="text-left">رصيد كعميل (مدين)</th>
-              <th className="text-left">رصيد كمورد (دائن)</th>
-              <th className="text-left">الصافي</th>
-              <th className="text-left">المقاصة الممكنة</th>
+              <th className="text-right">رصيد كعميل (مدين)</th>
+              <th className="text-right">رصيد كمورد (دائن)</th>
+              <th className="text-right">الصافي</th>
+              <th className="text-right">المقاصة الممكنة</th>
               <th className="text-center">المقاصّة</th>
             </tr>
           </thead>
@@ -112,12 +112,12 @@ export default function PartnerBalanceSummary() {
                     {r.is_supplier && <Badge variant="outline" className="text-[11.5px]">مورد</Badge>}
                   </div>
                 </td>
-                <td className="num text-left">{r.customer_balance > 0.01 ? fmtSAR(r.customer_balance) : "—"}</td>
-                <td className="num text-left">{r.vendor_balance > 0.01 ? fmtSAR(r.vendor_balance) : "—"}</td>
-                <td className={`num text-left font-bold ${r.net_position >= 0 ? "text-success" : "text-warning"}`}>
+                <td className="num text-right">{r.customer_balance > 0.01 ? fmtSAR(r.customer_balance) : "—"}</td>
+                <td className="num text-right">{r.vendor_balance > 0.01 ? fmtSAR(r.vendor_balance) : "—"}</td>
+                <td className={`num text-right font-bold ${r.net_position >= 0 ? "text-success" : "text-warning"}`}>
                   {fmtSAR(Math.abs(r.net_position))} {r.net_position >= 0 ? "مدين" : "دائن"}
                 </td>
-                <td className="num text-left text-primary font-semibold">{canSettle(r) ? fmtSAR(maxSettle(r)) : "—"}</td>
+                <td className="num text-right text-primary font-semibold">{canSettle(r) ? fmtSAR(maxSettle(r)) : "—"}</td>
                 <td className="text-center">
                   {canSettle(r) ? (
                     <Button size="sm" variant="outline" className="h-7 gap-1" onClick={() => openSettle(r)}>
@@ -134,8 +134,8 @@ export default function PartnerBalanceSummary() {
             <tfoot>
               <tr className="font-bold bg-muted/40">
                 <td colSpan={2}>الإجمالي</td>
-                <td className="num text-left">{fmtSAR(totals.customer)}</td>
-                <td className="num text-left">{fmtSAR(totals.vendor)}</td>
+                <td className="num text-right">{fmtSAR(totals.customer)}</td>
+                <td className="num text-right">{fmtSAR(totals.vendor)}</td>
                 <td colSpan={2}></td>
               </tr>
             </tfoot>

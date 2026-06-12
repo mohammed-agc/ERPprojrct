@@ -94,11 +94,11 @@ export default function CenterProfitability({ scope, title, subtitle }: Props) {
           <thead className="bg-muted/40 text-xs">
             <tr>
               <th className="text-right p-2">المركز</th>
-              <th className="text-left p-2">الإيراد</th>
-              <th className="text-left p-2">تكلفة المبيعات</th>
-              <th className="text-left p-2">المصروفات</th>
-              <th className="text-left p-2">ربح إجمالي</th>
-              <th className="text-left p-2">ربح صافي</th>
+              <th className="text-right p-2">الإيراد</th>
+              <th className="text-right p-2">تكلفة المبيعات</th>
+              <th className="text-right p-2">المصروفات</th>
+              <th className="text-right p-2">ربح إجمالي</th>
+              <th className="text-right p-2">ربح صافي</th>
               <th className="text-right p-2 w-32">هامش صافي</th>
             </tr>
           </thead>

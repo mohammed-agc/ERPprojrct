@@ -272,12 +272,12 @@ export default function InvoiceDetail() {
           <thead>
             <tr>
               <th>#</th><th>الوصف</th>
-              <th className="text-left">الكمية</th>
-              <th className="text-left">سعر الوحدة</th>
-              <th className="text-left">الخصم</th>
-              <th className="text-left">قبل الضريبة</th>
-              <th className="text-left">VAT%</th>
-              <th className="text-left">الإجمالي</th>
+              <th className="text-right">الكمية</th>
+              <th className="text-right">سعر الوحدة</th>
+              <th className="text-right">الخصم</th>
+              <th className="text-right">قبل الضريبة</th>
+              <th className="text-right">VAT%</th>
+              <th className="text-right">الإجمالي</th>
             </tr>
           </thead>
           <tbody>
@@ -295,12 +295,12 @@ export default function InvoiceDetail() {
                     <div>{l.description}</div>
                     {l.vin && <div className="text-[12px] text-muted-foreground font-mono" dir="ltr">VIN: {l.vin}</div>}
                   </td>
-                  <td className="num text-left">{qty}</td>
-                  <td className="num text-left">{fmt(up)}</td>
-                  <td className="num text-left text-red-600">{disc > 0 ? `- ${fmt(disc)}` : "—"}</td>
-                  <td className="num text-left">{fmt(beforeVat)}</td>
-                  <td className="num text-left">{Number(l.vat_pct)}%</td>
-                  <td className="num text-left font-semibold">{fmt(lt)}</td>
+                  <td className="num text-right">{qty}</td>
+                  <td className="num text-right">{fmt(up)}</td>
+                  <td className="num text-right text-red-600">{disc > 0 ? `- ${fmt(disc)}` : "—"}</td>
+                  <td className="num text-right">{fmt(beforeVat)}</td>
+                  <td className="num text-right">{Number(l.vat_pct)}%</td>
+                  <td className="num text-right font-semibold">{fmt(lt)}</td>
                 </tr>
               );
             })}
@@ -315,7 +315,7 @@ export default function InvoiceDetail() {
             <Link to={`/sales/credit-notes?invoice_id=${inv.id}`} className="text-xs text-primary hover:underline">عرض الكل ←</Link>
           </div>
           <table className="erp-table">
-            <thead><tr><th>الرقم</th><th>التاريخ</th><th>السبب</th><th className="text-left">الإجمالي</th></tr></thead>
+            <thead><tr><th>الرقم</th><th>التاريخ</th><th>السبب</th><th className="text-right">الإجمالي</th></tr></thead>
             <tbody>
               {creditNotes.length === 0 && <tr><td colSpan={4} className="text-center text-muted-foreground py-4">لا توجد إشعارات</td></tr>}
               {creditNotes.map(c => (
@@ -323,7 +323,7 @@ export default function InvoiceDetail() {
                   <td className="font-mono"><Link to={`/sales/credit-notes/${c.id}`} className="text-primary hover:underline">{c.credit_note_no}</Link></td>
                   <td className="num">{fmtDate(c.cn_date)}</td>
                   <td className="text-xs text-muted-foreground">{c.reason}</td>
-                  <td className="num text-left font-semibold">{fmt(Number(c.total))}</td>
+                  <td className="num text-right font-semibold">{fmt(Number(c.total))}</td>
                 </tr>
               ))}
             </tbody>
@@ -335,7 +335,7 @@ export default function InvoiceDetail() {
         <div className="bg-card border border-border rounded-lg overflow-hidden">
           <div className="px-3 py-2 border-b border-border text-sm font-semibold">الدفعات</div>
           <table className="erp-table">
-            <thead><tr><th>الرقم</th><th>التاريخ</th><th>طريقة الدفع</th><th className="text-left">المبلغ</th></tr></thead>
+            <thead><tr><th>الرقم</th><th>التاريخ</th><th>طريقة الدفع</th><th className="text-right">المبلغ</th></tr></thead>
             <tbody>
               {payments.length === 0 && <tr><td colSpan={4} className="text-center text-muted-foreground py-4">لا توجد دفعات</td></tr>}
               {payments.map(p => (
@@ -343,7 +343,7 @@ export default function InvoiceDetail() {
                   <td className="font-mono">{p.payment_no}</td>
                   <td className="num">{fmtDate(p.payment_date)}</td>
                   <td className="text-xs">{p.method}</td>
-                  <td className="num text-left font-semibold">{fmt(Number(p.amount))}</td>
+                  <td className="num text-right font-semibold">{fmt(Number(p.amount))}</td>
                 </tr>
               ))}
             </tbody>

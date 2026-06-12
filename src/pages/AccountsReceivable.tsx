@@ -113,14 +113,14 @@ export default function AccountsReceivable() {
               <th>الكود</th>
               <th>العميل</th>
               <th className="text-center">الفواتير</th>
-              <th className="text-left">إجمالي</th>
-              <th className="text-left">مدفوع</th>
-              <th className="text-left">المتبقي</th>
-              <th className="text-left">حالي</th>
-              <th className="text-left">0-30</th>
-              <th className="text-left">31-60</th>
-              <th className="text-left">61-90</th>
-              <th className="text-left">+90</th>
+              <th className="text-right">إجمالي</th>
+              <th className="text-right">مدفوع</th>
+              <th className="text-right">المتبقي</th>
+              <th className="text-right">حالي</th>
+              <th className="text-right">0-30</th>
+              <th className="text-right">31-60</th>
+              <th className="text-right">61-90</th>
+              <th className="text-right">+90</th>
               <th></th>
             </tr>
           </thead>
@@ -132,14 +132,14 @@ export default function AccountsReceivable() {
                 <td className="font-mono text-xs">{r.customer_code}</td>
                 <td className="font-medium">{r.customer_name}</td>
                 <td className="text-center">{r.invoice_count}</td>
-                <td className="num text-left">{fmt(r.total_receivable)}</td>
-                <td className="num text-left text-success">{fmt(r.paid_amount)}</td>
-                <td className="num text-left font-semibold">{fmt(r.remaining_balance)}</td>
-                <td className="num text-left">{fmt(r.aging.current)}</td>
-                <td className="num text-left">{fmt(r.aging.d_0_30)}</td>
-                <td className="num text-left text-warning">{fmt(r.aging.d_31_60)}</td>
-                <td className="num text-left text-warning">{fmt(r.aging.d_61_90)}</td>
-                <td className={`num text-left font-semibold ${r.aging.d_90_plus > 0 ? "text-destructive" : ""}`}>{fmt(r.aging.d_90_plus)}</td>
+                <td className="num text-right">{fmt(r.total_receivable)}</td>
+                <td className="num text-right text-success">{fmt(r.paid_amount)}</td>
+                <td className="num text-right font-semibold">{fmt(r.remaining_balance)}</td>
+                <td className="num text-right">{fmt(r.aging.current)}</td>
+                <td className="num text-right">{fmt(r.aging.d_0_30)}</td>
+                <td className="num text-right text-warning">{fmt(r.aging.d_31_60)}</td>
+                <td className="num text-right text-warning">{fmt(r.aging.d_61_90)}</td>
+                <td className={`num text-right font-semibold ${r.aging.d_90_plus > 0 ? "text-destructive" : ""}`}>{fmt(r.aging.d_90_plus)}</td>
                 <td>
                   <Link to={`/ar/${r.customer_id}`} className="text-primary text-xs inline-flex items-center gap-1 hover:underline">
                     <FileText className="h-3 w-3" /> كشف
@@ -152,14 +152,14 @@ export default function AccountsReceivable() {
             <tfoot>
               <tr className="bg-muted/60 font-semibold">
                 <td colSpan={3} className="text-left">الإجمالي</td>
-                <td className="num text-left">{fmt(totals.receivable)}</td>
-                <td className="num text-left">{fmt(totals.paid)}</td>
-                <td className="num text-left">{fmt(totals.remaining)}</td>
-                <td className="num text-left">{fmt(totals.current)}</td>
-                <td className="num text-left">{fmt(totals.d030)}</td>
-                <td className="num text-left">{fmt(totals.d3160)}</td>
-                <td className="num text-left">{fmt(totals.d6190)}</td>
-                <td className="num text-left">{fmt(totals.d90)}</td>
+                <td className="num text-right">{fmt(totals.receivable)}</td>
+                <td className="num text-right">{fmt(totals.paid)}</td>
+                <td className="num text-right">{fmt(totals.remaining)}</td>
+                <td className="num text-right">{fmt(totals.current)}</td>
+                <td className="num text-right">{fmt(totals.d030)}</td>
+                <td className="num text-right">{fmt(totals.d3160)}</td>
+                <td className="num text-right">{fmt(totals.d6190)}</td>
+                <td className="num text-right">{fmt(totals.d90)}</td>
                 <td />
               </tr>
             </tfoot>

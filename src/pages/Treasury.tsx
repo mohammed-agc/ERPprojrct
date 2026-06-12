@@ -101,7 +101,7 @@ export default function Treasury() {
           </div>
           <table className="erp-table">
             <thead>
-              <tr><th>الكود</th><th>الاسم</th><th>النوع</th><th>الفرع</th><th>العملة</th><th className="text-left">الرصيد</th></tr>
+              <tr><th>الكود</th><th>الاسم</th><th>النوع</th><th>الفرع</th><th>العملة</th><th className="text-right">الرصيد</th></tr>
             </thead>
             <tbody>
               {loading && <tr><td colSpan={6} className="text-center text-muted-foreground py-6">…</td></tr>}
@@ -117,7 +117,7 @@ export default function Treasury() {
                     <td><span className={`text-[11.5px] px-1.5 py-0.5 rounded border ${accountTypeColor[a.type]}`}>{accountTypeLabel[a.type]}</span></td>
                     <td className="text-xs text-muted-foreground">{a.branch ?? "—"}</td>
                     <td className="text-xs">{a.currency}</td>
-                    <td className={`num text-left font-semibold ${bal < 0 ? "text-destructive" : ""}`}>{fmtSAR(bal)}</td>
+                    <td className={`num text-right font-semibold ${bal < 0 ? "text-destructive" : ""}`}>{fmtSAR(bal)}</td>
                   </tr>
                 );
               })}

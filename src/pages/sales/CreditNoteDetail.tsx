@@ -125,10 +125,10 @@ export default function CreditNoteDetail() {
             <tr>
               <th>#</th>
               <th>الوصف</th>
-              <th className="text-left">الكمية</th>
-              <th className="text-left">سعر الوحدة</th>
-              <th className="text-left">VAT %</th>
-              <th className="text-left">الإجمالي</th>
+              <th className="text-right">الكمية</th>
+              <th className="text-right">سعر الوحدة</th>
+              <th className="text-right">VAT %</th>
+              <th className="text-right">الإجمالي</th>
             </tr>
           </thead>
           <tbody>
@@ -136,10 +136,10 @@ export default function CreditNoteDetail() {
               <tr key={l.id}>
                 <td>{l.line_no}</td>
                 <td>{l.description}</td>
-                <td className="num text-left">{fmt(Number(l.quantity))}</td>
-                <td className="num text-left">{fmt(Number(l.unit_price))}</td>
-                <td className="num text-left">{Number(l.vat_pct)}%</td>
-                <td className="num text-left font-semibold">{fmt(Number(l.line_total))}</td>
+                <td className="num text-right">{fmt(Number(l.quantity))}</td>
+                <td className="num text-right">{fmt(Number(l.unit_price))}</td>
+                <td className="num text-right">{Number(l.vat_pct)}%</td>
+                <td className="num text-right font-semibold">{fmt(Number(l.line_total))}</td>
               </tr>
             ))}
           </tbody>

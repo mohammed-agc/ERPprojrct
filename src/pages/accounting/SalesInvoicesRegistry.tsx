@@ -213,9 +213,9 @@ export default function SalesInvoicesRegistry() {
               <th>التاريخ</th>
               <th>العميل</th>
               <th>المركبة / VIN</th>
-              <th className="text-left">الأصلي</th>
-              <th className="text-left">المسوّى</th>
-              <th className="text-left">المفتوح</th>
+              <th className="text-right">الأصلي</th>
+              <th className="text-right">المسوّى</th>
+              <th className="text-right">المفتوح</th>
               <th>الحالة</th>
               <th className="text-left">الإجراءات المحاسبية</th>
             </tr>
@@ -259,9 +259,9 @@ export default function SalesInvoicesRegistry() {
                         </div>
                       ) : <span>{vehs.length} مركبات</span>}
                   </td>
-                  <td className="num text-left text-xs font-bold">{fmtSAR(originalAmount)}</td>
-                  <td className="num text-left text-xs text-primary">{clearedAmount > 0.01 ? fmtSAR(clearedAmount) : "—"}</td>
-                  <td className={`num text-left text-xs ${openAmount > 0.01 ? "text-warning font-semibold" : "text-muted-foreground"}`}>{fmtSAR(openAmount)}</td>
+                  <td className="num text-right text-xs font-bold">{fmtSAR(originalAmount)}</td>
+                  <td className="num text-right text-xs text-primary">{clearedAmount > 0.01 ? fmtSAR(clearedAmount) : "—"}</td>
+                  <td className={`num text-right text-xs ${openAmount > 0.01 ? "text-warning font-semibold" : "text-muted-foreground"}`}>{fmtSAR(openAmount)}</td>
                   <td>{docStatusBadge(docStatus)}</td>
                   <td className="text-left">
                     <div className="flex items-center justify-end gap-1">
@@ -290,9 +290,9 @@ export default function SalesInvoicesRegistry() {
             <tfoot>
               <tr className="bg-muted/60 font-semibold">
                 <td colSpan={4} className="text-left text-xs">الإجمالي</td>
-                <td className="num text-left text-xs font-bold">{fmtSAR(totals.total)}</td>
-                <td className="num text-left text-xs text-primary">{fmtSAR(Math.max(0, totals.total - totals.outstanding))}</td>
-                <td className="num text-left text-xs text-warning">{fmtSAR(totals.outstanding)}</td>
+                <td className="num text-right text-xs font-bold">{fmtSAR(totals.total)}</td>
+                <td className="num text-right text-xs text-primary">{fmtSAR(Math.max(0, totals.total - totals.outstanding))}</td>
+                <td className="num text-right text-xs text-warning">{fmtSAR(totals.outstanding)}</td>
                 <td colSpan={2}></td>
               </tr>
             </tfoot>

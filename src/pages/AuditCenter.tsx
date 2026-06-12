@@ -122,7 +122,7 @@ export default function AuditCenter() {
           <thead>
             <tr>
               <th>التاريخ والوقت</th><th>النوع</th><th>المرجع</th><th>الفترة</th>
-              <th>المستخدم</th><th className="text-left">المبلغ</th><th>الخطورة</th><th>الوصف</th>
+              <th>المستخدم</th><th className="text-right">المبلغ</th><th>الخطورة</th><th>الوصف</th>
             </tr>
           </thead>
           <tbody>
@@ -134,7 +134,7 @@ export default function AuditCenter() {
                 <td className="font-mono text-xs">{r.entity_ref}</td>
                 <td className="text-xs text-muted-foreground">{r.period ?? "—"}</td>
                 <td className="text-xs">{r.user}</td>
-                <td className="num text-left">{r.amount ? fmtSAR(r.amount) : "—"}</td>
+                <td className="num text-right">{r.amount ? fmtSAR(r.amount) : "—"}</td>
                 <td>
                   <Badge variant="outline" className={cn("text-[11.5px]", auditSeverityTone[r.severity])}>
                     {r.severity === "critical" ? "حرج" : r.severity === "warning" ? "تحذير" : "معلوماتي"}

@@ -338,7 +338,7 @@ export default function Vehicles() {
               <th>VIN</th>
               <th>الفرع</th>
               <th>اللون</th>
-              <th className="text-left">السعر (ر.س)</th>
+              <th className="text-right">السعر (ر.س)</th>
               <th>الحالة</th>
               <th></th>
             </tr>
@@ -360,7 +360,7 @@ export default function Vehicles() {
                   <td className="font-mono text-[12px]" dir="ltr">{r.vin || "—"}</td>
                   <td className="text-xs">{r._meta.branch || "—"}</td>
                   <td>{r.color || "—"}</td>
-                  <td className="num text-left font-semibold">{Number(r.sale_price).toLocaleString("ar-SA")}</td>
+                  <td className="num text-right font-semibold">{Number(r.sale_price).toLocaleString("ar-SA")}</td>
                   <td>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <Badge className={VEHICLE_STATUS_CLASS[eff]}>{VEHICLE_STATUS_LABEL[eff]}</Badge>
@@ -410,5 +410,4 @@ function KpiCard({
     </div>
   );
 }
-
 

@@ -91,14 +91,14 @@ export default function CashFlow() {
                 <ArrowDownCircle className="h-4 w-4" /> التدفقات الداخلة
               </div>
               <table className="erp-table">
-                <thead><tr><th className="w-20">الكود</th><th>المصدر</th><th className="text-left w-28">القيمة</th></tr></thead>
+                <thead><tr><th className="w-20">الكود</th><th>المصدر</th><th className="text-right w-28">القيمة</th></tr></thead>
                 <tbody>
                   {report.inflows.length === 0 && <tr><td colSpan={3} className="text-center text-muted-foreground py-6">لا توجد تدفقات داخلة</td></tr>}
                   {report.inflows.map((r, i) => (
                     <tr key={i}>
                       <td className="font-mono text-xs">{r.code}</td>
                       <td>{r.name_ar}</td>
-                      <td className="num text-left text-emerald-700 font-medium">{fmtSAR(r.amount)}</td>
+                      <td className="num text-right text-emerald-700 font-medium">{fmtSAR(r.amount)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -110,14 +110,14 @@ export default function CashFlow() {
                 <ArrowUpCircle className="h-4 w-4" /> التدفقات الخارجة
               </div>
               <table className="erp-table">
-                <thead><tr><th className="w-20">الكود</th><th>الاستخدام</th><th className="text-left w-28">القيمة</th></tr></thead>
+                <thead><tr><th className="w-20">الكود</th><th>الاستخدام</th><th className="text-right w-28">القيمة</th></tr></thead>
                 <tbody>
                   {report.outflows.length === 0 && <tr><td colSpan={3} className="text-center text-muted-foreground py-6">لا توجد تدفقات خارجة</td></tr>}
                   {report.outflows.map((r, i) => (
                     <tr key={i}>
                       <td className="font-mono text-xs">{r.code}</td>
                       <td>{r.name_ar}</td>
-                      <td className="num text-left text-rose-700 font-medium">{fmtSAR(r.amount)}</td>
+                      <td className="num text-right text-rose-700 font-medium">{fmtSAR(r.amount)}</td>
                     </tr>
                   ))}
                 </tbody>

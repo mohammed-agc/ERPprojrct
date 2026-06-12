@@ -106,7 +106,7 @@ export default function TreasuryAccounts() {
             <tr>
               <th>الكود</th><th>الاسم</th><th>النوع</th><th>العملة</th><th>الفرع</th>
               <th>البنك / IBAN</th><th>المسؤول</th>
-              <th className="text-left">افتتاحي</th><th className="text-left">الرصيد</th>
+              <th className="text-right">افتتاحي</th><th className="text-right">الرصيد</th>
               <th>الحالة</th><th className="w-24"></th>
             </tr>
           </thead>
@@ -130,8 +130,8 @@ export default function TreasuryAccounts() {
                     {!r.bank_name && !r.iban && "—"}
                   </td>
                   <td className="text-xs">{r.responsible ?? "—"}</td>
-                  <td className="num text-left text-xs">{fmtSAR(r.opening_balance)}</td>
-                  <td className={`num text-left font-semibold ${bal < 0 ? "text-destructive" : ""}`}>{fmtSAR(bal)}</td>
+                  <td className="num text-right text-xs">{fmtSAR(r.opening_balance)}</td>
+                  <td className={`num text-right font-semibold ${bal < 0 ? "text-destructive" : ""}`}>{fmtSAR(bal)}</td>
                   <td>{r.active ? <Badge variant="secondary" className="text-[11.5px]">نشط</Badge> : <Badge variant="outline" className="text-[11.5px]">معطل</Badge>}</td>
                   <td className="flex gap-1">
                     <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setEdit(r); setOpen(true); }}><Pencil className="h-3 w-3" /></Button>

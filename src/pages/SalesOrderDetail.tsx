@@ -648,7 +648,7 @@ export default function SalesOrderDetail() {
               <th className="w-32">السعر (ر.س)</th>
               <th className="w-32">الخصم</th>
               <th className="w-20">VAT %</th>
-              <th className="w-32 text-left">المجموع</th>
+              <th className="w-32 text-right">المجموع</th>
               <th className="w-20"></th>
             </tr>
           </thead>
@@ -691,7 +691,7 @@ export default function SalesOrderDetail() {
                       { key: "model", header: "الموديل", render: (v: any) => <span>{v.model}{vehicleIdentity(v).trim ? <span className="text-muted-foreground"> · {vehicleIdentity(v).trim}</span> : null}</span> },
                       { key: "year", header: "السنة", render: (v: any) => <span className="num">{v.year}</span> },
                       { key: "color", header: "اللون", render: (v: any) => <span className="text-muted-foreground">{v.color || "—"}</span> },
-                      { key: "price", header: "السعر", className: "text-left", render: (v: any) => <span className="num">{Number(v.sale_price).toLocaleString("ar-SA")}</span> },
+                      { key: "price", header: "السعر", className: "text-right", render: (v: any) => <span className="num">{Number(v.sale_price).toLocaleString("ar-SA")}</span> },
                     ]}
                   />
                   {veh && (() => {
@@ -743,7 +743,7 @@ export default function SalesOrderDetail() {
                 <td className="w-20 align-top">
                   <NumberCell value={l.vat_pct} onChange={v => updateLine(i, { vat_pct: v ?? 0 })} min={0} max={100} disabled={!canEditLines} />
                 </td>
-                <td className="num text-left font-semibold w-32 align-top pt-2">{l.line_total.toLocaleString("ar-SA", { minimumFractionDigits: 2 })}</td>
+                <td className="num text-right font-semibold w-32 align-top pt-2">{l.line_total.toLocaleString("ar-SA", { minimumFractionDigits: 2 })}</td>
                 <td className="w-20 align-top">
                   {canEditLines && (
                     <div className="flex items-center gap-0.5 justify-end">

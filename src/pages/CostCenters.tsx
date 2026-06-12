@@ -173,7 +173,7 @@ export default function CostCenters() {
               <th className="text-right py-2 px-2 font-medium">الاسم</th>
               <th className="text-right py-2 px-2 font-medium">النوع</th>
               <th className="text-right py-2 px-2 font-medium">المدير</th>
-              <th className="text-left py-2 px-2 font-medium">الموازنة الشهرية</th>
+              <th className="text-right py-2 px-2 font-medium">الموازنة الشهرية</th>
               <th className="text-right py-2 px-2 font-medium">الحالة</th>
               <th className="py-2 px-2"></th>
             </tr>

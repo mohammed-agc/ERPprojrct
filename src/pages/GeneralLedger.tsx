@@ -74,9 +74,9 @@ export default function GeneralLedger() {
               <th>رقم القيد</th>
               <th>المرجع</th>
               <th>البيان</th>
-              <th className="text-left">مدين</th>
-              <th className="text-left">دائن</th>
-              <th className="text-left">الرصيد الجاري</th>
+              <th className="text-right">مدين</th>
+              <th className="text-right">دائن</th>
+              <th className="text-right">الرصيد الجاري</th>
             </tr>
           </thead>
           <tbody>
@@ -91,9 +91,9 @@ export default function GeneralLedger() {
                 </td>
                 <td className="text-xs">{r.reference || "—"}</td>
                 <td className="max-w-[280px] truncate">{r.description || "—"}</td>
-                <td className="num text-left">{r.debit ? fmt(r.debit) : "—"}</td>
-                <td className="num text-left">{r.credit ? fmt(r.credit) : "—"}</td>
-                <td className={`num text-left font-semibold ${r.running_balance < 0 ? "text-destructive" : ""}`}>{fmt(r.running_balance)}</td>
+                <td className="num text-right">{r.debit ? fmt(r.debit) : "—"}</td>
+                <td className="num text-right">{r.credit ? fmt(r.credit) : "—"}</td>
+                <td className={`num text-right font-semibold ${r.running_balance < 0 ? "text-destructive" : ""}`}>{fmt(r.running_balance)}</td>
               </tr>
             ))}
           </tbody>
@@ -101,9 +101,9 @@ export default function GeneralLedger() {
             <tfoot>
               <tr className="bg-muted/60 font-semibold">
                 <td colSpan={4} className="text-left">الإجمالي</td>
-                <td className="num text-left">{fmt(totals.d)}</td>
-                <td className="num text-left">{fmt(totals.c)}</td>
-                <td className={`num text-left ${ending < 0 ? "text-destructive" : ""}`}>{fmt(ending)}</td>
+                <td className="num text-right">{fmt(totals.d)}</td>
+                <td className="num text-right">{fmt(totals.c)}</td>
+                <td className={`num text-right ${ending < 0 ? "text-destructive" : ""}`}>{fmt(ending)}</td>
               </tr>
             </tfoot>
           )}

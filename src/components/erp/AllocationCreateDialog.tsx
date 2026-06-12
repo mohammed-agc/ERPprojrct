@@ -247,7 +247,7 @@ export function AllocationCreateDialog({ open, onOpenChange, defaultPoId, onCrea
                           value={u.engine_no}
                           onChange={e => update(u.key, { engine_no: e.target.value.toUpperCase() })}
                         />
-                        <div className="text-[11.5px] text-muted-foreground text-left num">{fmtSAR(u.unit_cost)}</div>
+                        <div className="text-[11.5px] text-muted-foreground text-right num">{fmtSAR(u.unit_cost)}</div>
                       </div>
                     );
                   })}

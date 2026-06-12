@@ -78,9 +78,9 @@ export default function CreditNotes() {
               <th>الفاتورة</th>
               <th>العميل</th>
               <th>السبب</th>
-              <th className="text-left">قبل الضريبة</th>
-              <th className="text-left">VAT</th>
-              <th className="text-left">الإجمالي</th>
+              <th className="text-right">قبل الضريبة</th>
+              <th className="text-right">VAT</th>
+              <th className="text-right">الإجمالي</th>
               <th>الحالة</th>
             </tr>
           </thead>
@@ -105,9 +105,9 @@ export default function CreditNotes() {
                   <td className="font-mono text-xs">{r.invoices?.invoice_no ?? "—"}</td>
                   <td>{r.customers?.name ?? "—"}</td>
                   <td className="text-xs text-muted-foreground">{r.reason}</td>
-                  <td className="num text-left">{fmt(Number(r.subtotal))}</td>
-                  <td className="num text-left">{fmt(Number(r.vat_amount))}</td>
-                  <td className="num text-left font-bold">{fmt(Number(r.total))}</td>
+                  <td className="num text-right">{fmt(Number(r.subtotal))}</td>
+                  <td className="num text-right">{fmt(Number(r.vat_amount))}</td>
+                  <td className="num text-right font-bold">{fmt(Number(r.total))}</td>
                   <td>
                     <Badge variant={r.status === "posted" ? "default" : "secondary"}>
                       {r.status === "posted" ? "مرحَّل" : r.status}
