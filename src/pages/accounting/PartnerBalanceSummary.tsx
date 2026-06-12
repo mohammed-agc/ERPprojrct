@@ -89,6 +89,7 @@ export default function PartnerBalanceSummary() {
               <th className="text-left">رصيد كعميل (مدين)</th>
               <th className="text-left">رصيد كمورد (دائن)</th>
               <th className="text-left">الصافي</th>
+              <th className="text-left">المقاصة الممكنة</th>
               <th className="text-center">المقاصّة</th>
             </tr>
           </thead>
@@ -116,6 +117,7 @@ export default function PartnerBalanceSummary() {
                 <td className={`num text-left font-bold ${r.net_position >= 0 ? "text-success" : "text-warning"}`}>
                   {fmtSAR(Math.abs(r.net_position))} {r.net_position >= 0 ? "مدين" : "دائن"}
                 </td>
+                <td className="num text-left text-primary font-semibold">{canSettle(r) ? fmtSAR(maxSettle(r)) : "—"}</td>
                 <td className="text-center">
                   {canSettle(r) ? (
                     <Button size="sm" variant="outline" className="h-7 gap-1" onClick={() => openSettle(r)}>
