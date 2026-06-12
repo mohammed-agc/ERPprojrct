@@ -9,7 +9,7 @@ import { accountingService, type JournalEntryDetail } from "@/services/erp/accou
 const fmt = (n: number) => Number(n).toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const sourceLabel = (t: string | null) => {
   if (!t) return "يدوي";
-  const map: Record<string, string> = { invoice: "فاتورة", payment: "دفعة", manual: "يدوي", sales_order: "أمر بيع" };
+  const map: Record<string, string> = { invoice: "فاتورة", sales_invoice: "فاتورة مبيعات", purchase_invoice: "فاتورة شراء", payment: "دفعة", sales_payment: "سداد عميل", purchase_payment: "سداد مورد", settlement: "مقاصة", credit_note: "إشعار دائن", manual: "يدوي", sales_order: "أمر بيع" };
   return map[t] ?? t;
 };
 
@@ -64,8 +64,8 @@ export default function JournalDetail() {
               <th className="w-12">#</th>
               <th>الحساب</th>
               <th>البيان</th>
-              <th className="text-left w-32">مدين</th>
-              <th className="text-left w-32">دائن</th>
+              <th className="text-right w-32">مدين</th>
+              <th className="text-right w-32">دائن</th>
             </tr>
           </thead>
           <tbody>
@@ -77,16 +77,16 @@ export default function JournalDetail() {
                   <div className="font-medium">{l.account_name}</div>
                 </td>
                 <td className="text-xs">{l.description || "—"}</td>
-                <td className="num text-left">{l.debit ? fmt(l.debit) : "—"}</td>
-                <td className="num text-left">{l.credit ? fmt(l.credit) : "—"}</td>
+                <td className="num text-right">{l.debit ? fmt(l.debit) : "—"}</td>
+                <td className="num text-right">{l.credit ? fmt(l.credit) : "—"}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr className="bg-muted/60 font-semibold">
               <td colSpan={3} className="text-left">الإجمالي</td>
-              <td className="num text-left">{fmt(entry.total_debit)}</td>
-              <td className="num text-left">{fmt(entry.total_credit)}</td>
+              <td className="num text-right">{fmt(entry.total_debit)}</td>
+              <td className="num text-right">{fmt(entry.total_credit)}</td>
             </tr>
             <tr>
               <td colSpan={5} className="py-2">

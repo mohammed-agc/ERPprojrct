@@ -14,7 +14,7 @@ const fmt = (n: number) => Number(n).toLocaleString("ar-SA", { minimumFractionDi
 
 const sourceLabel = (t: string | null) => {
   if (!t) return "—";
-  const map: Record<string, string> = { invoice: "فاتورة", payment: "دفعة", manual: "يدوي", sales_order: "أمر بيع" };
+  const map: Record<string, string> = { invoice: "فاتورة", sales_invoice: "فاتورة مبيعات", purchase_invoice: "فاتورة شراء", payment: "دفعة", sales_payment: "سداد عميل", purchase_payment: "سداد مورد", settlement: "مقاصة", credit_note: "إشعار دائن", manual: "يدوي", sales_order: "أمر بيع" };
   return map[t] ?? t;
 };
 
@@ -97,8 +97,8 @@ export default function Journals() {
               <th>المرجع</th>
               <th>البيان</th>
               <th>المصدر</th>
-              <th className="text-left">مدين</th>
-              <th className="text-left">دائن</th>
+              <th className="text-right">مدين</th>
+              <th className="text-right">دائن</th>
               <th>التوازن</th>
               <th>الحالة</th>
             </tr>
@@ -121,8 +121,8 @@ export default function Journals() {
                   <td className="text-xs">{r.reference || "—"}</td>
                   <td className="max-w-[280px] truncate">{r.description || "—"}</td>
                   <td className="text-xs text-muted-foreground">{sourceLabel(r.source_type)}</td>
-                  <td className="num text-left font-semibold">{fmt(r.total_debit)}</td>
-                  <td className="num text-left font-semibold">{fmt(r.total_credit)}</td>
+                  <td className="num text-right font-semibold">{fmt(r.total_debit)}</td>
+                  <td className="num text-right font-semibold">{fmt(r.total_credit)}</td>
                   <td>
                     {balanced
                       ? <span className="text-success text-xs">متوازن</span>
@@ -140,8 +140,8 @@ export default function Journals() {
             <tfoot>
               <tr className="bg-muted/60 font-semibold">
                 <td colSpan={5} className="text-left">الإجمالي</td>
-                <td className="num text-left">{fmt(totals.d)}</td>
-                <td className="num text-left">{fmt(totals.c)}</td>
+                <td className="num text-right">{fmt(totals.d)}</td>
+                <td className="num text-right">{fmt(totals.c)}</td>
                 <td colSpan={2} />
               </tr>
             </tfoot>
