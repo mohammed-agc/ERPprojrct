@@ -110,6 +110,9 @@
   .erp-table tbody td {
     @apply px-3 py-1.5 border-b border-[hsl(var(--table-border))] text-foreground align-middle;
   }
+  /* محاذاة موحّدة: خلايا LTR (VIN/أكواد/مراجع) تبقى تحت رأسها الأيمن مع قراءة LTR صحيحة */
+  .erp-table tbody td[dir="ltr"] { text-align: right; }
+  /* الأرقام المالية: رأس العمود وخلاياه يجب أن يحملا text-left معاً (نمط النظام) */
   .erp-table tbody tr { @apply h-9 transition-colors; }
   .erp-table tbody tr:hover { @apply bg-[hsl(var(--table-row-hover))]; }
   .erp-table tbody tr:focus-within { @apply bg-[hsl(var(--table-row-hover))]; }
@@ -244,4 +247,3 @@
     pointer-events: none;
   }
 }
-

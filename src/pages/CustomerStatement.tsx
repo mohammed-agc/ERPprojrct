@@ -119,15 +119,16 @@ export default function CustomerStatement() {
               <th>التاريخ</th>
               <th>النوع</th>
               <th>المرجع</th>
+              <th>المركبة / VIN</th>
               <th>البيان</th>
-              <th className="text-left w-28">مدين</th>
-              <th className="text-left w-28">دائن</th>
-              <th className="text-left w-32">الرصيد</th>
+              <th className="text-right w-28">مدين</th>
+              <th className="text-right w-28">دائن</th>
+              <th className="text-right w-32">الرصيد</th>
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={7} className="text-center text-muted-foreground py-8">جارٍ التحميل…</td></tr>}
-            {!loading && data.lines.length === 0 && <EmptyState inTable colSpan={7} title="لا توجد حركات" description="لا توجد فواتير أو دفعات ضمن النطاق." />}
+            {loading && <tr><td colSpan={8} className="text-center text-muted-foreground py-8">جارٍ التحميل…</td></tr>}
+            {!loading && data.lines.length === 0 && <EmptyState inTable colSpan={8} title="لا توجد حركات" description="لا توجد فواتير أو دفعات ضمن النطاق." />}
             {!loading && data.lines.map((l, i) => (
               <tr key={`${l.source_id}-${i}`}>
                 <td className="num">{l.date}</td>
@@ -137,20 +138,21 @@ export default function CustomerStatement() {
                     : <Badge className="text-xs bg-success/15 text-success border-success/30">دفعة</Badge>}
                 </td>
                 <td className="font-mono text-xs">{l.reference}</td>
+                <td className="text-xs text-muted-foreground font-mono" dir="ltr">{(l as any).vehicle ?? "—"}</td>
                 <td>{l.description}</td>
-                <td className="num text-left">{l.debit ? fmt(l.debit) : "—"}</td>
-                <td className="num text-left">{l.credit ? fmt(l.credit) : "—"}</td>
-                <td className={`num text-left font-semibold ${l.running_balance > 0 ? "text-destructive" : ""}`}>{fmt(l.running_balance)}</td>
+                <td className="num text-right">{l.debit ? fmt(l.debit) : "—"}</td>
+                <td className="num text-right">{l.credit ? fmt(l.credit) : "—"}</td>
+                <td className={`num text-right font-semibold ${l.running_balance > 0 ? "text-destructive" : ""}`}>{fmt(l.running_balance)}</td>
               </tr>
             ))}
           </tbody>
           {data.lines.length > 0 && (
             <tfoot>
               <tr className="bg-muted/60 font-semibold">
-                <td colSpan={4} className="text-left">الإجمالي</td>
-                <td className="num text-left">{fmt(data.totals.debit)}</td>
-                <td className="num text-left">{fmt(data.totals.credit)}</td>
-                <td className="num text-left">{fmt(data.totals.balance)}</td>
+                <td colSpan={5} className="text-left">الإجمالي</td>
+                <td className="num text-right">{fmt(data.totals.debit)}</td>
+                <td className="num text-right">{fmt(data.totals.credit)}</td>
+                <td className="num text-right">{fmt(data.totals.balance)}</td>
               </tr>
             </tfoot>
           )}

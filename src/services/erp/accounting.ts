@@ -244,6 +244,7 @@ export interface CustomerStatementLine {
   credit: number;  // decreases customer balance (payments)
   running_balance: number;
   source_id: string;
+  vehicle?: string;
 }
 
 /** Default net payment term in days when invoice has no due_date column. */
@@ -348,6 +349,21 @@ Object.assign(accountingService, {
       .eq("customer_id", customerId)
       .neq("status", "cancelled");
 
+    // المركبة/VIN لكل فاتورة (شركة سيارات) — من بنود الفاتورة
+    const vehByInv: Record<string, string> = {};
+    {
+      const ids = (invoices ?? []).map((i: any) => i.id);
+      if (ids.length) {
+        const { data: ivl } = await supabase
+          .from("invoice_lines")
+          .select("invoice_id, vin, brand, model")
+          .in("invoice_id", ids);
+        for (const l of (ivl ?? []) as any[]) {
+          if (l.vin && !vehByInv[l.invoice_id]) vehByInv[l.invoice_id] = `${l.brand ?? ""} ${l.model ?? ""} — ${l.vin}`.trim();
+        }
+      }
+    }
+
     const events: Omit<CustomerStatementLine, "running_balance">[] = [];
     for (const inv of (invoices ?? []) as any[]) {
       events.push({
@@ -358,6 +374,7 @@ Object.assign(accountingService, {
         debit: Number(inv.total || 0),
         credit: 0,
         source_id: inv.id,
+        vehicle: vehByInv[inv.id],
       });
     }
 
