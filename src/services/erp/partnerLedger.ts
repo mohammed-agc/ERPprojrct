@@ -61,6 +61,13 @@ export const DOC_TYPE_LABEL: Record<string, string> = {
   sales_payment: "سداد عميل",
   credit_note: "إشعار دائن",
   journal: "قيد يدوي",
+  settlement: "مقاصة",
+  debit_note: "إشعار مدين",
+  rebate: "حافز وكيل",
+  write_off: "إعدام رصيد",
+  insurance_settlement: "تسوية تأمين",
+  consignment_settlement: "تسوية عمولة بيع",
+  intercompany_settlement: "تسوية بين شركات",
 };
 
 // ───────── ملخّص أرصدة الأطراف + المقاصّة (Partner Balance + Settlement) ─────────
