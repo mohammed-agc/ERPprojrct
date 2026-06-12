@@ -116,6 +116,8 @@ export interface AllocationRow {
   allocation_date: string;
   status: string;
   remarks: string | null;
+  created_by: string | null;
+  created_at: string | null;
 }
 
 export interface DocAllocationSummary {
@@ -133,7 +135,7 @@ export async function getDocumentAllocations(
 ): Promise<DocAllocationSummary> {
   const { data, error } = await supabase
     .from("open_item_allocations")
-    .select("allocation_number, allocation_type, allocated_amount, allocation_date, status, remarks")
+    .select("allocation_number, allocation_type, allocated_amount, allocation_date, status, remarks, created_by, created_at")
     .eq("target_document_type", docType)
     .eq("target_document_id", docId)
     .eq("status", "active")
@@ -166,9 +168,13 @@ export async function getDocumentAllocations(
 
 export const ALLOC_TYPE_LABEL: Record<string, string> = {
   PAYMENT: "دفعة",
-  SETTLEMENT: "مقاصّة",
+  SETTLEMENT: "مقاصة",
   CREDIT_NOTE: "إشعار دائن",
   DEBIT_NOTE: "إشعار مدين",
-  WRITE_OFF: "إعدام دين",
+  REBATE: "حافز وكيل",
+  WRITE_OFF: "إعدام رصيد",
+  INSURANCE_SETTLEMENT: "تسوية تأمين",
+  CONSIGNMENT_SETTLEMENT: "تسوية عمولة بيع",
+  INTERCOMPANY_SETTLEMENT: "تسوية بين شركات",
   ADJUSTMENT: "تسوية",
 };

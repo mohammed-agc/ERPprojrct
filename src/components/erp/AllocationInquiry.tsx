@@ -33,15 +33,15 @@ export function AllocationInquiry({ docType, docId, total }: Props) {
 
   const breakdown = [
     { label: "الأصلي", value: data.total, tone: "text-foreground" },
-    { label: "مدفوع (دفعات)", value: data.payment_allocated, tone: "text-success" },
-    { label: "مسوّى (مقاصّة)", value: data.settlement_allocated, tone: "text-primary" },
+    { label: "المدفوع (دفعات)", value: data.payment_allocated, tone: "text-success" },
+    { label: "المسوّى (كل التسويات)", value: data.settlement_allocated, tone: "text-primary" },
     { label: "إشعارات دائنة", value: data.credit_note_allocated, tone: "text-warning" },
   ].filter(b => b.label === "الأصلي" || b.value > 0.01);
 
   return (
     <div className="bg-card border border-border rounded-lg p-4 mt-4">
       <div className="flex items-center gap-2 mb-3 font-semibold text-sm">
-        <Layers className="h-4 w-4" /> تفصيل التصفية (Open Items)
+        <Layers className="h-4 w-4" /> سجل التسويات (Open Item Clearing)
       </div>
 
       {/* ملخّص التركيبة */}
@@ -67,6 +67,8 @@ export function AllocationInquiry({ docType, docId, total }: Props) {
               <th>النوع</th>
               <th>التاريخ</th>
               <th className="text-left">المبلغ</th>
+              <th>المستخدم</th>
+              <th>الحالة</th>
               <th>ملاحظة</th>
             </tr>
           </thead>
@@ -81,13 +83,15 @@ export function AllocationInquiry({ docType, docId, total }: Props) {
                 </td>
                 <td>{fmtDate(a.allocation_date)}</td>
                 <td className="num text-left">{fmtSAR(a.allocated_amount)}</td>
+                <td className="text-[11.5px] text-muted-foreground">{a.created_by ?? "—"}</td>
+                <td><span className="text-[11.5px] px-1.5 py-0.5 rounded bg-success/10 text-success">{a.status === "active" ? "نشطة" : "معكوسة"}</span></td>
                 <td className="text-[11.5px] text-muted-foreground">{a.remarks ?? "—"}</td>
               </tr>
             ))}
           </tbody>
         </table>
       ) : (
-        <div className="text-xs text-muted-foreground text-center py-3">لا توجد تخصيصات بعد — الفاتورة مفتوحة بالكامل</div>
+        <div className="text-xs text-muted-foreground text-center py-3">لا توجد تسويات بعد — المستند مفتوح بالكامل</div>
       )}
     </div>
   );

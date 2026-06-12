@@ -29,6 +29,16 @@ function payBadge(s: "unpaid" | "partial" | "paid") {
   return <Badge variant="destructive">غير مدفوعة</Badge>;
 }
 
+const DOC_STATUS_LABEL: Record<string, string> = {
+  OPEN: "مفتوحة", PARTIALLY_CLEARED: "مسوّاة جزئياً", CLEARED: "مسوّاة بالكامل", CANCELLED: "ملغاة",
+};
+function docStatusBadge(s: "OPEN" | "PARTIALLY_CLEARED" | "CLEARED" | "CANCELLED") {
+  if (s === "CLEARED") return <Badge className="bg-success text-success-foreground">{DOC_STATUS_LABEL.CLEARED}</Badge>;
+  if (s === "PARTIALLY_CLEARED") return <Badge className="bg-warning text-warning-foreground">{DOC_STATUS_LABEL.PARTIALLY_CLEARED}</Badge>;
+  if (s === "CANCELLED") return <Badge variant="destructive">{DOC_STATUS_LABEL.CANCELLED}</Badge>;
+  return <Badge variant="secondary">{DOC_STATUS_LABEL.OPEN}</Badge>;
+}
+
 export default function SalesInvoicesRegistry() {
   const { role } = useErpSession();
   const [rows, setRows] = useState<any[]>([]);
@@ -69,7 +79,22 @@ export default function SalesInvoicesRegistry() {
       list.forEach((i: any) => { if (i.sales_order_id) vehiclesByInvoice[i.id] = bySo[i.sales_order_id] ?? []; });
     }
 
-    setRows(list.map((i: any) => ({ ...i, _vehicles: vehiclesByInvoice[i.id] ?? [] })));
+    // التخصيصات النشطة (Open Items) — المتبقّي الصحيح لكل فاتورة (يشمل المقاصّة)
+    const allocByInv: Record<string, number> = {};
+    const invIds = list.map((i: any) => i.id);
+    if (invIds.length) {
+      const { data: allocs } = await supabase
+        .from("open_item_allocations")
+        .select("target_document_id, allocated_amount")
+        .eq("target_document_type", "sales_invoice")
+        .eq("status", "active")
+        .in("target_document_id", invIds);
+      (allocs ?? []).forEach((a: any) => {
+        allocByInv[a.target_document_id] = (allocByInv[a.target_document_id] ?? 0) + Number(a.allocated_amount || 0);
+      });
+    }
+
+    setRows(list.map((i: any) => ({ ...i, _vehicles: vehiclesByInvoice[i.id] ?? [], _remaining: Math.max(0, Number(i.total ?? 0) - (allocByInv[i.id] ?? 0)) })));
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
@@ -151,14 +176,16 @@ export default function SalesInvoicesRegistry() {
     const t = filtered.reduce((s, r) => s + Number(r.total), 0);
     const paid = filtered.reduce((s, r) => s + Number(r.paid_amount ?? 0), 0);
     const credited = filtered.reduce((s, r) => s + Number(r.credited_amount ?? 0), 0);
-    return { count: filtered.length, total: t, paid, credited, outstanding: Math.max(0, t - paid - credited) };
+    const outstanding = filtered.reduce((sum, r) => sum + (r._remaining ?? Math.max(0, Number(r.total) - Number(r.paid_amount ?? 0) - Number(r.credited_amount ?? 0))), 0);
+    const settled = Math.max(0, t - paid - credited - outstanding);
+    return { count: filtered.length, total: t, paid, credited, settled, outstanding };
   }, [filtered]);
 
   return (
     <div dir="rtl">
       <PageHeader
         title="فواتير المبيعات — سجل المحاسبة"
-        subtitle={`${totals.count} فاتورة · إجمالي ${fmtSAR(totals.total)} · محصّل ${fmtSAR(totals.paid)} · متبقٍ ${fmtSAR(totals.outstanding)}`}
+        subtitle={`${totals.count} فاتورة · الأصلي ${fmtSAR(totals.total)} · المسوّى ${fmtSAR(totals.settled)} · المفتوح ${fmtSAR(totals.outstanding)}`}
       />
 
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border border-border rounded-lg p-3 mb-3 flex flex-wrap items-center gap-2">
@@ -186,9 +213,9 @@ export default function SalesInvoicesRegistry() {
               <th>التاريخ</th>
               <th>العميل</th>
               <th>المركبة / VIN</th>
-              <th className="text-left">الإجمالي</th>
-              <th className="text-left">المدفوع</th>
-              <th className="text-left">المتبقي</th>
+              <th className="text-left">الأصلي</th>
+              <th className="text-left">المسوّى</th>
+              <th className="text-left">المفتوح</th>
               <th>الحالة</th>
               <th className="text-left">الإجراءات المحاسبية</th>
             </tr>
@@ -197,12 +224,17 @@ export default function SalesInvoicesRegistry() {
             {loading && <tr><td colSpan={9} className="text-center text-muted-foreground py-8 text-xs">جاري التحميل...</td></tr>}
             {!loading && filtered.length === 0 && <tr><td colSpan={9} className="text-center text-muted-foreground py-8 text-xs">لا توجد فواتير مطابقة</td></tr>}
             {!loading && filtered.map(r => {
-              const total = Number(r.total);
-              const paid = Number(r.paid_amount ?? 0);
-              const credited = Number(r.credited_amount ?? 0);
-              const remaining = Math.max(0, total - paid - credited);
-              const payStatus: "unpaid" | "partial" | "paid" = paid <= 0 ? "unpaid" : paid >= total ? "paid" : "partial";
-              const payPerm = canPerform("receive_payment", (payStatus === "paid" ? "paid" : "invoiced") as any, role);
+              // معيار SAP Open Item: الأصلي / المسوّى / المفتوح / الحالة
+              const originalAmount = Number(r.total);
+              const clearedAmount = originalAmount - (r._remaining ?? originalAmount);   // كل التخصيصات النشطة (أي نوع = clearing)
+              const openAmount = r._remaining ?? originalAmount;
+              const isCancelled = r.status === "cancelled";
+              const docStatus: "OPEN" | "PARTIALLY_CLEARED" | "CLEARED" | "CANCELLED" =
+                isCancelled ? "CANCELLED"
+                : openAmount <= 0.01 ? "CLEARED"
+                : clearedAmount > 0.01 ? "PARTIALLY_CLEARED"
+                : "OPEN";
+              const payPerm = canPerform("receive_payment", (docStatus === "CLEARED" ? "paid" : "invoiced") as any, role);
               const cnPerm = canPerform("issue_credit_note", "invoiced" as any, role);
               const vehs: any[] = r._vehicles ?? [];
               return (
@@ -227,20 +259,18 @@ export default function SalesInvoicesRegistry() {
                         </div>
                       ) : <span>{vehs.length} مركبات</span>}
                   </td>
-                  <td className="num text-left text-xs font-bold">{fmtSAR(total)}</td>
-                  <td className="num text-left text-xs text-success">{fmtSAR(paid)}</td>
-                  <td className={`num text-left text-xs ${remaining > 0 ? "text-warning font-semibold" : "text-muted-foreground"}`}>{fmtSAR(remaining)}
-                    {credited > 0 && <div className="text-[12px] text-red-600">دائن: {fmtSAR(credited)}</div>}
-                  </td>
-                  <td>{payBadge(payStatus)}</td>
+                  <td className="num text-left text-xs font-bold">{fmtSAR(originalAmount)}</td>
+                  <td className="num text-left text-xs text-primary">{clearedAmount > 0.01 ? fmtSAR(clearedAmount) : "—"}</td>
+                  <td className={`num text-left text-xs ${openAmount > 0.01 ? "text-warning font-semibold" : "text-muted-foreground"}`}>{fmtSAR(openAmount)}</td>
+                  <td>{docStatusBadge(docStatus)}</td>
                   <td className="text-left">
                     <div className="flex items-center justify-end gap-1">
                       <ActionButton size="sm" variant="outline" permission={payPerm} hideIfDenied
-                        onClick={() => openPayment(r)} disabled={payStatus === "paid" || r.status === "cancelled"}>
+                        onClick={() => openPayment(r)} disabled={docStatus === "CLEARED" || r.status === "cancelled"}>
                         <Banknote className="h-3.5 w-3.5 ml-1" /> دفعة
                       </ActionButton>
                       <ActionButton size="sm" variant="ghost" permission={cnPerm} hideIfDenied
-                        onClick={() => issueCreditNote(r)} disabled={r.status === "cancelled" || remaining <= 0}
+                        onClick={() => issueCreditNote(r)} disabled={r.status === "cancelled" || openAmount <= 0}
                         className="text-destructive">
                         <FileMinus className="h-3.5 w-3.5 ml-1" /> إشعار دائن
                       </ActionButton>
@@ -257,8 +287,8 @@ export default function SalesInvoicesRegistry() {
             <tfoot>
               <tr className="bg-muted/60 font-semibold">
                 <td colSpan={4} className="text-left text-xs">الإجمالي</td>
-                <td className="num text-left text-xs">{fmtSAR(totals.total)}</td>
-                <td className="num text-left text-xs text-success">{fmtSAR(totals.paid)}</td>
+                <td className="num text-left text-xs font-bold">{fmtSAR(totals.total)}</td>
+                <td className="num text-left text-xs text-primary">{fmtSAR(Math.max(0, totals.total - totals.outstanding))}</td>
                 <td className="num text-left text-xs text-warning">{fmtSAR(totals.outstanding)}</td>
                 <td colSpan={2}></td>
               </tr>
