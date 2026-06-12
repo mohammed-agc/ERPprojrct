@@ -12,7 +12,7 @@ import { canPerform } from "@/lib/erpPermissions";
 import { PaymentDialog, PaymentSubmitPayload, PaymentInvoiceContext } from "@/components/erp/PaymentDialog";
 import { creditNotesService } from "@/services/erp/creditNotes";
 import { salesVehicleStatus } from "@/services/erp/salesVehicleStatus";
-import { Search, Receipt, RefreshCw, Banknote, FileMinus, ExternalLink } from "lucide-react";
+import { Search, Receipt, RefreshCw, Banknote, FileMinus, ExternalLink, Layers } from "lucide-react";
 import { toast } from "sonner";
 
 const fmtSAR = (n: number) => Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ر.س";
@@ -274,6 +274,9 @@ export default function SalesInvoicesRegistry() {
                         className="text-destructive">
                         <FileMinus className="h-3.5 w-3.5 ml-1" /> إشعار دائن
                       </ActionButton>
+                      <Link to={`/invoices/${r.id}#allocations`} className="inline-flex items-center text-[11.5px] text-primary hover:underline px-1.5 py-1 rounded hover:bg-primary/5" title="سجل التسويات">
+                        <Layers className="h-3.5 w-3.5 ml-1" /> التسويات
+                      </Link>
                       <Link to={`/invoices/${r.id}`} className="inline-flex items-center text-muted-foreground hover:text-primary px-1" title="فتح الفاتورة">
                         <ExternalLink className="h-3.5 w-3.5" />
                       </Link>
