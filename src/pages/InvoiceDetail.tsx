@@ -236,22 +236,33 @@ export default function InvoiceDetail() {
           <div className="num font-bold text-primary">{fmt(total)}</div>
         </div>
         <div className="bg-card border border-border rounded-lg p-3">
-          <div className="text-xs text-muted-foreground mb-2">التصفية</div>
-          <div className="space-y-1">
-            <div className="flex justify-between text-[12.5px]"><span className="text-muted-foreground">المدفوع (دفعات)</span><span className="num text-success">{fmt(paid)}</span></div>
-            {(() => {
-              const rem = openRemaining ?? Math.max(0, total - paid - credited);
-              const settled = Math.max(0, total - paid - credited - rem);
-              return (
-                <>
-                  {settled > 0.01 && <div className="flex justify-between text-[12.5px]"><span className="text-muted-foreground">المسوّى (مقاصّة)</span><span className="num text-primary">{fmt(settled)}</span></div>}
-                  {credited > 0 && <div className="flex justify-between text-[12.5px]"><span className="text-muted-foreground">معكوس (إشعارات)</span><span className="num text-warning">{fmt(credited)}</span></div>}
-                  <div className="flex justify-between text-sm font-semibold border-t border-border pt-1 mt-1"><span>المتبقّي</span><span className="num text-primary">{fmt(rem)}</span></div>
-                </>
-              );
-            })()}
+          <div className="text-xs text-muted-foreground mb-2">حالة التسوية (Open Item)</div>
+          {(() => {
+            const originalAmount = total;
+            const openAmount = openRemaining ?? Math.max(0, total - paid - credited);
+            const clearedAmount = Math.max(0, originalAmount - openAmount);
+            const cashPaid = paid;
+            const settled = Math.max(0, clearedAmount - cashPaid - credited);
+            const docStatus = openAmount <= 0.01 ? "CLEARED" : clearedAmount > 0.01 ? "PARTIALLY_CLEARED" : "OPEN";
+            const statusLabel = docStatus === "CLEARED" ? "مسوّاة بالكامل" : docStatus === "PARTIALLY_CLEARED" ? "مسوّاة جزئياً" : "مفتوحة";
+            const statusCls = docStatus === "CLEARED" ? "bg-success/15 text-success" : docStatus === "PARTIALLY_CLEARED" ? "bg-warning/15 text-warning" : "bg-muted text-muted-foreground";
+            return (
+              <div className="space-y-1">
+                <div className="flex justify-between items-center mb-1"><span className="text-muted-foreground text-[12.5px]">الحالة</span><span className={`text-[12.5px] font-semibold px-2 py-0.5 rounded ${statusCls}`}>{statusLabel}</span></div>
+                <div className="flex justify-between text-[12.5px]"><span className="text-muted-foreground">المبلغ الأصلي</span><span className="num font-semibold">{fmt(originalAmount)}</span></div>
+                <div className="flex justify-between text-[12.5px]"><span className="text-muted-foreground">المبلغ المسوّى</span><span className="num text-primary">{clearedAmount > 0.01 ? fmt(clearedAmount) : "—"}</span></div>
+                {(cashPaid > 0.01 || settled > 0.01 || credited > 0.01) && (
+                  <div className="pr-3 text-[11.5px] text-muted-foreground space-y-0.5">
+                    {cashPaid > 0.01 && <div className="flex justify-between"><span>• دفعات نقدية</span><span className="num">{fmt(cashPaid)}</span></div>}
+                    {settled > 0.01 && <div className="flex justify-between"><span>• مقاصة</span><span className="num">{fmt(settled)}</span></div>}
+                    {credited > 0.01 && <div className="flex justify-between"><span>• إشعارات</span><span className="num">{fmt(credited)}</span></div>}
+                  </div>
+                )}
+                <div className="flex justify-between text-sm font-semibold border-t border-border pt-1 mt-1"><span>المبلغ المفتوح</span><span className="num text-primary">{fmt(openAmount)}</span></div>
+              </div>
+            );
+          })()}
           </div>
-        </div>
       </div>
 
       {/* بنود الفاتورة مع تفصيل قبل/بعد الضريبة */}
