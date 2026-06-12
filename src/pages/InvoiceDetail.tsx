@@ -28,6 +28,7 @@ export default function InvoiceDetail() {
   const [lines, setLines] = useState<any[]>([]);
   const [creditNotes, setCreditNotes] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
+  const [openRemaining, setOpenRemaining] = useState<number | null>(null);
   const [vehicleByLineNo, setVehicleByLineNo] = useState<Record<number, { id: string; label: string }>>({});
   const [dlgOpen, setDlgOpen] = useState(false);
 
@@ -43,6 +44,14 @@ export default function InvoiceDetail() {
     setLines(lns ?? []);
     setCreditNotes(cns ?? []);
     setPayments(pmts ?? []);
+
+    // المتبقّي الحقيقي من Open Items (يشمل المقاصّة) — المصدر الموحّد SAP
+    if (head?.id) {
+      const { data: rem } = await supabase.rpc("document_remaining" as any, {
+        p_doc_type: "sales_invoice", p_doc_id: head.id, p_total: Number(head.total),
+      });
+      setOpenRemaining(rem != null ? Number(rem) : null);
+    }
 
     // ربط المركبة من أمر البيع — عبر inventory_items (وليس vehicles)
     if (head?.sales_order_id) {
@@ -227,10 +236,21 @@ export default function InvoiceDetail() {
           <div className="num font-bold text-primary">{fmt(total)}</div>
         </div>
         <div className="bg-card border border-border rounded-lg p-3">
-          <div className="text-xs text-muted-foreground mb-1">المدفوع / المتبقي</div>
-          <div className="num font-semibold text-success">{fmt(paid)}</div>
-          <div className="text-[12.5px] text-muted-foreground mt-0.5">متبقٍ: {fmt(Math.max(0, total - paid))}</div>
-          {credited > 0 && <div className="text-[12.5px] text-muted-foreground">معكوس: {fmt(credited)}</div>}
+          <div className="text-xs text-muted-foreground mb-2">التصفية</div>
+          <div className="space-y-1">
+            <div className="flex justify-between text-[12.5px]"><span className="text-muted-foreground">المدفوع (دفعات)</span><span className="num text-success">{fmt(paid)}</span></div>
+            {(() => {
+              const rem = openRemaining ?? Math.max(0, total - paid - credited);
+              const settled = Math.max(0, total - paid - credited - rem);
+              return (
+                <>
+                  {settled > 0.01 && <div className="flex justify-between text-[12.5px]"><span className="text-muted-foreground">المسوّى (مقاصّة)</span><span className="num text-primary">{fmt(settled)}</span></div>}
+                  {credited > 0 && <div className="flex justify-between text-[12.5px]"><span className="text-muted-foreground">معكوس (إشعارات)</span><span className="num text-warning">{fmt(credited)}</span></div>}
+                  <div className="flex justify-between text-sm font-semibold border-t border-border pt-1 mt-1"><span>المتبقّي</span><span className="num text-primary">{fmt(rem)}</span></div>
+                </>
+              );
+            })()}
+          </div>
         </div>
       </div>
 
