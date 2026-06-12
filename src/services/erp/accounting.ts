@@ -696,18 +696,11 @@ Object.assign(accountingService, {
       .eq("id", vendorId)
       .maybeSingle();
 
-    const [{ data: invoices }, { data: payments }] = await Promise.all([
-      supabase
-        .from("purchase_invoices")
-        .select("id, invoice_no, invoice_date, total, status, notes")
-        .eq("supplier_id", vendorId)
-        .neq("status", "cancelled"),
-      supabase
-        .from("purchase_payments")
-        .select("id, code, payment_date, amount, payment_method")
-        .eq("supplier_id", vendorId)
-        ,
-    ]);
+    const { data: invoices } = await supabase
+      .from("purchase_invoices")
+      .select("id, invoice_no, invoice_date, total, status, notes")
+      .eq("supplier_id", vendorId)
+      .neq("status", "cancelled");
 
     const events: Omit<VendorStatementLine, "running_balance">[] = [];
     for (const inv of (invoices ?? []) as any[]) {
@@ -721,16 +714,30 @@ Object.assign(accountingService, {
         source_id: inv.id,
       });
     }
-    for (const p of (payments ?? []) as any[]) {
-      events.push({
-        date: p.payment_date,
-        type: "payment",
-        reference: p.payment_no,
-        description: p.notes || p.reference || "دفعة لمورد",
-        debit: Number(p.amount || 0),
-        credit: 0,
-        source_id: p.id,
-      });
+    // Open Items settlement movements (payments + settlements + credit notes)
+    const apInvIds = (invoices ?? []).map((i: any) => i.id);
+    if (apInvIds.length > 0) {
+      const { data: apAllocs } = await supabase
+        .from("open_item_allocations")
+        .select("allocation_number, allocation_type, allocation_date, allocated_amount, target_document_id")
+        .eq("target_document_type", "purchase_invoice")
+        .eq("status", "active")
+        .in("target_document_id", apInvIds);
+      const TYPE_DESC_AP: Record<string, string> = {
+ 
+ 
+      };
+      for (const a of apAllocs ?? []) {
+        events.push({
+          date: (a as any).allocation_date,
+          type: "payment",
+          reference: (a as any).allocation_number,
+          description: TYPE_DESC_AP[(a as any).allocation_type] ?? (a as any).allocation_type,
+          debit: Number((a as any).allocated_amount || 0),
+          credit: 0,
+          source_id: (a as any).target_document_id,
+        });
+      }
     }
 
     const filtered = events

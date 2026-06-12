@@ -22,6 +22,7 @@ import {
   formatSaudiAddress, hasRole, toggleRole, complianceScore,
 } from "@/lib/contactMeta";
 import { SupplierIntelligence } from "@/components/erp/SupplierIntelligence";
+import { PartnerAccountStatement } from "@/components/erp/PartnerAccountStatement";
 import { AccountStatement } from "@/components/erp/AccountStatement";
 import { cn } from "@/lib/utils";
 
@@ -589,13 +590,7 @@ export default function ContactDetail() {
             const scope: "supplier" | "customer" | "both" =
               isVendor && !isCustomer ? "supplier" : isCustomer && !isVendor ? "customer" : "both";
             return (
-              <AccountStatement
-                contactName={row.name}
-                contactCode={row.code}
-                scope={scope}
-                customerInvoices={invoices as any}
-                creditLimit={meta.credit_limit}
-              />
+              <PartnerAccountStatement partnerId={row.id} scope={scope} />
             );
           })()}
         </TabsContent>

@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,8 @@ import {
 
 export default function PartnerLedger() {
   const [kind, setKind] = useState<"all" | "customer" | "supplier">("all");
-  const [partnerId, setPartnerId] = useState<string>("");
+  const [searchParams] = useSearchParams();
+  const [partnerId, setPartnerId] = useState<string>(searchParams.get("partner") ?? "");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [pSearch, setPSearch] = useState("");
