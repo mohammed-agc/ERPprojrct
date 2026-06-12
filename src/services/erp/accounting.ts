@@ -456,12 +456,29 @@ Object.assign(accountingService, {
       });
     }
 
+    // Open Items: التخصيصات النشطة (PAYMENT + SETTLEMENT)، باستثناء CREDIT_NOTE المحسوب عبر credited_amount
+    const invIdsAR = (invoices ?? []).map((i: any) => i.id);
+    const allocMapAR = new Map<string, number>();
+    if (invIdsAR.length > 0) {
+      const { data: arAllocs } = await supabase
+        .from("open_item_allocations")
+        .select("target_document_id, allocated_amount")
+        .eq("target_document_type", "sales_invoice")
+        .eq("status", "active")
+        .neq("allocation_type", "CREDIT_NOTE")
+        .in("target_document_id", invIdsAR);
+      for (const a of arAllocs ?? []) {
+        const k = (a as any).target_document_id;
+        allocMapAR.set(k, (allocMapAR.get(k) ?? 0) + Number((a as any).allocated_amount || 0));
+      }
+    }
+
     for (const inv of (invoices ?? []) as any[]) {
       if (inv.status === "cancelled") continue;
       const r = rows.get(inv.customer_id);
       if (!r) continue;
       r.derived_remaining +=
-        Number(inv.total || 0) - Number(inv.paid_amount || 0) - Number(inv.credited_amount || 0);
+        Number(inv.total || 0) - (allocMapAR.get(inv.id) ?? 0) - Number(inv.credited_amount || 0);
     }
 
     for (const cn of (cns ?? []) as any[]) {
