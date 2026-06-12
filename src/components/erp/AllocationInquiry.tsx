@@ -48,12 +48,12 @@ export function AllocationInquiry({ docType, docId, total }: Props) {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
         {breakdown.map(b => (
           <div key={b.label} className="p-2 bg-muted/40 rounded-lg text-center">
-            <div className="text-[10px] text-muted-foreground">{b.label}</div>
+            <div className="text-[11.5px] text-muted-foreground">{b.label}</div>
             <div className={`num text-sm font-bold ${b.tone}`}>{fmtSAR(b.value)}</div>
           </div>
         ))}
         <div className="p-2 bg-primary/10 border border-primary/30 rounded-lg text-center">
-          <div className="text-[10px] text-muted-foreground">المتبقّي</div>
+          <div className="text-[11.5px] text-muted-foreground">المتبقّي</div>
           <div className="num text-sm font-bold text-primary">{fmtSAR(data.remaining)}</div>
         </div>
       </div>
@@ -73,7 +73,7 @@ export function AllocationInquiry({ docType, docId, total }: Props) {
           <tbody>
             {data.allocations.map((a, i) => (
               <tr key={i}>
-                <td className="font-mono text-[10px]">{a.allocation_number}</td>
+                <td className="font-mono text-[11.5px]">{a.allocation_number}</td>
                 <td>
                   <span className={`font-medium ${TYPE_TONE[a.allocation_type] ?? ""}`}>
                     {ALLOC_TYPE_LABEL[a.allocation_type] ?? a.allocation_type}
@@ -81,7 +81,7 @@ export function AllocationInquiry({ docType, docId, total }: Props) {
                 </td>
                 <td>{fmtDate(a.allocation_date)}</td>
                 <td className="num text-left">{fmtSAR(a.allocated_amount)}</td>
-                <td className="text-[10px] text-muted-foreground">{a.remarks ?? "—"}</td>
+                <td className="text-[11.5px] text-muted-foreground">{a.remarks ?? "—"}</td>
               </tr>
             ))}
           </tbody>

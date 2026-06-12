@@ -39,7 +39,7 @@ export function NotificationsCenter() {
           <Bell className="h-4 w-4" />
           {unread > 0 && (
             <span className={cn(
-              "absolute -top-0.5 -right-0.5 h-4 min-w-[16px] px-1 rounded-full text-[9px] font-bold text-white flex items-center justify-center",
+              "absolute -top-0.5 -right-0.5 h-4 min-w-[16px] px-1 rounded-full text-[12px] font-bold text-white flex items-center justify-center",
               critical > 0 ? "bg-rose-500" : "bg-amber-500"
             )}>{unread > 9 ? "9+" : unread}</span>
           )}
@@ -49,7 +49,7 @@ export function NotificationsCenter() {
         <div className="flex items-center justify-between px-3 py-2 border-b">
           <div className="text-sm font-semibold">الإشعارات</div>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" className="h-7 text-[11px]"
+            <Button variant="ghost" size="sm" className="h-7 text-[12px]"
               onClick={() => { productivityService.markAllRead(notifs.map(n => n.id)); reload(); }}>
               <Check className="h-3 w-3 ml-1" /> قراءة الكل
             </Button>
@@ -74,14 +74,14 @@ export function NotificationsCenter() {
                           {!n.read && <span className={cn("h-1.5 w-1.5 rounded-full", s.dot)} />}
                           <div className="text-xs font-semibold truncate">{n.title}</div>
                         </div>
-                        {n.body && <div className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{n.body}</div>}
+                        {n.body && <div className="text-[12px] text-muted-foreground mt-0.5 leading-relaxed">{n.body}</div>}
                         <div className="flex items-center gap-1 mt-1.5">
                           {n.to && (
-                            <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2" onClick={() => go(n)}>
+                            <Button variant="ghost" size="sm" className="h-6 text-[11.5px] px-2" onClick={() => go(n)}>
                               <ExternalLink className="h-3 w-3 ml-1" /> فتح
                             </Button>
                           )}
-                          <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2"
+                          <Button variant="ghost" size="sm" className="h-6 text-[11.5px] px-2"
                             onClick={() => { productivityService.dismiss(n.id); reload(); }}>
                             <X className="h-3 w-3 ml-1" /> تجاهل
                           </Button>

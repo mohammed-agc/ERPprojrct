@@ -76,7 +76,7 @@ export function CascadeSelect({
         </div>
         <div className="max-h-64 overflow-auto">
           {filtered.length === 0 && (
-            <div className="text-center text-[11px] text-muted-foreground py-6">
+            <div className="text-center text-[12px] text-muted-foreground py-6">
               {emptyHint ?? "لا توجد نتائج"}
             </div>
           )}
@@ -94,7 +94,7 @@ export function CascadeSelect({
                 {isSel && <Check className="h-3 w-3 text-primary" />}
                 <span className="flex-1 truncate">{o.label}</span>
                 {o.sublabel && (
-                  <span className="text-[10px] text-muted-foreground truncate">{o.sublabel}</span>
+                  <span className="text-[11.5px] text-muted-foreground truncate">{o.sublabel}</span>
                 )}
               </div>
             );

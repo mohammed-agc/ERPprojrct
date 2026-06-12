@@ -103,12 +103,12 @@ export default function PartnerBalanceSummary() {
               <tr key={r.partner_id}>
                 <td>
                   <div className="font-medium">{r.partner_name}</div>
-                  <div className="text-[10px] text-muted-foreground font-mono">{r.partner_code}</div>
+                  <div className="text-[11.5px] text-muted-foreground font-mono">{r.partner_code}</div>
                 </td>
                 <td>
                   <div className="flex gap-1 flex-wrap">
-                    {r.is_customer && <Badge variant="secondary" className="text-[10px]">عميل</Badge>}
-                    {r.is_supplier && <Badge variant="outline" className="text-[10px]">مورد</Badge>}
+                    {r.is_customer && <Badge variant="secondary" className="text-[11.5px]">عميل</Badge>}
+                    {r.is_supplier && <Badge variant="outline" className="text-[11.5px]">مورد</Badge>}
                   </div>
                 </td>
                 <td className="num text-left">{r.customer_balance > 0.01 ? fmtSAR(r.customer_balance) : "—"}</td>
@@ -122,7 +122,7 @@ export default function PartnerBalanceSummary() {
                       <ArrowLeftRight className="h-3 w-3" /> مقاصّة
                     </Button>
                   ) : (
-                    <span className="text-[10px] text-muted-foreground">—</span>
+                    <span className="text-[11.5px] text-muted-foreground">—</span>
                   )}
                 </td>
               </tr>
@@ -176,7 +176,7 @@ export default function PartnerBalanceSummary() {
                   onChange={e => setSettleAmount(e.target.value ? Number(e.target.value) : undefined)}
                   className="num"
                 />
-                <p className="text-[11px] text-muted-foreground mt-1">
+                <p className="text-[12px] text-muted-foreground mt-1">
                   افتراضياً المبلغ الأقصى. القيد: مدين ذمم دائنة (مورد) / دائن ذمم مدينة (عميل).
                 </p>
               </div>

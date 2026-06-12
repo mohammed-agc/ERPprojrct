@@ -38,19 +38,19 @@ export function PartnerAccountStatement({ partnerId, scope }: Props) {
       {/* ملخّص علوي */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-          <div className="text-[11px] text-muted-foreground">{balanceLabel}</div>
+          <div className="text-[12px] text-muted-foreground">{balanceLabel}</div>
           <div className="num text-lg font-bold text-primary">{fmtSAR(Math.abs(closing))}</div>
         </div>
         <div className="bg-card border border-border rounded-lg p-3">
-          <div className="text-[11px] text-muted-foreground">إجمالي مدين</div>
+          <div className="text-[12px] text-muted-foreground">إجمالي مدين</div>
           <div className="num text-lg font-bold">{fmtSAR(totalDebit)}</div>
         </div>
         <div className="bg-card border border-border rounded-lg p-3">
-          <div className="text-[11px] text-muted-foreground">إجمالي دائن</div>
+          <div className="text-[12px] text-muted-foreground">إجمالي دائن</div>
           <div className="num text-lg font-bold">{fmtSAR(totalCredit)}</div>
         </div>
         <div className="bg-card border border-border rounded-lg p-3">
-          <div className="text-[11px] text-muted-foreground">عدد الحركات</div>
+          <div className="text-[12px] text-muted-foreground">عدد الحركات</div>
           <div className="num text-lg font-bold">{rows.length}</div>
         </div>
       </div>

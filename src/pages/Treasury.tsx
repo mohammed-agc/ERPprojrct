@@ -23,11 +23,11 @@ function Kpi({ label, value, sub, icon: Icon, tone }: any) {
   return (
     <div className={`bg-card border rounded-md p-3 ${toneCls}`}>
       <div className="flex items-center justify-between">
-        <div className="text-[11px] text-muted-foreground font-medium">{label}</div>
+        <div className="text-[12px] text-muted-foreground font-medium">{label}</div>
         <Icon className="h-3.5 w-3.5 text-muted-foreground" />
       </div>
       <div className="text-lg font-bold mt-1">{value}</div>
-      {sub && <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>}
+      {sub && <div className="text-[11.5px] text-muted-foreground mt-0.5">{sub}</div>}
     </div>
   );
 }
@@ -114,7 +114,7 @@ export default function Treasury() {
                       <Link to={`/treasury/accounts/${a.id}`} className="text-primary hover:underline">{a.code}</Link>
                     </td>
                     <td className="font-medium">{a.name_ar}</td>
-                    <td><span className={`text-[10px] px-1.5 py-0.5 rounded border ${accountTypeColor[a.type]}`}>{accountTypeLabel[a.type]}</span></td>
+                    <td><span className={`text-[11.5px] px-1.5 py-0.5 rounded border ${accountTypeColor[a.type]}`}>{accountTypeLabel[a.type]}</span></td>
                     <td className="text-xs text-muted-foreground">{a.branch ?? "—"}</td>
                     <td className="text-xs">{a.currency}</td>
                     <td className={`num text-left font-semibold ${bal < 0 ? "text-destructive" : ""}`}>{fmtSAR(bal)}</td>

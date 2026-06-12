@@ -61,12 +61,12 @@ export default function Inspection() {
             )}
             {filtered.map(i => (
               <tr key={i.id} className="cursor-pointer hover:bg-muted/40" onClick={() => nav(`/purchasing/inspection/${i.id}`)}>
-                <td className="font-mono text-[11px]">
+                <td className="font-mono text-[12px]">
                   <div className="flex items-center gap-1.5">
                     <FileSearch className="h-3 w-3 text-muted-foreground" />{i.insp_no}
                   </div>
                 </td>
-                <td className="font-mono text-[11px] text-muted-foreground">{i.grn_id.slice(0, 8)}</td>
+                <td className="font-mono text-[12px] text-muted-foreground">{i.grn_id.slice(0, 8)}</td>
                 <td className="text-xs">{fmtDate(i.started_at)}</td>
                 <td className="text-xs">{fmtDate(i.completed_at)}</td>
                 <td><Badge className={INS_TONE[i.status]}>{INS_LABEL[i.status]}</Badge></td>
@@ -83,7 +83,7 @@ function Kpi({ label, value, tone }: { label: string; value: number; tone: "warn
   const c = tone === "success" ? "text-success" : tone === "warning" ? "text-warning" : "text-destructive";
   return (
     <div className="border border-border bg-card rounded-lg p-2.5">
-      <div className="text-[10px] text-muted-foreground mb-0.5">{label}</div>
+      <div className="text-[11.5px] text-muted-foreground mb-0.5">{label}</div>
       <div className={`text-xl font-bold num ${c}`}>{value}</div>
     </div>
   );

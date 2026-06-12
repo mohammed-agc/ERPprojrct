@@ -72,11 +72,11 @@ export default function CreditNoteDetail() {
                 <BookOpen className="h-3 w-3" />
                 <span className="font-mono">{cn.journal_entry.entry_no}</span>
                 {cn.journal_entry.is_posted && (
-                  <span className="text-[10px] opacity-80">• مُرحَّل</span>
+                  <span className="text-[11.5px] opacity-80">• مُرحَّل</span>
                 )}
               </Link>
             ) : cn.status === "posted" ? (
-              <span className="text-[11px] px-2 py-0.5 rounded border border-amber-500/40 bg-amber-500/10 text-amber-600">
+              <span className="text-[12px] px-2 py-0.5 rounded border border-amber-500/40 bg-amber-500/10 text-amber-600">
                 لا يوجد قيد محاسبي مرتبط
               </span>
             ) : null}

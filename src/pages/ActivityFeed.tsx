@@ -74,7 +74,7 @@ export default function ActivityFeed() {
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium">{it.title}</div>
               <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                <Badge variant="outline" className={cn("text-[10px]", TONE[it.group])}>
+                <Badge variant="outline" className={cn("text-[11.5px]", TONE[it.group])}>
                   {GROUPS.find(g => g.id === it.group)?.label}
                 </Badge>
                 {it.user && <span>· {it.user}</span>}

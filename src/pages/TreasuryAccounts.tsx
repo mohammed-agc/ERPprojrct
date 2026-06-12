@@ -121,18 +121,18 @@ export default function TreasuryAccounts() {
                     <Link to={`/treasury/accounts/${r.id}`} className="text-primary hover:underline">{r.code}</Link>
                   </td>
                   <td className="font-medium">{r.name_ar}</td>
-                  <td><span className={`text-[10px] px-1.5 py-0.5 rounded border ${accountTypeColor[r.type]}`}>{accountTypeLabel[r.type]}</span></td>
+                  <td><span className={`text-[11.5px] px-1.5 py-0.5 rounded border ${accountTypeColor[r.type]}`}>{accountTypeLabel[r.type]}</span></td>
                   <td className="text-xs">{r.currency}</td>
                   <td className="text-xs text-muted-foreground">{r.branch ?? "—"}</td>
                   <td className="text-xs">
                     {r.bank_name && <div>{r.bank_name}</div>}
-                    {r.iban && <div className="font-mono text-[10px] text-muted-foreground" dir="ltr">{r.iban}</div>}
+                    {r.iban && <div className="font-mono text-[11.5px] text-muted-foreground" dir="ltr">{r.iban}</div>}
                     {!r.bank_name && !r.iban && "—"}
                   </td>
                   <td className="text-xs">{r.responsible ?? "—"}</td>
                   <td className="num text-left text-xs">{fmtSAR(r.opening_balance)}</td>
                   <td className={`num text-left font-semibold ${bal < 0 ? "text-destructive" : ""}`}>{fmtSAR(bal)}</td>
-                  <td>{r.active ? <Badge variant="secondary" className="text-[10px]">نشط</Badge> : <Badge variant="outline" className="text-[10px]">معطل</Badge>}</td>
+                  <td>{r.active ? <Badge variant="secondary" className="text-[11.5px]">نشط</Badge> : <Badge variant="outline" className="text-[11.5px]">معطل</Badge>}</td>
                   <td className="flex gap-1">
                     <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setEdit(r); setOpen(true); }}><Pencil className="h-3 w-3" /></Button>
                     <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={async () => { await treasuryService.toggleAccount(r.id); load(); }}><Power className="h-3 w-3" /></Button>

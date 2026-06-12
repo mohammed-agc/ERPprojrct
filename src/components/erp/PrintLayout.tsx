@@ -45,20 +45,20 @@ export function PrintLayout({
         <header className="flex items-start justify-between border-b border-border pb-4 mb-4">
           <div>
             <div className="text-lg font-bold">{orgName}</div>
-            {vatNumber && <div className="text-[11px] text-muted-foreground mt-0.5">الرقم الضريبي: <span className="font-mono">{vatNumber}</span></div>}
+            {vatNumber && <div className="text-[12px] text-muted-foreground mt-0.5">الرقم الضريبي: <span className="font-mono">{vatNumber}</span></div>}
           </div>
           <div className="text-left">
             {title && <div className="text-base font-bold">{title}</div>}
-            {subtitle && <div className="text-[11px] text-muted-foreground">{subtitle}</div>}
-            {documentNo && <div className="text-[11px] mt-1">رقم المستند: <span className="font-mono font-semibold">{documentNo}</span></div>}
-            {documentDate && <div className="text-[11px]">التاريخ: <span className="font-mono">{documentDate}</span></div>}
+            {subtitle && <div className="text-[12px] text-muted-foreground">{subtitle}</div>}
+            {documentNo && <div className="text-[12px] mt-1">رقم المستند: <span className="font-mono font-semibold">{documentNo}</span></div>}
+            {documentDate && <div className="text-[12px]">التاريخ: <span className="font-mono">{documentDate}</span></div>}
           </div>
         </header>
 
         <div className="relative z-10">{children}</div>
 
         {showSignatures && (
-          <footer className="grid grid-cols-3 gap-6 mt-10 pt-6 border-t border-border text-[11px]">
+          <footer className="grid grid-cols-3 gap-6 mt-10 pt-6 border-t border-border text-[12px]">
             {["أعدّ بواسطة", "اعتمد بواسطة", "استلم بواسطة"].map(role => (
               <div key={role} className="text-center">
                 <div className="h-12 border-b border-dashed border-muted-foreground/40 mb-1" />
@@ -68,7 +68,7 @@ export function PrintLayout({
           </footer>
         )}
 
-        <div className="hidden print:flex justify-between mt-8 text-[9px] text-muted-foreground border-t pt-2">
+        <div className="hidden print:flex justify-between mt-8 text-[12px] text-muted-foreground border-t pt-2">
           <span>SARAT ERP</span>
           <span>صفحة {/* page number filled by browser via CSS */}</span>
         </div>

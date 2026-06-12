@@ -116,7 +116,7 @@ export default function JournalDetail() {
 function Info({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="p-2.5 bg-muted/40 border border-border rounded">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="text-[11.5px] uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className="text-sm font-medium mt-0.5">{value}</div>
     </div>
   );

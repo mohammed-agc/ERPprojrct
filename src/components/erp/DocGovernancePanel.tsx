@@ -60,12 +60,12 @@ export function DocGovernancePanel({
 
       {/* Responsible + previous */}
       <div className="grid grid-cols-2 gap-2">
-        <div className="flex items-center gap-1.5 text-[11px]">
+        <div className="flex items-center gap-1.5 text-[12px]">
           <User className="h-3 w-3 text-muted-foreground" />
           <span className="text-muted-foreground">المسؤول:</span>
           <span className="font-medium">{responsibleRole ? ROLE_LABEL[responsibleRole] : "—"}</span>
         </div>
-        <div className="flex items-center gap-1.5 text-[11px]">
+        <div className="flex items-center gap-1.5 text-[12px]">
           <span className="text-muted-foreground">الوثيقة السابقة:</span>
           {previous ? (
             <Link to={docPath(previous.kind, previous.id)} className="text-primary hover:underline font-mono">
@@ -78,7 +78,7 @@ export function DocGovernancePanel({
       {/* Next actions */}
       {nextActions.length > 0 && (
         <div className="space-y-1.5">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">الإجراء التالي</div>
+          <div className="text-[11.5px] font-semibold uppercase tracking-wider text-muted-foreground">الإجراء التالي</div>
           <div className="flex flex-wrap gap-1.5">
             {nextActions.map((a, i) => {
               const roleMatch = activeRole === a.role;
@@ -87,7 +87,7 @@ export function DocGovernancePanel({
               return (
                 <Button
                   key={i} size="sm" variant={a.variant || "default"}
-                  className="h-7 text-[11px]"
+                  className="h-7 text-[12px]"
                   disabled={disabled}
                   onClick={a.onClick}
                   title={disabled ? reason : a.label}
@@ -99,7 +99,7 @@ export function DocGovernancePanel({
             })}
           </div>
           {nextActions.some(a => activeRole !== a.role) && (
-            <div className="flex items-start gap-1 text-[10px] text-muted-foreground">
+            <div className="flex items-start gap-1 text-[11.5px] text-muted-foreground">
               <AlertCircle className="h-3 w-3 mt-0.5" />
               <span>الإجراءات الرمادية تتطلب تبديل الدور النشط من شريط الأدوار.</span>
             </div>
@@ -110,7 +110,7 @@ export function DocGovernancePanel({
       {/* Approval history */}
       {approvals.length > 0 && (
         <div className="space-y-1">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">سجل الاعتمادات</div>
+          <div className="text-[11.5px] font-semibold uppercase tracking-wider text-muted-foreground">سجل الاعتمادات</div>
           <ul className="space-y-1">
             {approvals.map((a, i) => (
               <li key={i} className="flex items-center justify-between gap-2 px-2 py-1 bg-muted/40 rounded">
@@ -121,7 +121,7 @@ export function DocGovernancePanel({
                   <span className="font-medium">{a.actor}</span>
                   <span className="text-muted-foreground">({ROLE_LABEL[a.role]})</span>
                 </div>
-                <span className="text-[10px] text-muted-foreground">{fmtAuditTime(a.at)}</span>
+                <span className="text-[11.5px] text-muted-foreground">{fmtAuditTime(a.at)}</span>
               </li>
             ))}
           </ul>
@@ -130,9 +130,9 @@ export function DocGovernancePanel({
 
       {/* Audit timeline */}
       <div className="space-y-1">
-        <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">سجل التدقيق</div>
+        <div className="text-[11.5px] font-semibold uppercase tracking-wider text-muted-foreground">سجل التدقيق</div>
         {audit.length === 0 ? (
-          <div className="text-[11px] text-muted-foreground py-2">لا توجد إجراءات مسجلة بعد</div>
+          <div className="text-[12px] text-muted-foreground py-2">لا توجد إجراءات مسجلة بعد</div>
         ) : (
           <ul className="space-y-1 max-h-56 overflow-y-auto">
             {audit.slice().reverse().map((e, i) => (
@@ -140,14 +140,14 @@ export function DocGovernancePanel({
                 <Clock className="h-3 w-3 mt-0.5 text-muted-foreground flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-[11px]">{e.action}</span>
-                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">{fmtAuditTime(e.at)}</span>
+                    <span className="font-medium text-[12px]">{e.action}</span>
+                    <span className="text-[11.5px] text-muted-foreground whitespace-nowrap">{fmtAuditTime(e.at)}</span>
                   </div>
-                  <div className="text-[10px] text-muted-foreground">
+                  <div className="text-[11.5px] text-muted-foreground">
                     {e.actor} · {ROLE_LABEL[e.role]}
                     {e.from_status && e.to_status && ` · ${e.from_status} → ${e.to_status}`}
                   </div>
-                  {e.note && <div className="text-[10px] text-muted-foreground mt-0.5">{e.note}</div>}
+                  {e.note && <div className="text-[11.5px] text-muted-foreground mt-0.5">{e.note}</div>}
                 </div>
               </li>
             ))}

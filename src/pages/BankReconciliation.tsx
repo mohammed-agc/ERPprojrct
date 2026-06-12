@@ -97,19 +97,19 @@ export default function BankReconciliation() {
       {/* Reconciliation summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
         <div className="bg-card border rounded-md p-3">
-          <div className="text-[11px] text-muted-foreground">رصيد كشف البنك</div>
+          <div className="text-[12px] text-muted-foreground">رصيد كشف البنك</div>
           <div className="text-lg font-bold">{fmtSAR(stmtBalNum)}</div>
         </div>
         <div className="bg-card border rounded-md p-3">
-          <div className="text-[11px] text-muted-foreground">رصيد دفاتر ERP</div>
+          <div className="text-[12px] text-muted-foreground">رصيد دفاتر ERP</div>
           <div className="text-lg font-bold">{fmtSAR(erpBalance)}</div>
         </div>
         <div className={`border rounded-md p-3 ${Math.abs(diff) < 0.01 ? "bg-success/5 border-success/40" : "bg-warning/5 border-warning/40"}`}>
-          <div className="text-[11px] text-muted-foreground">الفرق</div>
+          <div className="text-[12px] text-muted-foreground">الفرق</div>
           <div className={`text-lg font-bold ${Math.abs(diff) < 0.01 ? "text-success" : "text-warning"}`}>{fmtSAR(diff)}</div>
         </div>
         <div className="bg-card border rounded-md p-3">
-          <div className="text-[11px] text-muted-foreground">الحالة</div>
+          <div className="text-[12px] text-muted-foreground">الحالة</div>
           <div className="mt-1">
             {Math.abs(diff) < 0.01 && stmtBalNum !== 0
               ? <Badge className="bg-success gap-1"><CheckCircle2 className="h-3 w-3" /> مُسوَّى</Badge>
@@ -123,7 +123,7 @@ export default function BankReconciliation() {
         <div className="bg-card border rounded-lg overflow-hidden">
           <div className="bg-muted px-3 py-2 font-semibold text-sm flex justify-between">
             <span>سطور كشف غير مطابقة</span>
-            <Badge variant="secondary" className="text-[10px]">{unmatched.length}</Badge>
+            <Badge variant="secondary" className="text-[11.5px]">{unmatched.length}</Badge>
           </div>
           <table className="erp-table">
             <thead>
@@ -139,7 +139,7 @@ export default function BankReconciliation() {
                   <td className="num text-left">{l.debit ? fmtSAR(l.debit) : "—"}</td>
                   <td className="num text-left">{l.credit ? fmtSAR(l.credit) : "—"}</td>
                   <td className="flex gap-1">
-                    <Button size="sm" variant="outline" className="h-6 px-2 text-[10px]" onClick={() => setMatchLine(l)}>
+                    <Button size="sm" variant="outline" className="h-6 px-2 text-[11.5px]" onClick={() => setMatchLine(l)}>
                       <LinkIcon className="h-3 w-3 ml-0.5" /> مطابقة
                     </Button>
                     <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={async () => { await treasuryService.ignoreStatementLine(l.id); loadData(); }}>
@@ -156,7 +156,7 @@ export default function BankReconciliation() {
         <div className="bg-card border rounded-lg overflow-hidden">
           <div className="bg-success/10 px-3 py-2 font-semibold text-sm flex justify-between">
             <span>سطور مُطابقة</span>
-            <Badge className="bg-success text-[10px]">{matched.length}</Badge>
+            <Badge className="bg-success text-[11.5px]">{matched.length}</Badge>
           </div>
           <table className="erp-table">
             <thead>
@@ -265,7 +265,7 @@ function MatchDialog({ line, onClose, vouchers, onSaved }: { line: BankStatement
                   <td className="text-xs">{v.type === "receipt" ? "قبض" : "صرف"}</td>
                   <td className="num text-left">{fmtSAR(v.amount)}</td>
                   <td>
-                    <Button size="sm" className="h-6 px-2 text-[10px]" onClick={async () => { await treasuryService.matchStatementLine(line.id, v.id); toast.success("تمت المطابقة"); onClose(); onSaved(); }}>
+                    <Button size="sm" className="h-6 px-2 text-[11.5px]" onClick={async () => { await treasuryService.matchStatementLine(line.id, v.id); toast.success("تمت المطابقة"); onClose(); onSaved(); }}>
                       مطابقة
                     </Button>
                   </td>

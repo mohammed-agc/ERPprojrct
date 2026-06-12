@@ -314,9 +314,9 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
                     <td>
                       <Input className="h-7" value={l.description} onChange={e => update(i, { description: e.target.value })} />
                       {l.vehicle_label && (
-                        <div className="text-[10px] text-primary mt-0.5">🚗 VIN: <span className="font-mono">{l.vehicle_label}</span></div>
+                        <div className="text-[11.5px] text-primary mt-0.5">🚗 VIN: <span className="font-mono">{l.vehicle_label}</span></div>
                       )}
-                      {err && <div className="text-[10px] text-destructive mt-0.5">{err}</div>}
+                      {err && <div className="text-[11.5px] text-destructive mt-0.5">{err}</div>}
                     </td>
                     <td>
                       <Input className={`h-7 text-left num ${qtyBad ? "border-destructive" : ""}`}
@@ -324,7 +324,7 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
                         value={l.quantity}
                         onChange={e => update(i, { quantity: Math.max(0, Number(e.target.value) || 0) })} />
                       {l._maxQty !== undefined && (
-                        <div className="text-[10px] text-muted-foreground mt-0.5">حد: {l._maxQty}</div>
+                        <div className="text-[11.5px] text-muted-foreground mt-0.5">حد: {l._maxQty}</div>
                       )}
                     </td>
                     <td>
@@ -333,7 +333,7 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
                         value={l.unit_price}
                         onChange={e => update(i, { unit_price: Math.max(0, Number(e.target.value) || 0) })} />
                       {l._maxUnit !== undefined && (
-                        <div className="text-[10px] text-muted-foreground mt-0.5">حد: {fmt(l._maxUnit)}</div>
+                        <div className="text-[11.5px] text-muted-foreground mt-0.5">حد: {fmt(l._maxUnit)}</div>
                       )}
                     </td>
                     <td><Input className="h-7 text-left num" type="number" min={0} max={100}

@@ -97,9 +97,9 @@ export default function InspectionDetail() {
 
       <Card>
         <CardContent className="p-3 grid grid-cols-3 gap-3 text-xs">
-          <div><div className="text-[10px] text-muted-foreground">تاريخ البدء</div><div>{fmtDate(ins.started_at)}</div></div>
-          <div><div className="text-[10px] text-muted-foreground">انتهى في</div><div>{fmtDate(ins.completed_at)}</div></div>
-          <div><div className="text-[10px] text-muted-foreground">اعتماد</div><div>{fmtDate(ins.approved_at)}</div></div>
+          <div><div className="text-[11.5px] text-muted-foreground">تاريخ البدء</div><div>{fmtDate(ins.started_at)}</div></div>
+          <div><div className="text-[11.5px] text-muted-foreground">انتهى في</div><div>{fmtDate(ins.completed_at)}</div></div>
+          <div><div className="text-[11.5px] text-muted-foreground">اعتماد</div><div>{fmtDate(ins.approved_at)}</div></div>
         </CardContent>
       </Card>
 
@@ -125,7 +125,7 @@ export default function InspectionDetail() {
                 <Fragment key={l.id}>
                 <tr>
                   <td className="num text-xs">{l.line_no}</td>
-                  <td className="font-mono text-[11px]" dir="ltr">{l.vin}</td>
+                  <td className="font-mono text-[12px]" dir="ltr">{l.vin}</td>
                   <td>
                     <Badge className={INS_RESULT_TONE[l.result]}>{INS_RESULT_LABEL[l.result]}</Badge>
                   </td>
@@ -133,7 +133,7 @@ export default function InspectionDetail() {
                     {l.vehicle_id ? (
                       <span className="inline-flex items-center gap-1 text-success">
                         <CheckCircle2 className="h-3 w-3" />
-                        <span className="font-mono text-[10px]">{l.vehicle_id.slice(0, 8)}</span>
+                        <span className="font-mono text-[11.5px]">{l.vehicle_id.slice(0, 8)}</span>
                       </span>
                     ) : <span className="text-muted-foreground">—</span>}
                   </td>
@@ -150,7 +150,7 @@ export default function InspectionDetail() {
                         </Button>
                       </div>
                     )}
-                    <Button size="sm" variant="outline" className="h-7 px-2 mt-1 text-[10px]"
+                    <Button size="sm" variant="outline" className="h-7 px-2 mt-1 text-[11.5px]"
                       onClick={() => setOpenLine(openLine === l.id ? null : l.id)}>
                       <ClipboardList className="h-3 w-3 ml-1" /> فحص تفصيلي
                       {openLine === l.id ? <ChevronDown className="h-3 w-3 mr-1" /> : <ChevronLeft className="h-3 w-3 mr-1" />}
@@ -189,7 +189,7 @@ export default function InspectionDetail() {
               </div>
             </div>
             {passed === 0 && (
-              <div className="text-[11px] text-warning">حدد بنوداً ناجحة قبل الاعتماد لإنشاء سجلات المركبات</div>
+              <div className="text-[12px] text-warning">حدد بنوداً ناجحة قبل الاعتماد لإنشاء سجلات المركبات</div>
             )}
           </CardContent>
         </Card>
@@ -203,7 +203,7 @@ function Kpi({ label, value, tone }: { label: string; value: number; tone: "prim
     : tone === "destructive" ? "text-destructive" : tone === "info" ? "text-info" : "text-primary";
   return (
     <div className="border border-border bg-card rounded-lg p-2.5">
-      <div className="text-[10px] text-muted-foreground mb-0.5">{label}</div>
+      <div className="text-[11.5px] text-muted-foreground mb-0.5">{label}</div>
       <div className={`text-xl font-bold num ${c}`}>{value}</div>
     </div>
   );

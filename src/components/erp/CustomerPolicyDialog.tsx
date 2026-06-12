@@ -79,10 +79,10 @@ export function CustomerPolicyDialog({
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-3 py-2">
-          <div className="col-span-2 bg-muted/40 border border-border rounded p-2 text-[11px] space-y-0.5">
+          <div className="col-span-2 bg-muted/40 border border-border rounded p-2 text-[12px] space-y-0.5">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">القيم الحالية</span>
-              <span className="font-mono text-[10px] text-muted-foreground">{customer.code}</span>
+              <span className="font-mono text-[11.5px] text-muted-foreground">{customer.code}</span>
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-0.5">
               <span>الحد الحالي: <b className="num">{fmtSAR(customer.credit_limit)} ر.س</b></span>
@@ -125,24 +125,24 @@ export function CustomerPolicyDialog({
             <Label className="text-xs">أيام السداد المخصصة</Label>
             <Input type="number" min={1} value={customDays} disabled={policy !== "custom"}
               onChange={e => setCustomDays(Number(e.target.value))} className="h-9 text-sm num" />
-            <p className="text-[10px] text-muted-foreground mt-1">تُستخدم فقط عند اختيار "مخصّص".</p>
+            <p className="text-[11.5px] text-muted-foreground mt-1">تُستخدم فقط عند اختيار "مخصّص".</p>
           </div>
           <div>
             <Label className="text-xs">أيام السماح (Grace)</Label>
             <Input type="number" min={0} value={grace}
               onChange={e => setGrace(Number(e.target.value))} className="h-9 text-sm num" />
-            <p className="text-[10px] text-muted-foreground mt-1">فترة سماح قبل اعتبار الفاتورة متأخرة.</p>
+            <p className="text-[11.5px] text-muted-foreground mt-1">فترة سماح قبل اعتبار الفاتورة متأخرة.</p>
           </div>
 
           <div className="col-span-2 flex items-center justify-between border border-border rounded p-2.5">
             <div>
               <div className="text-xs font-semibold">حساب نشط</div>
-              <div className="text-[10px] text-muted-foreground">إيقاف الحساب يمنع إصدار أوامر بيع/فواتير جديدة (يتطلب تجاوز مدير).</div>
+              <div className="text-[11.5px] text-muted-foreground">إيقاف الحساب يمنع إصدار أوامر بيع/فواتير جديدة (يتطلب تجاوز مدير).</div>
             </div>
             <Switch checked={active} onCheckedChange={setActive} />
           </div>
 
-          <div className="col-span-2 text-[11px] bg-primary/5 border border-primary/30 rounded p-2">
+          <div className="col-span-2 text-[12px] bg-primary/5 border border-primary/30 rounded p-2">
             أي تغيير في السياسة يُسجَّل تلقائيًا في سجل التدقيق ويُعيد احتساب تواريخ الاستحقاق والتقادم لكل الفواتير المفتوحة.
           </div>
         </div>

@@ -43,10 +43,10 @@ export default function AdminRoles() {
                 </div>
                 <div>
                   <div className="font-bold text-sm">{ROLE_LABELS[r]}</div>
-                  <div className="text-[10px] font-mono text-muted-foreground">{r}</div>
+                  <div className="text-[11.5px] font-mono text-muted-foreground">{r}</div>
                 </div>
               </div>
-              <Badge variant="secondary" className="gap-1 text-[10px]">
+              <Badge variant="secondary" className="gap-1 text-[11.5px]">
                 <Users className="h-3 w-3" />
                 {counts[r] ?? 0}
               </Badge>

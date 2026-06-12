@@ -99,7 +99,7 @@ export default function PurchaseOrders() {
               const s = suppliers.find(x => x.id === p.supplier_id);
               return (
                 <tr key={p.id} className="cursor-pointer hover:bg-muted/40" onClick={() => nav(`/purchasing/orders/${p.id}`)}>
-                  <td className="font-mono text-[11px] text-primary hover:underline">
+                  <td className="font-mono text-[12px] text-primary hover:underline">
                     <div className="flex items-center gap-1.5"><FileText className="h-3 w-3 text-muted-foreground" />{p.po_no}</div>
                   </td>
                   <td>{(p as any).contact?.name ?? s?.name ?? <span className="text-muted-foreground">—</span>}</td>

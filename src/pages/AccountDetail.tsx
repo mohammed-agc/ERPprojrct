@@ -100,11 +100,11 @@ export default function AccountDetail() {
                   <div className="flex-1 bg-blue-400/70 rounded-t-sm" style={{ height: `${(v.d / maxMonthly) * 100}%` }} />
                   <div className="flex-1 bg-amber-400/70 rounded-t-sm" style={{ height: `${(v.c / maxMonthly) * 100}%` }} />
                 </div>
-                <div className="text-[9px] text-muted-foreground">{k.slice(2)}</div>
+                <div className="text-[12px] text-muted-foreground">{k.slice(2)}</div>
               </div>
             ))}
           </div>
-          <div className="flex gap-3 text-[10px] text-muted-foreground mt-1">
+          <div className="flex gap-3 text-[11.5px] text-muted-foreground mt-1">
             <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 bg-blue-400" /> مدين</span>
             <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 bg-amber-400" /> دائن</span>
           </div>

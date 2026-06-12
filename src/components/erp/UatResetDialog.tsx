@@ -65,7 +65,7 @@ export function UatResetDialog({ open, onOpenChange }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="rounded-md border border-amber-500/40 bg-amber-50/60 dark:bg-amber-950/20 p-2.5 text-[11px] flex items-start gap-2">
+        <div className="rounded-md border border-amber-500/40 bg-amber-50/60 dark:bg-amber-950/20 p-2.5 text-[12px] flex items-start gap-2">
           <AlertTriangle className="h-4 w-4 text-amber-700 mt-0.5 shrink-0" />
           <div className="text-amber-900 dark:text-amber-200">
             هذا الإجراء سيمسح كل المستندات التشغيلية (المشتريات، المبيعات، المخزون، المحاسبة التشغيلية، ...) لإتاحة بدء دورة اختبار نظيفة. لا يمكن التراجع عنه.
@@ -74,20 +74,20 @@ export function UatResetDialog({ open, onOpenChange }: Props) {
 
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-md border border-rose-500/30 bg-rose-50/40 dark:bg-rose-950/20 p-2">
-            <div className="text-[11px] font-bold text-rose-700 dark:text-rose-300 mb-1.5 flex items-center gap-1">
-              <Badge variant="destructive" className="h-4 text-[9px]">سيُمسح</Badge>
+            <div className="text-[12px] font-bold text-rose-700 dark:text-rose-300 mb-1.5 flex items-center gap-1">
+              <Badge variant="destructive" className="h-4 text-[12px]">سيُمسح</Badge>
               <span>البيانات التشغيلية</span>
             </div>
-            <ul className="text-[10.5px] leading-5 text-rose-900/80 dark:text-rose-200/80 list-disc pr-4 space-y-0.5 max-h-48 overflow-auto">
+            <ul className="text-[12px] leading-5 text-rose-900/80 dark:text-rose-200/80 list-disc pr-4 space-y-0.5 max-h-48 overflow-auto">
               {REMOVED.map((x) => <li key={x}>{x}</li>)}
             </ul>
           </div>
           <div className="rounded-md border border-emerald-500/30 bg-emerald-50/40 dark:bg-emerald-950/20 p-2">
-            <div className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 mb-1.5 flex items-center gap-1">
+            <div className="text-[12px] font-bold text-emerald-700 dark:text-emerald-300 mb-1.5 flex items-center gap-1">
               <CheckCircle2 className="h-3 w-3" />
               <span>سيُحتفظ به</span>
             </div>
-            <ul className="text-[10.5px] leading-5 text-emerald-900/80 dark:text-emerald-200/80 list-disc pr-4 space-y-0.5 max-h-48 overflow-auto">
+            <ul className="text-[12px] leading-5 text-emerald-900/80 dark:text-emerald-200/80 list-disc pr-4 space-y-0.5 max-h-48 overflow-auto">
               {KEPT.map((x) => <li key={x}>{x}</li>)}
             </ul>
           </div>

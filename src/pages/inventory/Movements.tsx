@@ -85,7 +85,7 @@ export default function Movements() {
               const isIssue = m.kind.includes("issue") || m.kind.includes("consume") || m.kind.includes("sell");
               return (
                 <tr key={m.id}>
-                  <td className="font-mono text-[11px]">
+                  <td className="font-mono text-[12px]">
                     <div className="flex items-center gap-1.5"><ArrowLeftRight className="h-3 w-3 text-muted-foreground" />{m.code}</div>
                   </td>
                   <td className="text-xs">{fmtDate(m.at)}</td>
@@ -98,7 +98,7 @@ export default function Movements() {
                   <td className="num text-xs font-semibold">{m.qty}</td>
                   <td className="text-xs">{wh?.name ?? "—"}</td>
                   <td className="text-xs">{toWh?.name ?? "—"}</td>
-                  <td className="font-mono text-[11px] text-muted-foreground">{m.reference ?? "—"}</td>
+                  <td className="font-mono text-[12px] text-muted-foreground">{m.reference ?? "—"}</td>
                   <td className="text-xs">{m.user}</td>
                 </tr>
               );

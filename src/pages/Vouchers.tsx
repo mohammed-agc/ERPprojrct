@@ -158,9 +158,9 @@ export default function VouchersPage({ type }: Props) {
                   <td className="text-xs">{r.reference ?? "—"}</td>
                   <td className="text-xs font-mono">{r.linked_invoice ?? "—"}</td>
                   <td>
-                    {r.status === "posted" && <Badge className="text-[10px]">مُرحَّل</Badge>}
-                    {r.status === "draft" && <Badge variant="secondary" className="text-[10px]">مسودة</Badge>}
-                    {r.status === "reversed" && <Badge variant="destructive" className="text-[10px]">ملغي</Badge>}
+                    {r.status === "posted" && <Badge className="text-[11.5px]">مُرحَّل</Badge>}
+                    {r.status === "draft" && <Badge variant="secondary" className="text-[11.5px]">مسودة</Badge>}
+                    {r.status === "reversed" && <Badge variant="destructive" className="text-[11.5px]">ملغي</Badge>}
                   </td>
                   <td>
                     {r.status === "posted" && (

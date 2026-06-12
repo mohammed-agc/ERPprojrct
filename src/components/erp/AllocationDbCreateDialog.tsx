@@ -187,7 +187,7 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
                 </SelectContent>
               </Select>
             </div>
-            <div className="text-[11px] text-muted-foreground bg-muted/40 rounded px-2 py-2 text-center">
+            <div className="text-[12px] text-muted-foreground bg-muted/40 rounded px-2 py-2 text-center">
               {rows.length === 0 ? "—" : <><span className="font-bold text-foreground num">{filledCount}</span> / <span className="num">{rows.length}</span> VIN</>}
             </div>
           </div>
@@ -195,21 +195,21 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
           {po && supplier && (
             <div className="border border-primary/30 bg-primary/5 rounded-md p-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div>
-                <div className="text-[10px] text-muted-foreground">المورد</div>
+                <div className="text-[11.5px] text-muted-foreground">المورد</div>
                 <div className="font-semibold text-sm">{supplier.name}</div>
-                <div className="text-[10px] text-muted-foreground font-mono">{supplier.code}</div>
+                <div className="text-[11.5px] text-muted-foreground font-mono">{supplier.code}</div>
               </div>
               <div>
-                <div className="text-[10px] text-muted-foreground">أمر الشراء</div>
+                <div className="text-[11.5px] text-muted-foreground">أمر الشراء</div>
                 <div className="font-mono font-semibold">{po.po_no}</div>
-                <div className="text-[10px] text-muted-foreground">{fmtDate(po.created_at)}</div>
+                <div className="text-[11.5px] text-muted-foreground">{fmtDate(po.created_at)}</div>
               </div>
               <div>
-                <div className="text-[10px] text-muted-foreground">التسليم المتوقع</div>
+                <div className="text-[11.5px] text-muted-foreground">التسليم المتوقع</div>
                 <div className="text-sm">{fmtDate(po.expected_delivery)}</div>
               </div>
               <div>
-                <div className="text-[10px] text-muted-foreground">الإجمالي</div>
+                <div className="text-[11.5px] text-muted-foreground">الإجمالي</div>
                 <div className="font-bold num">{fmtSAR(po.total)}</div>
               </div>
             </div>
@@ -222,14 +222,14 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
               <div key={lineId} className="border border-border rounded-md overflow-hidden">
                 <div className="bg-muted/40 px-3 py-2 grid grid-cols-2 sm:grid-cols-6 gap-2 items-center border-b border-border">
                   <div className="sm:col-span-2">
-                    <div className="text-[10px] text-muted-foreground">المنتج</div>
+                    <div className="text-[11.5px] text-muted-foreground">المنتج</div>
                     <div className="font-semibold">{u0.brand} {u0.model}</div>
                   </div>
-                  <div><div className="text-[10px] text-muted-foreground">السنة</div><div className="num">{u0.year ?? "—"}</div></div>
-                  <div><div className="text-[10px] text-muted-foreground">اللون</div><div>{u0.color ?? "—"}</div></div>
-                  <div><div className="text-[10px] text-muted-foreground">الكمية</div><div className="num font-bold">{units.length}</div></div>
+                  <div><div className="text-[11.5px] text-muted-foreground">السنة</div><div className="num">{u0.year ?? "—"}</div></div>
+                  <div><div className="text-[11.5px] text-muted-foreground">اللون</div><div>{u0.color ?? "—"}</div></div>
+                  <div><div className="text-[11.5px] text-muted-foreground">الكمية</div><div className="num font-bold">{units.length}</div></div>
                   <div className="text-left">
-                    <div className="text-[10px] text-muted-foreground">الإجمالي</div>
+                    <div className="text-[11.5px] text-muted-foreground">الإجمالي</div>
                     <div className="num font-bold">{fmtSAR(lineTotal)}</div>
                   </div>
                 </div>
@@ -239,12 +239,12 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
                     return (
                       <div key={u.key} className="grid grid-cols-[90px_1fr_1fr_70px] gap-2 items-center px-3 py-2">
                         <div className="flex items-center gap-1.5">
-                          <Badge variant={filled ? "default" : "outline"} className="text-[10px] h-5">
+                          <Badge variant={filled ? "default" : "outline"} className="text-[11.5px] h-5">
                             وحدة {u.unit_index}/{u.unit_total}
                           </Badge>
                         </div>
                         <Input
-                          className={`h-8 text-[11px] font-mono uppercase ${vinErrors[u.key] ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                          className={`h-8 text-[12px] font-mono uppercase ${vinErrors[u.key] ? "border-destructive focus-visible:ring-destructive" : ""}`}
                           placeholder="VIN (17 خانة)"
                           maxLength={17}
                           value={u.vin}
@@ -252,15 +252,15 @@ export function AllocationDbCreateDialog({ open, onOpenChange, defaultPoId, onCr
                           onBlur={e => verifyVin(u.key, e.target.value)}
                         />
                         {vinErrors[u.key] && (
-                          <div className="text-[10px] text-destructive px-1">{vinErrors[u.key]}</div>
+                          <div className="text-[11.5px] text-destructive px-1">{vinErrors[u.key]}</div>
                         )}
                         <Input
-                          className="h-8 text-[11px] font-mono uppercase"
+                          className="h-8 text-[12px] font-mono uppercase"
                           placeholder="رقم المحرك"
                           value={u.engine_no}
                           onChange={e => update(u.key, { engine_no: e.target.value.toUpperCase() })}
                         />
-                        <div className="text-[10px] text-muted-foreground text-left num">{fmtSAR(u.unit_cost)}</div>
+                        <div className="text-[11.5px] text-muted-foreground text-left num">{fmtSAR(u.unit_cost)}</div>
                       </div>
                     );
                   })}

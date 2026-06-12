@@ -162,7 +162,7 @@ export default function Reservations() {
                         <Car className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                         <div>
                           <div className="font-medium">{[r.brand, r.model].filter(Boolean).join(" ") || r.name}</div>
-                          <div className="text-[10px] text-muted-foreground">{[r.year, r.color].filter(Boolean).join(" · ")}</div>
+                          <div className="text-[11.5px] text-muted-foreground">{[r.year, r.color].filter(Boolean).join(" · ")}</div>
                         </div>
                       </div>
                     </td>
@@ -191,7 +191,7 @@ export default function Reservations() {
             </tbody>
           </table>
         </div>
-        <p className="text-[11px] text-muted-foreground mt-2 px-1">
+        <p className="text-[12px] text-muted-foreground mt-2 px-1">
           الحجز يُنشأ تلقائياً عند تأكيد أمر البيع، ويستمر حتى السداد (يصبح "مباع") أو يُفرَج عنه بإلغاء الأمر / إشعار دائن.
           لإلغاء حجز، افتح أمر البيع المرتبط.
         </p>

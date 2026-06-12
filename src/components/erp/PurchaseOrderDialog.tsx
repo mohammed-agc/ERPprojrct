@@ -133,13 +133,13 @@ export function PurchaseOrderDialog({ open, onOpenChange, onCreated }: Props) {
               <SelectContent>
                 {suppliers.length > 0 && (
                   <SelectGroup>
-                    <SelectLabel className="text-[10px]">الموردون المعتمدون</SelectLabel>
+                    <SelectLabel className="text-[11.5px]">الموردون المعتمدون</SelectLabel>
                     {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name} — {s.country}</SelectItem>)}
                   </SelectGroup>
                 )}
                 {newContactVendors.length > 0 && (
                   <SelectGroup>
-                    <SelectLabel className="text-[10px] flex items-center gap-1">
+                    <SelectLabel className="text-[11.5px] flex items-center gap-1">
                       <UserPlus className="h-3 w-3" /> جهات اتصال بدور مورّد
                     </SelectLabel>
                     {newContactVendors.map(v => <SelectItem key={v.id} value={v.id}>{v.name}{v.code ? ` — ${v.code}` : ""}</SelectItem>)}

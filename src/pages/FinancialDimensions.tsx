@@ -55,9 +55,9 @@ export default function FinancialDimensions() {
                     className={`border-t cursor-pointer hover:bg-muted/30 ${selected === d.id ? "bg-accent/40" : ""}`}>
                   <td className="p-2">
                     <div className="font-medium">{d.name_ar}</div>
-                    <div className="text-[10px] text-muted-foreground font-mono">{d.code}</div>
+                    <div className="text-[11.5px] text-muted-foreground font-mono">{d.code}</div>
                   </td>
-                  <td className="p-2"><Badge variant="outline" className="text-[10px]">{dimensionTypeLabel[d.type]}</Badge></td>
+                  <td className="p-2"><Badge variant="outline" className="text-[11.5px]">{dimensionTypeLabel[d.type]}</Badge></td>
                   <td className="p-2 text-center"><Switch checked={d.is_required} onCheckedChange={() => toggle(d, "is_required")} /></td>
                   <td className="p-2 text-center"><Switch checked={d.is_active} onCheckedChange={() => toggle(d, "is_active")} /></td>
                 </tr>
@@ -108,7 +108,7 @@ export default function FinancialDimensions() {
         </div>
       </div>
 
-      <div className="text-[11px] text-muted-foreground mt-3">
+      <div className="text-[12px] text-muted-foreground mt-3">
         ستتم ربط هذه الأبعاد بسطور قيود اليومية والفواتير لاحقاً لتمكين التحليل متعدد الأبعاد على مستوى كل حركة محاسبية.
       </div>
     </div>

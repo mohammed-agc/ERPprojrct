@@ -75,7 +75,7 @@ export default function AdminDashboard() {
               <Card className="p-3 hover:shadow-md transition-shadow cursor-pointer h-full">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="text-[11px] text-muted-foreground leading-tight">{k.label}</div>
+                    <div className="text-[12px] text-muted-foreground leading-tight">{k.label}</div>
                     <div className="text-xl font-bold mt-1 tabular-nums">{k.value}</div>
                   </div>
                   <div className={`h-8 w-8 rounded-md flex items-center justify-center shrink-0 ${TONES[k.tone as Kpi["tone"]]}`}>

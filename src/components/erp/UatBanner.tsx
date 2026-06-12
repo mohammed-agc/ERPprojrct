@@ -18,7 +18,7 @@ export function UatBanner() {
       role="status"
       className="sticky top-0 z-30 w-full bg-amber-500/95 text-amber-950 border-b border-amber-700/40 backdrop-blur"
     >
-      <div className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-semibold">
+      <div className="flex items-center gap-2 px-3 py-1.5 text-[12px] font-semibold">
         <FlaskConical className="h-3.5 w-3.5" />
         <span>بيئة اختبار UAT — البيانات المعروضة تجريبية وقابلة للتهيئة في أي وقت</span>
         <button

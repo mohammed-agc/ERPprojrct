@@ -114,12 +114,12 @@ function Row({ node, depth, query, onEdit, onDelete }: {
           </div>
         </td>
         <td className="py-2 px-2">
-          <Badge variant="outline" className={`text-[10px] ${centerKindColor[c.kind]}`}>{centerKindLabel[c.kind]}</Badge>
+          <Badge variant="outline" className={`text-[11.5px] ${centerKindColor[c.kind]}`}>{centerKindLabel[c.kind]}</Badge>
         </td>
         <td className="py-2 px-2 text-xs">{c.manager ?? "—"}</td>
         <td className="py-2 px-2 text-xs text-left tabular-nums">{c.budget_monthly ? fmtCompact(c.budget_monthly) : "—"}</td>
         <td className="py-2 px-2">
-          <Badge variant={c.status === "active" ? "default" : "secondary"} className="text-[10px]">
+          <Badge variant={c.status === "active" ? "default" : "secondary"} className="text-[11.5px]">
             {c.status === "active" ? "نشط" : "متوقف"}
           </Badge>
         </td>

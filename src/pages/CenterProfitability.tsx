@@ -113,7 +113,7 @@ export default function CenterProfitability({ scope, title, subtitle }: Props) {
                 <tr key={r.center.id} className="border-t hover:bg-muted/30">
                   <td className="p-2">
                     <div className="font-medium">{r.center.name_ar}</div>
-                    <div className="text-[10px] text-muted-foreground font-mono">{r.center.code}{r.center.manager ? ` · ${r.center.manager}` : ""}</div>
+                    <div className="text-[11.5px] text-muted-foreground font-mono">{r.center.code}{r.center.manager ? ` · ${r.center.manager}` : ""}</div>
                   </td>
                   <td className="p-2 text-left tabular-nums">{fmtSAR(r.revenue)}</td>
                   <td className="p-2 text-left tabular-nums text-muted-foreground">{fmtSAR(r.cogs)}</td>
@@ -142,7 +142,7 @@ function KPI({ label, value, tone }: { label: string; value: string; tone?: "goo
   const cls = tone === "good" ? "border-success/40 bg-success/5" : tone === "bad" ? "border-destructive/40 bg-destructive/5" : "border-border";
   return (
     <div className={`bg-card border rounded-md p-3 ${cls}`}>
-      <div className="text-[11px] text-muted-foreground font-medium">{label}</div>
+      <div className="text-[12px] text-muted-foreground font-medium">{label}</div>
       <div className="text-lg font-bold mt-1 tabular-nums">{value}</div>
     </div>
   );

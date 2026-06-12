@@ -59,18 +59,18 @@ export default function Warehouses() {
               const binCount = bins.filter(b => b.warehouse_id === w.id).length;
               return (
                 <tr key={w.id}>
-                  <td className="font-mono text-[11px]">
+                  <td className="font-mono text-[12px]">
                     <div className="flex items-center gap-1.5"><WhIcon className="h-3 w-3 text-muted-foreground" />{w.code}</div>
                   </td>
                   <td className="text-sm">{w.name}</td>
                   <td><Badge className={KIND_TONE[w.kind]}>{WH_KIND_LABEL[w.kind]}</Badge></td>
-                  <td className="text-xs"><div className="flex items-center gap-1"><Building2 className="h-3 w-3 text-muted-foreground" />{w.city}</div><div className="text-[10px] text-muted-foreground">{w.branch}</div></td>
+                  <td className="text-xs"><div className="flex items-center gap-1"><Building2 className="h-3 w-3 text-muted-foreground" />{w.city}</div><div className="text-[11.5px] text-muted-foreground">{w.branch}</div></td>
                   <td className="text-xs">{w.manager}</td>
                   <td className="w-[160px]">
                     {w.capacity_vehicles > 0 ? (
                       <>
                         <div className="h-1.5 bg-muted rounded overflow-hidden"><div className="h-full bg-primary" style={{ width: `${o?.vPct ?? 0}%` }} /></div>
-                        <div className="text-[10px] text-muted-foreground mt-0.5 num">{o?.vCount ?? 0}/{w.capacity_vehicles} · {o?.vPct ?? 0}%</div>
+                        <div className="text-[11.5px] text-muted-foreground mt-0.5 num">{o?.vCount ?? 0}/{w.capacity_vehicles} · {o?.vPct ?? 0}%</div>
                       </>
                     ) : <span className="text-muted-foreground text-xs">—</span>}
                   </td>
@@ -78,7 +78,7 @@ export default function Warehouses() {
                     {w.capacity_parts > 0 ? (
                       <>
                         <div className="h-1.5 bg-muted rounded overflow-hidden"><div className="h-full bg-success" style={{ width: `${o?.pPct ?? 0}%` }} /></div>
-                        <div className="text-[10px] text-muted-foreground mt-0.5 num">{o?.pCount ?? 0}/{w.capacity_parts} · {o?.pPct ?? 0}%</div>
+                        <div className="text-[11.5px] text-muted-foreground mt-0.5 num">{o?.pCount ?? 0}/{w.capacity_parts} · {o?.pPct ?? 0}%</div>
                       </>
                     ) : <span className="text-muted-foreground text-xs">—</span>}
                   </td>

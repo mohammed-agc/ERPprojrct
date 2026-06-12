@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -133,13 +133,13 @@ export default function PartnerLedger() {
                 {rows.map((r, i) => (
                   <tr key={i}>
                     <td className="text-xs whitespace-nowrap">{fmtDate(r.entry_date)}</td>
-                    <td className="font-mono text-[10px]" dir="ltr">{r.entry_no}</td>
+                    <td className="font-mono text-[11.5px]" dir="ltr">{r.entry_no}</td>
                     <td className="text-xs">
                       {r.document_type
-                        ? <Badge className="bg-muted text-foreground text-[10px]">{DOC_TYPE_LABEL[r.document_type] ?? r.document_type}</Badge>
+                        ? <Badge className="bg-muted text-foreground text-[11.5px]">{DOC_TYPE_LABEL[r.document_type] ?? r.document_type}</Badge>
                         : "—"}
                     </td>
-                    <td className="font-mono text-[10px]" dir="ltr">{r.reference_number ?? "—"}</td>
+                    <td className="font-mono text-[11.5px]" dir="ltr">{r.reference_number ?? "—"}</td>
                     <td className="text-xs text-muted-foreground max-w-[200px] truncate">{r.description ?? "—"}</td>
                     <td className="num text-xs text-info">{Number(r.debit) > 0 ? fmtSAR(r.debit) : "—"}</td>
                     <td className="num text-xs text-success">{Number(r.credit) > 0 ? fmtSAR(r.credit) : "—"}</td>
@@ -159,9 +159,9 @@ function Stat({ label, value, valueNode, tone, hint }:
   { label: string; value?: string; valueNode?: React.ReactNode; tone?: string; hint?: string }) {
   return (
     <div className="bg-card border border-border rounded-lg p-3">
-      <div className="text-[10px] text-muted-foreground mb-1">{label}</div>
+      <div className="text-[11.5px] text-muted-foreground mb-1">{label}</div>
       {valueNode ?? <div className={`text-sm font-bold num ${tone ?? ""}`}>{value}</div>}
-      {hint && <div className="text-[9px] text-muted-foreground mt-0.5">{hint}</div>}
+      {hint && <div className="text-[12px] text-muted-foreground mt-0.5">{hint}</div>}
     </div>
   );
 }

@@ -186,9 +186,9 @@ function UnitsTab() {
                 {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
                 <Building2 className="h-4 w-4 text-primary" />
                 <span className="font-medium text-sm">{d.name_ar}</span>
-                <span className="text-[11px] text-muted-foreground font-mono" dir="ltr">{d.code}</span>
+                <span className="text-[12px] text-muted-foreground font-mono" dir="ltr">{d.code}</span>
                 <div className="flex-1" />
-                <Badge variant="secondary" className="text-[10px]">{deptUnits.length} وحدة</Badge>
+                <Badge variant="secondary" className="text-[11.5px]">{deptUnits.length} وحدة</Badge>
               </button>
               {isOpen && (
                 <div className="pr-8 pb-2 space-y-0.5">
@@ -199,9 +199,9 @@ function UnitsTab() {
                     <div key={u.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent/30 rounded text-sm border-r-2 border-border">
                       <Network className="h-3.5 w-3.5 text-muted-foreground" />
                       <span>{u.name_ar}</span>
-                      <span className="text-[11px] text-muted-foreground" dir="ltr">{u.name_en}</span>
+                      <span className="text-[12px] text-muted-foreground" dir="ltr">{u.name_en}</span>
                       <div className="flex-1" />
-                      {u.manager && <span className="text-[11px] text-muted-foreground">المسؤول: {u.manager}</span>}
+                      {u.manager && <span className="text-[12px] text-muted-foreground">المسؤول: {u.manager}</span>}
                       <Button variant="ghost" size="icon" className="h-6 w-6">
                         <Pencil className="h-3 w-3 text-muted-foreground" />
                       </Button>
@@ -292,7 +292,7 @@ function PositionsTab() {
                   <td className="text-muted-foreground text-xs" dir="ltr">{p.title_en}</td>
                   <td className="text-sm">{dept?.name_ar ?? "—"}</td>
                   <td className="text-sm text-muted-foreground">{unit?.name_ar ?? "—"}</td>
-                  <td><Badge variant="outline" className="text-[10px]">{levelLabel[p.level]}</Badge></td>
+                  <td><Badge variant="outline" className="text-[11.5px]">{levelLabel[p.level]}</Badge></td>
                   <td><Button variant="ghost" size="icon" className="h-7 w-7"><Pencil className="h-3.5 w-3.5 text-muted-foreground" /></Button></td>
                 </tr>
               );
@@ -375,7 +375,7 @@ function AssignmentsTab() {
                   <td>
                     <Badge
                       variant={a.status === "active" ? "default" : a.status === "on_leave" ? "secondary" : "outline"}
-                      className={cn("text-[10px]", a.status === "ended" && "text-muted-foreground")}
+                      className={cn("text-[11.5px]", a.status === "ended" && "text-muted-foreground")}
                     >
                       {assignmentStatusLabel[a.status]}
                     </Badge>

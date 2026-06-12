@@ -80,11 +80,11 @@ export default function AccountsPayable() {
                   <td className="num text-left text-success">{fmtSAR(r.paid_amount)}</td>
                   <td className="num text-left font-semibold">{fmtSAR(r.remaining_balance)}</td>
                   <td className="num text-left text-destructive">{fmtSAR(r.overdue_amount)}</td>
-                  <td className="num text-left text-[11px]">{fmtSAR(r.aging.current)}</td>
-                  <td className="num text-left text-[11px]">{fmtSAR(r.aging.d_0_30)}</td>
-                  <td className="num text-left text-[11px]">{fmtSAR(r.aging.d_31_60)}</td>
-                  <td className="num text-left text-[11px]">{fmtSAR(r.aging.d_61_90)}</td>
-                  <td className="num text-left text-[11px] text-destructive">{fmtSAR(r.aging.d_90_plus)}</td>
+                  <td className="num text-left text-[12px]">{fmtSAR(r.aging.current)}</td>
+                  <td className="num text-left text-[12px]">{fmtSAR(r.aging.d_0_30)}</td>
+                  <td className="num text-left text-[12px]">{fmtSAR(r.aging.d_31_60)}</td>
+                  <td className="num text-left text-[12px]">{fmtSAR(r.aging.d_61_90)}</td>
+                  <td className="num text-left text-[12px] text-destructive">{fmtSAR(r.aging.d_90_plus)}</td>
                 </tr>
               ))}
             </tbody>
@@ -96,11 +96,11 @@ export default function AccountsPayable() {
                   <td className="num text-left text-success">{fmtSAR(totals.paid)}</td>
                   <td className="num text-left">{fmtSAR(totals.remaining)}</td>
                   <td className="num text-left text-destructive">{fmtSAR(totals.overdue)}</td>
-                  <td className="num text-left text-[11px]">{fmtSAR(totals.current)}</td>
-                  <td className="num text-left text-[11px]">{fmtSAR(totals.b1)}</td>
-                  <td className="num text-left text-[11px]">{fmtSAR(totals.b2)}</td>
-                  <td className="num text-left text-[11px]">{fmtSAR(totals.b3)}</td>
-                  <td className="num text-left text-[11px] text-destructive">{fmtSAR(totals.b4)}</td>
+                  <td className="num text-left text-[12px]">{fmtSAR(totals.current)}</td>
+                  <td className="num text-left text-[12px]">{fmtSAR(totals.b1)}</td>
+                  <td className="num text-left text-[12px]">{fmtSAR(totals.b2)}</td>
+                  <td className="num text-left text-[12px]">{fmtSAR(totals.b3)}</td>
+                  <td className="num text-left text-[12px] text-destructive">{fmtSAR(totals.b4)}</td>
                 </tr>
               </tfoot>
             )}

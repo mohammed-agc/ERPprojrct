@@ -187,7 +187,7 @@ export default function Permissions() {
       </div>
 
       {/* Type legend */}
-      <div className="flex items-center gap-2 mb-2 text-[11px]">
+      <div className="flex items-center gap-2 mb-2 text-[12px]">
         <span className="text-muted-foreground">دلالة الألوان:</span>
         {(Object.keys(permTypeLabel) as Array<keyof typeof permTypeLabel>).map(k => (
           <span key={k} className={cn("px-1.5 py-0.5 rounded border", permTypeClass[k])}>{permTypeLabel[k]}</span>
@@ -210,7 +210,7 @@ export default function Permissions() {
                   <span className="font-semibold text-xs uppercase tracking-wide">الصلاحية</span>
                 </div>
               </th>
-              <th className="text-center px-2 py-2 border-b border-l border-[hsl(var(--table-border))] text-[10px] font-semibold uppercase tracking-wide text-muted-foreground w-16">
+              <th className="text-center px-2 py-2 border-b border-l border-[hsl(var(--table-border))] text-[11.5px] font-semibold uppercase tracking-wide text-muted-foreground w-16">
                 النوع
               </th>
               {visibleRoles.map(r => (
@@ -219,8 +219,8 @@ export default function Permissions() {
                   className="text-center px-1.5 py-2 border-b border-l border-[hsl(var(--table-border))] min-w-[110px] align-bottom"
                 >
                   <div className="flex flex-col items-center gap-1">
-                    <div className="text-[11px] font-semibold leading-tight">{r.title_ar}</div>
-                    <div className="text-[9px] text-muted-foreground font-mono" dir="ltr">{r.department_code}</div>
+                    <div className="text-[12px] font-semibold leading-tight">{r.title_ar}</div>
+                    <div className="text-[12px] text-muted-foreground font-mono" dir="ltr">{r.department_code}</div>
                     <Checkbox
                       checked={colChecked(r.id)}
                       onCheckedChange={(v)=>toggleColAll(r.id, !!v)}
@@ -263,7 +263,7 @@ export default function Permissions() {
         )}
       </div>
 
-      <div className="text-[11px] text-muted-foreground mt-2 text-center">
+      <div className="text-[12px] text-muted-foreground mt-2 text-center">
         مصفوفة واجهة فقط — لم تُربط بعد بمحرك الاعتماد الخلفي. التغييرات لا تؤثر على enforcement.
       </div>
     </div>
@@ -296,12 +296,12 @@ const MatrixRow = memo(function MatrixRow({
           />
           <div className="min-w-0">
             <div className="text-xs font-medium truncate">{p.label_ar}</div>
-            <div className="text-[10px] text-muted-foreground font-mono truncate" dir="ltr">{p.code}</div>
+            <div className="text-[11.5px] text-muted-foreground font-mono truncate" dir="ltr">{p.code}</div>
           </div>
         </div>
       </td>
       <td className="text-center px-1 py-1.5 border-b border-l border-[hsl(var(--table-border))]">
-        <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0", permTypeClass[p.type])}>
+        <Badge variant="outline" className={cn("text-[12px] px-1.5 py-0", permTypeClass[p.type])}>
           {permTypeLabel[p.type]}
         </Badge>
       </td>
@@ -343,7 +343,7 @@ function Section({
   return (
     <>
       <tr className="bg-muted/40">
-        <td colSpan={100} className="sticky right-0 px-3 py-1.5 border-b border-[hsl(var(--table-border))] text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+        <td colSpan={100} className="sticky right-0 px-3 py-1.5 border-b border-[hsl(var(--table-border))] text-[12px] font-bold uppercase tracking-wider text-muted-foreground">
           {workflowGroupLabel[group]} · {perms.length}
         </td>
       </tr>

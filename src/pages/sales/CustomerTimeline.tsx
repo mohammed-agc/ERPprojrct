@@ -134,7 +134,7 @@ export default function CustomerTimeline() {
                 </div>
               </div>
               {filteredCustomers.map(c => (
-                <SelectItem key={c.id} value={c.id}>{c.name} <span className="text-muted-foreground font-mono text-[10px]">({c.code})</span></SelectItem>
+                <SelectItem key={c.id} value={c.id}>{c.name} <span className="text-muted-foreground font-mono text-[11.5px]">({c.code})</span></SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -153,22 +153,22 @@ export default function CustomerTimeline() {
           {/* ملخص */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
             <div className="border border-border rounded-lg p-3">
-              <div className="text-[11px] text-muted-foreground flex items-center gap-1"><User className="h-3 w-3" /> العميل</div>
+              <div className="text-[12px] text-muted-foreground flex items-center gap-1"><User className="h-3 w-3" /> العميل</div>
               <div className="font-semibold text-sm mt-0.5">{selectedCust?.name}</div>
-              <Link to={`/ar/${selected}`} className="text-[10px] text-primary hover:underline">كشف الحساب ←</Link>
+              <Link to={`/ar/${selected}`} className="text-[11.5px] text-primary hover:underline">كشف الحساب ←</Link>
             </div>
             <div className="border border-border rounded-lg p-3">
-              <div className="text-[11px] text-muted-foreground flex items-center gap-1"><Receipt className="h-3 w-3" /> إجمالي الفواتير</div>
+              <div className="text-[12px] text-muted-foreground flex items-center gap-1"><Receipt className="h-3 w-3" /> إجمالي الفواتير</div>
               <div className="font-bold text-lg num mt-0.5">{fmtSAR(summary.invoiced)}</div>
             </div>
             <div className="border border-border rounded-lg p-3">
-              <div className="text-[11px] text-muted-foreground flex items-center gap-1"><Banknote className="h-3 w-3 text-green-600" /> المدفوع</div>
+              <div className="text-[12px] text-muted-foreground flex items-center gap-1"><Banknote className="h-3 w-3 text-green-600" /> المدفوع</div>
               <div className="font-bold text-lg num mt-0.5 text-success">{fmtSAR(summary.paid)}</div>
             </div>
             <div className="border border-border rounded-lg p-3">
-              <div className="text-[11px] text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> المتبقي</div>
+              <div className="text-[12px] text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> المتبقي</div>
               <div className={`font-bold text-lg num mt-0.5 ${outstanding > 0 ? "text-warning" : "text-muted-foreground"}`}>{fmtSAR(outstanding)}</div>
-              {summary.credited > 0 && <div className="text-[10px] text-muted-foreground">إشعارات دائنة: {fmtSAR(summary.credited)}</div>}
+              {summary.credited > 0 && <div className="text-[11.5px] text-muted-foreground">إشعارات دائنة: {fmtSAR(summary.credited)}</div>}
             </div>
           </div>
 
@@ -191,13 +191,13 @@ export default function CustomerTimeline() {
                     <div className={`flex-1 border rounded-lg p-3 ${m.bg} transition-colors`}>
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className={`text-[10px] ${m.color}`}>{m.label}</Badge>
+                          <Badge variant="outline" className={`text-[11.5px] ${m.color}`}>{m.label}</Badge>
                           <span className="font-medium text-sm">{e.title}</span>
-                          {e.status && <span className="text-[10px] text-muted-foreground">· {e.status}</span>}
+                          {e.status && <span className="text-[11.5px] text-muted-foreground">· {e.status}</span>}
                         </div>
                         <div className="flex items-center gap-3">
                           {e.amount !== undefined && e.amount > 0 && <span className="num font-semibold text-sm">{fmtSAR(e.amount)}</span>}
-                          <span className="text-[10px] text-muted-foreground">{fmtDate(e.date)}</span>
+                          <span className="text-[11.5px] text-muted-foreground">{fmtDate(e.date)}</span>
                         </div>
                       </div>
                     </div>

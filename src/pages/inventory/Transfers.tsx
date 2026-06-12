@@ -83,7 +83,7 @@ export default function Transfers() {
               const toW = warehouses.find(w => w.id === t.to_warehouse_id);
               return (
                 <tr key={t.id}>
-                  <td className="font-mono text-[11px]"><div className="flex items-center gap-1.5"><ArrowLeftRight className="h-3 w-3 text-muted-foreground" />{t.code}</div></td>
+                  <td className="font-mono text-[12px]"><div className="flex items-center gap-1.5"><ArrowLeftRight className="h-3 w-3 text-muted-foreground" />{t.code}</div></td>
                   <td className="text-xs">{t.kind === "vehicle" ? "مركبة" : "قطعة"}</td>
                   <td className="text-xs">{unitLabel(t)}</td>
                   <td className="num text-xs">{t.qty}</td>

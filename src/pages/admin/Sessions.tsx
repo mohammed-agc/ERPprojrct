@@ -161,16 +161,16 @@ export default function AdminSessions() {
                     <TableCell className="text-xs">
                       <div className="font-bold flex items-center gap-1">
                         {r.full_name || r.email}
-                        {isMe && <Badge variant="secondary" className="text-[9px]">أنت</Badge>}
+                        {isMe && <Badge variant="secondary" className="text-[12px]">أنت</Badge>}
                       </div>
-                      <div className="text-[10px] text-muted-foreground">{r.email}</div>
+                      <div className="text-[11.5px] text-muted-foreground">{r.email}</div>
                     </TableCell>
                     <TableCell className="text-xs">
                       <div className="flex items-center gap-2">
                         <Icon className="h-4 w-4 text-muted-foreground" />
                         <div>
                           <div>{deviceLabel(r.user_agent)}</div>
-                          <div className="text-[10px] font-mono text-muted-foreground truncate max-w-[260px]" title={r.user_agent ?? ""}>
+                          <div className="text-[11.5px] font-mono text-muted-foreground truncate max-w-[260px]" title={r.user_agent ?? ""}>
                             {r.user_agent ?? "—"}
                           </div>
                         </div>
@@ -182,9 +182,9 @@ export default function AdminSessions() {
                     <TableCell className="text-xs">{fmt(r.not_after)}</TableCell>
                     <TableCell>
                       {act ? (
-                        <Badge className="bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/15 text-[10px]">نشط</Badge>
+                        <Badge className="bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/15 text-[11.5px]">نشط</Badge>
                       ) : (
-                        <Badge variant="secondary" className="text-[10px]">منتهي</Badge>
+                        <Badge variant="secondary" className="text-[11.5px]">منتهي</Badge>
                       )}
                     </TableCell>
                   </TableRow>

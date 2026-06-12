@@ -49,13 +49,13 @@ export default function AllocationConfirmations() {
               const po = pos.find(p => p.id === c.po_id);
               return (
                 <tr key={c.id}>
-                  <td className="font-mono text-[11px]"><Link to={`/purchasing/allocation-confirmations/${c.id}`} className="text-primary hover:underline">{c.conf_no}</Link></td>
+                  <td className="font-mono text-[12px]"><Link to={`/purchasing/allocation-confirmations/${c.id}`} className="text-primary hover:underline">{c.conf_no}</Link></td>
                   <td className="text-xs">{sup?.name ?? "—"}</td>
-                  <td className="font-mono text-[11px]">{po?.po_no ?? "—"}</td>
-                  <td className="font-mono text-[11px]"><Link to={`/purchasing/allocations/${c.allocation_id}`} className="text-primary hover:underline">عرض</Link></td>
+                  <td className="font-mono text-[12px]">{po?.po_no ?? "—"}</td>
+                  <td className="font-mono text-[12px]"><Link to={`/purchasing/allocations/${c.allocation_id}`} className="text-primary hover:underline">عرض</Link></td>
                   <td className="text-xs">{fmtDate(c.allocation_date)}</td>
                   <td className="text-xs num font-semibold">{c.vehicle_count}</td>
-                  <td className="text-[10px]">{c.purchase_invoice_id ? <span className="text-success">مرتبطة</span> : <span className="text-muted-foreground">—</span>}</td>
+                  <td className="text-[11.5px]">{c.purchase_invoice_id ? <span className="text-success">مرتبطة</span> : <span className="text-muted-foreground">—</span>}</td>
                   <td className="text-xs">{fmtDate(c.created_at)}</td>
                 </tr>
               );

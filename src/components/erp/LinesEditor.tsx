@@ -77,7 +77,7 @@ export function LinesEditor({ items, onChange, lockedCategory, showTotals = true
       </div>
 
       <div className="border border-border rounded-lg overflow-x-auto">
-        <table className="erp-table text-[11px]">
+        <table className="erp-table text-[12px]">
           <thead>
             <tr>
               <th className="w-[70px]">النوع</th>
@@ -111,13 +111,13 @@ export function LinesEditor({ items, onChange, lockedCategory, showTotals = true
       {/* Description preview (auto-built, editable) */}
       <div className="space-y-1">
         {items.map((it, idx) => (
-          <div key={idx} className="flex items-center gap-2 text-[11px]">
+          <div key={idx} className="flex items-center gap-2 text-[12px]">
             <span className="text-muted-foreground w-12 shrink-0">#{idx + 1}</span>
             <Input
               value={it.description}
               onChange={(e) => onChange(items.map((x, i) => i === idx ? { ...x, description: e.target.value, _descTouched: true } : x))}
               placeholder="الوصف يُولَّد تلقائياً من الحقول أعلاه — قابل للتعديل"
-              className="h-7 text-[11px]"
+              className="h-7 text-[12px]"
             />
           </div>
         ))}

@@ -140,9 +140,9 @@ export default function Transfers() {
                 <td className="num text-left text-xs">{r.fees ? fmtSAR(r.fees) : "—"}</td>
                 <td className="text-xs">{r.reference ?? "—"}</td>
                 <td>
-                  {r.status === "completed" && <Badge className="text-[10px] bg-success">مكتمل</Badge>}
-                  {r.status === "pending" && <Badge variant="secondary" className="text-[10px]">قيد التنفيذ</Badge>}
-                  {r.status === "reversed" && <Badge variant="destructive" className="text-[10px]">ملغي</Badge>}
+                  {r.status === "completed" && <Badge className="text-[11.5px] bg-success">مكتمل</Badge>}
+                  {r.status === "pending" && <Badge variant="secondary" className="text-[11.5px]">قيد التنفيذ</Badge>}
+                  {r.status === "reversed" && <Badge variant="destructive" className="text-[11.5px]">ملغي</Badge>}
                 </td>
                 <td>
                   {r.status !== "reversed" && (

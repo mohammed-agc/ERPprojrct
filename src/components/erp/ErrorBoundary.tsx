@@ -37,7 +37,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
             تعذّر عرض هذا الجزء من النظام. يمكنك المحاولة مجدداً أو العودة للرئيسية.
           </p>
           {this.state.error?.message && (
-            <pre className="text-[10px] bg-muted p-2 rounded text-left overflow-auto max-h-24 text-muted-foreground">
+            <pre className="text-[11.5px] bg-muted p-2 rounded text-left overflow-auto max-h-24 text-muted-foreground">
               {this.state.error.message}
             </pre>
           )}

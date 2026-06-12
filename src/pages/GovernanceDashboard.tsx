@@ -62,10 +62,10 @@ export default function GovernanceDashboard() {
               <li key={a.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
                 <div className="min-w-0 flex-1">
                   <div className="font-medium text-sm truncate">{a.entity_label}</div>
-                  <div className="text-[11px] text-muted-foreground">{a.entity_ref} · {a.requester}</div>
+                  <div className="text-[12px] text-muted-foreground">{a.entity_ref} · {a.requester}</div>
                 </div>
                 <div className="text-sm font-semibold num">{fmtSAR(a.amount)}</div>
-                <Badge variant="outline" className={cn("text-[10px]", approvalStatusTone[a.status])}>
+                <Badge variant="outline" className={cn("text-[11.5px]", approvalStatusTone[a.status])}>
                   {approvalStatusLabel[a.status]}
                 </Badge>
               </li>
@@ -81,14 +81,14 @@ export default function GovernanceDashboard() {
           <ul className="divide-y">
             {audit.map(a => (
               <li key={a.id} className="flex items-start gap-3 px-4 py-2.5">
-                <Badge variant="outline" className={cn("text-[10px] shrink-0", auditSeverityTone[a.severity])}>
+                <Badge variant="outline" className={cn("text-[11.5px] shrink-0", auditSeverityTone[a.severity])}>
                   {a.severity === "critical" ? "حرج" : a.severity === "warning" ? "تحذير" : "معلوماتي"}
                 </Badge>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm">{auditKindLabel[a.kind]} — <span className="font-mono text-xs">{a.entity_ref}</span></div>
-                  <div className="text-[11px] text-muted-foreground">{a.description}</div>
+                  <div className="text-[12px] text-muted-foreground">{a.description}</div>
                 </div>
-                <div className="text-[10px] text-muted-foreground shrink-0">{a.at.slice(0, 10)}</div>
+                <div className="text-[11.5px] text-muted-foreground shrink-0">{a.at.slice(0, 10)}</div>
               </li>
             ))}
           </ul>

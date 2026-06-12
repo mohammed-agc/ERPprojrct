@@ -101,16 +101,16 @@ export function PaymentCreateDialog({ open, onOpenChange, invoiceId, remaining, 
               <Input type="number" value={amount} dir="ltr" placeholder="0"
                 onChange={e => setAmount(e.target.value)}
                 className={`h-9 flex-1 ${invalid && amount ? "border-destructive" : ""}`} />
-              <Button type="button" variant="outline" size="sm" className="h-9 text-[11px] whitespace-nowrap"
+              <Button type="button" variant="outline" size="sm" className="h-9 text-[12px] whitespace-nowrap"
                 onClick={() => setAmount(String(Math.round(cap * 100) / 100))}>
                 {method === "incentive" ? "الحد الأقصى" : "المتبقّي كاملاً"}
               </Button>
             </div>
             {overRemaining && (
-              <div className="text-[10px] text-destructive mt-0.5">المبلغ يتجاوز المتبقّي</div>
+              <div className="text-[11.5px] text-destructive mt-0.5">المبلغ يتجاوز المتبقّي</div>
             )}
             {overIncentive && (
-              <div className="text-[10px] text-destructive mt-0.5">المبلغ يتجاوز رصيد الحوافز المتاح</div>
+              <div className="text-[11.5px] text-destructive mt-0.5">المبلغ يتجاوز رصيد الحوافز المتاح</div>
             )}
           </div>
 

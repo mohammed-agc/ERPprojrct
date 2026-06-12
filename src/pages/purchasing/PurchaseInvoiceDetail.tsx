@@ -116,7 +116,7 @@ export default function PurchaseInvoiceDetail() {
                   <div className="flex items-center gap-1"><Car className="h-3 w-3 text-muted-foreground" />
                     {[l.manufacturer || l.brand, l.model, l.trim, l.year, l.color].filter(Boolean).join(" ")}</div>
                 </td>
-                <td className="font-mono text-[10px]" dir="ltr">{l.vin}</td>
+                <td className="font-mono text-[11.5px]" dir="ltr">{l.vin}</td>
                 <td className="num text-xs">{fmtSAR(l.unit_cost)}</td>
                 <td className="num text-xs text-destructive">{l.discount_amount > 0 ? `-${fmtSAR(l.discount_amount)}` : "—"}</td>
                 <td className="num text-xs">{fmtSAR(l.net_cost)}</td>
@@ -164,10 +164,10 @@ export default function PurchaseInvoiceDetail() {
               <tbody>
                 {payments.map(p => (
                   <tr key={p.id}>
-                    <td className="font-mono text-[11px]">{p.code}</td>
+                    <td className="font-mono text-[12px]">{p.code}</td>
                     <td className="text-xs">{fmtDate(p.payment_date)}</td>
                     <td className="text-xs">{PAYMENT_METHOD_LABEL[p.payment_method as keyof typeof PAYMENT_METHOD_LABEL] ?? p.payment_method}</td>
-                    <td className="font-mono text-[10px]" dir="ltr">{p.reference ?? "—"}</td>
+                    <td className="font-mono text-[11.5px]" dir="ltr">{p.reference ?? "—"}</td>
                     <td className="num text-xs font-semibold text-success">{fmtSAR(p.amount)}</td>
                   </tr>
                 ))}
@@ -189,7 +189,7 @@ export default function PurchaseInvoiceDetail() {
 function InfoCard({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="bg-card border border-border rounded-lg p-3">
-      <div className="text-[10px] text-muted-foreground mb-1">{label}</div>
+      <div className="text-[11.5px] text-muted-foreground mb-1">{label}</div>
       <div className="text-sm font-semibold">{value}</div>
     </div>
   );

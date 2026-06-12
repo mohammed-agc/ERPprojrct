@@ -123,10 +123,10 @@ export function ProductCombobox<T extends { id: string }>({
             placeholder="بحث..."
             className="flex-1 bg-transparent outline-none text-sm"
           />
-          <kbd className="text-[10px] text-muted-foreground border border-border rounded px-1.5 py-0.5">Esc</kbd>
+          <kbd className="text-[11.5px] text-muted-foreground border border-border rounded px-1.5 py-0.5">Esc</kbd>
         </div>
 
-        <div className="grid bg-muted/40 border-b border-border text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-3 py-1.5"
+        <div className="grid bg-muted/40 border-b border-border text-[12px] font-semibold text-muted-foreground uppercase tracking-wide px-3 py-1.5"
              style={{ gridTemplateColumns: columns.map(c => "minmax(0, 1fr)").join(" ") }}>
           {columns.map(c => (
             <div key={c.key} className={cn("truncate", c.className)}>{c.header}</div>
@@ -164,13 +164,13 @@ export function ProductCombobox<T extends { id: string }>({
             );
           })}
           {visible < filtered.length && (
-            <div className="text-center text-[11px] text-muted-foreground py-1.5 border-t border-border/40">
+            <div className="text-center text-[12px] text-muted-foreground py-1.5 border-t border-border/40">
               عرض {visible} من {filtered.length} — مرّر للمزيد
             </div>
           )}
         </div>
 
-        <div className="flex items-center justify-between px-3 py-1.5 border-t border-border bg-muted/30 text-[11px] text-muted-foreground">
+        <div className="flex items-center justify-between px-3 py-1.5 border-t border-border bg-muted/30 text-[12px] text-muted-foreground">
           <span>{filtered.length} نتيجة</span>
           <span className="flex items-center gap-2">
             <kbd className="border border-border rounded px-1">↑</kbd>

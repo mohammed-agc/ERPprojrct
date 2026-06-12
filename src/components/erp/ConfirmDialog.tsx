@@ -49,7 +49,7 @@ export function ConfirmDialog({
         </AlertDialogHeader>
         {requireText && (
           <div className="space-y-1.5">
-            <label className="text-[11px] text-muted-foreground">
+            <label className="text-[12px] text-muted-foreground">
               للتأكيد، اكتب: <span className="font-mono font-bold text-foreground">{requireText}</span>
             </label>
             <Input value={val} onChange={(e) => setVal(e.target.value)} className="h-8 text-sm" autoFocus />

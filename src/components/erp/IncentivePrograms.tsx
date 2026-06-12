@@ -130,7 +130,7 @@ export function IncentivePrograms({ supplierId }: { supplierId: string }) {
                   <span className="font-mono">{a.code}</span>
                   <span className="text-muted-foreground">{fmtDate(a.period_from)} → {fmtDate(a.period_to)}</span>
                   <span className="num font-semibold">{fmtSAR(a.earned_amount)}</span>
-                  <Badge className={cn("text-[9px]", STAGE_TONE[a.stage])}>{STAGE_LABEL[a.stage]}</Badge>
+                  <Badge className={cn("text-[12px]", STAGE_TONE[a.stage])}>{STAGE_LABEL[a.stage]}</Badge>
                 </div>
               ))}
             </div>

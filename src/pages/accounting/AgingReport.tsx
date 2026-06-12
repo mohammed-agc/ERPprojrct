@@ -77,12 +77,12 @@ export default function AgingReport() {
       <div className="grid grid-cols-3 md:grid-cols-7 gap-2">
         {BUCKETS.map(b => (
           <div key={b.key} className="bg-card border border-border rounded-lg p-2.5 text-center">
-            <div className="text-[10px] text-muted-foreground mb-1">{b.label}</div>
+            <div className="text-[11.5px] text-muted-foreground mb-1">{b.label}</div>
             <div className={`text-xs font-bold num ${b.tone}`}>{fmtSAR(Number(totals[b.key]))}</div>
           </div>
         ))}
         <div className="bg-primary/5 border border-primary/30 rounded-lg p-2.5 text-center">
-          <div className="text-[10px] text-muted-foreground mb-1">الإجمالي</div>
+          <div className="text-[11.5px] text-muted-foreground mb-1">الإجمالي</div>
           <div className="text-xs font-bold num text-primary">{fmtSAR(totals.total_outstanding)}</div>
         </div>
       </div>
@@ -111,7 +111,7 @@ export default function AgingReport() {
               <tr key={r.partner_id}>
                 <td className="text-xs">
                   {r.partner_name}
-                  {r.partner_code && <span className="text-[10px] text-muted-foreground mr-1">({r.partner_code})</span>}
+                  {r.partner_code && <span className="text-[11.5px] text-muted-foreground mr-1">({r.partner_code})</span>}
                 </td>
                 {BUCKETS.map(b => (
                   <td key={b.key} className={`num text-xs text-center ${Number(r[b.key]) > 0 ? b.tone : "text-muted-foreground/40"}`}>

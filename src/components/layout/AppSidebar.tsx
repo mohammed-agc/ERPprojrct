@@ -186,7 +186,7 @@ function BadgeDot({ count, tone }: { count: number; tone: "amber" | "rose" | "em
     slate: "bg-slate-500 text-white",
   };
   return (
-    <span className={cn("inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full text-[9px] font-bold", toneMap[tone])}>
+    <span className={cn("inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full text-[12px] font-bold", toneMap[tone])}>
       {count > 9 ? "9+" : count}
     </span>
   );
@@ -270,7 +270,7 @@ export function AppSidebar() {
           </div>
           <div>
             <div className="font-bold text-sm leading-tight">نظام ERP</div>
-            <div className="text-[10px] text-sidebar-muted">إصدار 1.0</div>
+            <div className="text-[11.5px] text-sidebar-muted">إصدار 1.0</div>
           </div>
         </div>
       </div>
@@ -284,7 +284,7 @@ export function AppSidebar() {
           const hasAlerts = groupItems.some(it => it.badge && it.badge.count > 0);
           return (
             <div key={g.title} className={cn("mb-3", hasAlerts && "border-r-2 border-amber-400/40")}>
-              <div className="px-4 py-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted flex items-center gap-1.5">
+              <div className="px-4 py-1 text-[11.5px] font-semibold uppercase tracking-wider text-sidebar-muted flex items-center gap-1.5">
                 {g.title}
                 {hasAlerts && <AlertTriangle className="h-3 w-3 text-amber-500" />}
               </div>

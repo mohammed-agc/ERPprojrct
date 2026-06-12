@@ -23,11 +23,11 @@ function Kpi({ icon: Icon, label, value, sub, tone = "default" }: any) {
     : tone === "primary" ? "text-primary" : tone === "destructive" ? "text-destructive" : "text-foreground";
   return (
     <div className="border border-border bg-card rounded-lg p-3">
-      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-1">
+      <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground mb-1">
         <Icon className={`h-3.5 w-3.5 ${c}`} /><span>{label}</span>
       </div>
       <div className={`text-xl font-bold num ${c}`}>{value}</div>
-      {sub && <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>}
+      {sub && <div className="text-[11.5px] text-muted-foreground mt-0.5">{sub}</div>}
     </div>
   );
 }
@@ -193,7 +193,7 @@ export default function SalesAnalytics() {
                     <tr><td colSpan={4} className="text-center text-muted-foreground py-8">لا توجد مبيعات محقّقة</td></tr>
                   ) : a.topCustomers.map((c, i) => (
                     <tr key={c.id} className="hover:bg-muted/30">
-                      <td className={`px-3 py-2 text-[11px] font-bold ${i === 0 ? "text-warning" : "text-muted-foreground"}`}>#{i + 1}</td>
+                      <td className={`px-3 py-2 text-[12px] font-bold ${i === 0 ? "text-warning" : "text-muted-foreground"}`}>#{i + 1}</td>
                       <td className="px-3 py-2">
                         <Link to={`/ar/${c.id}`} className="hover:underline font-medium">{c.name}</Link>
                       </td>
@@ -206,7 +206,7 @@ export default function SalesAnalytics() {
             </div>
           </div>
 
-          <p className="text-[11px] text-muted-foreground mt-3 px-1">
+          <p className="text-[12px] text-muted-foreground mt-3 px-1">
             * "المبيعات المحقّقة" تشمل الفواتير المسدّدة بالكامل فقط (الحالة: مدفوعة). الفواتير المسودة وغير المحصّلة لا تُحتسب ضمن الإيراد المحقّق.
           </p>
         </>

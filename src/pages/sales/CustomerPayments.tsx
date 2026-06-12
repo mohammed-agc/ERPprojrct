@@ -184,11 +184,11 @@ export default function CustomerPayments() {
       />
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
-        <Card className="p-3"><div className="text-[11px] text-muted-foreground">عدد الدفعات</div><div className="text-xl font-bold num">{totals.count}</div></Card>
-        <Card className="p-3"><div className="text-[11px] text-muted-foreground">إجمالي المحصّل</div><div className="text-xl font-bold num">{fmtSAR(totals.amount)}</div></Card>
-        <Card className="p-3"><div className="text-[11px] text-muted-foreground">عدد العملاء</div><div className="text-xl font-bold num">{totals.customers}</div></Card>
-        <Card className="p-3"><div className="text-[11px] text-muted-foreground">مرحَّلة محاسبيًا</div><div className="text-xl font-bold num text-success">{totals.posted} / {totals.count}</div></Card>
-        <Card className="p-3"><div className="text-[11px] text-muted-foreground">بدون قيد</div><div className={`text-xl font-bold num ${totals.count - totals.posted > 0 ? "text-destructive" : "text-muted-foreground"}`}>{totals.count - totals.posted}</div></Card>
+        <Card className="p-3"><div className="text-[12px] text-muted-foreground">عدد الدفعات</div><div className="text-xl font-bold num">{totals.count}</div></Card>
+        <Card className="p-3"><div className="text-[12px] text-muted-foreground">إجمالي المحصّل</div><div className="text-xl font-bold num">{fmtSAR(totals.amount)}</div></Card>
+        <Card className="p-3"><div className="text-[12px] text-muted-foreground">عدد العملاء</div><div className="text-xl font-bold num">{totals.customers}</div></Card>
+        <Card className="p-3"><div className="text-[12px] text-muted-foreground">مرحَّلة محاسبيًا</div><div className="text-xl font-bold num text-success">{totals.posted} / {totals.count}</div></Card>
+        <Card className="p-3"><div className="text-[12px] text-muted-foreground">بدون قيد</div><div className={`text-xl font-bold num ${totals.count - totals.posted > 0 ? "text-destructive" : "text-muted-foreground"}`}>{totals.count - totals.posted}</div></Card>
       </div>
 
       <Card className="p-3 mb-3 flex flex-wrap items-end gap-3">
@@ -244,17 +244,17 @@ export default function CustomerPayments() {
                       {r.customer ? (
                         <Link to={`/ar/${r.customer.id}`} className="hover:underline">
                           <div className="font-medium text-xs">{r.customer.name}</div>
-                          <div className="text-[10px] text-muted-foreground font-mono">{r.customer.code}</div>
+                          <div className="text-[11.5px] text-muted-foreground font-mono">{r.customer.code}</div>
                         </Link>
                       ) : "—"}
                     </td>
                     <td>
                       {r.invoice ? (
                         <Link to={`/invoices/${r.invoice.id}`} className="font-mono text-xs hover:underline">{r.invoice.invoice_no}</Link>
-                      ) : <span className="text-[10px] text-muted-foreground">على الحساب</span>}
+                      ) : <span className="text-[11.5px] text-muted-foreground">على الحساب</span>}
                     </td>
-                    <td><Badge variant="outline" className="text-[10px]">{METHOD_LABEL[r.method] ?? r.method}</Badge></td>
-                    <td className="font-mono text-[10px]">{r.reference || "—"}</td>
+                    <td><Badge variant="outline" className="text-[11.5px]">{METHOD_LABEL[r.method] ?? r.method}</Badge></td>
+                    <td className="font-mono text-[11.5px]">{r.reference || "—"}</td>
                     <td className="num text-left font-semibold">{fmtSAR(Number(r.amount || 0))}</td>
                     <td>
                       {r.journal_entry ? (
@@ -262,13 +262,13 @@ export default function CustomerPayments() {
                           <BookOpen className="h-3 w-3" />
                           <span className="font-mono">{r.journal_entry.entry_no}</span>
                           {r.journal_entry.is_posted
-                            ? <Badge className="text-[9px] h-4 bg-success text-success-foreground">مُرحَّل</Badge>
-                            : <Badge variant="outline" className="text-[9px] h-4 text-warning border-warning/40">مسودة</Badge>}
+                            ? <Badge className="text-[12px] h-4 bg-success text-success-foreground">مُرحَّل</Badge>
+                            : <Badge variant="outline" className="text-[12px] h-4 text-warning border-warning/40">مسودة</Badge>}
                         </Link>
-                      ) : <Badge variant="destructive" className="text-[10px]">⚠ بدون قيد</Badge>}
+                      ) : <Badge variant="destructive" className="text-[11.5px]">⚠ بدون قيد</Badge>}
                     </td>
                     <td className="text-left">
-                      {(() => { const d = buildReceipt(r); return d ? <DocPrintActions doc={d} /> : <span className="text-[10px] text-muted-foreground">—</span>; })()}
+                      {(() => { const d = buildReceipt(r); return d ? <DocPrintActions doc={d} /> : <span className="text-[11.5px] text-muted-foreground">—</span>; })()}
                     </td>
                   </tr>
                 ))}
@@ -336,7 +336,7 @@ export default function CustomerPayments() {
                       <td>
                         {g.invoice
                           ? <Link to={`/invoices/${g.invoice.id}`} className="font-mono text-xs hover:underline">{g.invoice.invoice_no}</Link>
-                          : <span className="text-[10px] text-muted-foreground">دفعات على الحساب</span>}
+                          : <span className="text-[11.5px] text-muted-foreground">دفعات على الحساب</span>}
                       </td>
                       <td>{g.customer?.name ?? "—"}</td>
                       <td className="num">{g.invoice ? fmtSAR(total) : "—"}</td>

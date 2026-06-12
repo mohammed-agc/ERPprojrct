@@ -457,7 +457,7 @@ export default function VehicleDetail() {
                       {d.name}
                     </a>
                     {d.size != null && (
-                      <span className="text-[11px] text-muted-foreground">{Math.round(d.size / 1024)} KB</span>
+                      <span className="text-[12px] text-muted-foreground">{Math.round(d.size / 1024)} KB</span>
                     )}
                     <button onClick={() => removeDoc(d.url)} className="text-muted-foreground hover:text-destructive">
                       <Trash2 className="h-4 w-4" />
@@ -725,7 +725,7 @@ export default function VehicleDetail() {
                         {ev.label}
                       </div>
                       {ev.detail && <div className="text-xs text-muted-foreground mt-0.5">{ev.detail}</div>}
-                      <div className="text-[11px] text-muted-foreground mt-0.5">{fmtDateTime(ev.at)}</div>
+                      <div className="text-[12px] text-muted-foreground mt-0.5">{fmtDateTime(ev.at)}</div>
                       {i < timeline.length - 1 && <Separator className="mt-3" />}
                     </li>
                   );
@@ -878,7 +878,7 @@ export default function VehicleDetail() {
 function Spec({ label, value, mono }: { label: string; value: any; mono?: boolean }) {
   return (
     <div>
-      <div className="text-[11px] text-muted-foreground">{label}</div>
+      <div className="text-[12px] text-muted-foreground">{label}</div>
       <div className={`text-sm ${mono ? "font-mono" : ""}`} dir={mono ? "ltr" : undefined}>
         {value || value === 0 ? value : "—"}
       </div>
@@ -889,7 +889,7 @@ function Spec({ label, value, mono }: { label: string; value: any; mono?: boolea
 function PriceCell({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) {
   return (
     <div>
-      <div className="text-[11px] text-muted-foreground">{label} (ر.س)</div>
+      <div className="text-[12px] text-muted-foreground">{label} (ر.س)</div>
       <div className={`text-lg font-semibold num ${highlight ? "text-primary" : ""}`}>
         {Number(value).toLocaleString("ar-SA", { minimumFractionDigits: 2 })}
       </div>
@@ -1212,7 +1212,7 @@ function DeliveryDialog({
               className="font-medium"
               style={{ fontFamily: "cursive" }}
             />
-            <div className="text-[11px] text-muted-foreground mt-1">
+            <div className="text-[12px] text-muted-foreground mt-1">
               التوقيع الفعلي على المستند الورقي يُرفع في قسم المستندات.
             </div>
           </section>

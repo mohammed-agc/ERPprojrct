@@ -54,7 +54,7 @@ export function ActivityCenter() {
               key={g}
               onClick={() => setFilter(g)}
               className={cn(
-                "px-2 py-0.5 rounded-full text-[10px] border transition",
+                "px-2 py-0.5 rounded-full text-[11.5px] border transition",
                 filter === g ? "bg-primary text-primary-foreground border-primary" : "bg-muted/40 hover:bg-muted text-muted-foreground border-transparent"
               )}
             >
@@ -74,8 +74,8 @@ export function ActivityCenter() {
                   <div className="flex items-start gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-medium leading-snug">{it.title}</div>
-                      <div className="flex items-center gap-1.5 mt-1 text-[10px] text-muted-foreground">
-                        <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0", GROUP_TONE[it.group])}>
+                      <div className="flex items-center gap-1.5 mt-1 text-[11.5px] text-muted-foreground">
+                        <Badge variant="outline" className={cn("text-[12px] px-1.5 py-0", GROUP_TONE[it.group])}>
                           {GROUP_LABEL[it.group]}
                         </Badge>
                         {it.user && <span>· {it.user}</span>}
@@ -94,7 +94,7 @@ export function ActivityCenter() {
             </ol>
           )}
         </ScrollArea>
-        <div className="px-3 py-2 border-t text-[10px] text-muted-foreground text-center">
+        <div className="px-3 py-2 border-t text-[11.5px] text-muted-foreground text-center">
           سجل النشاطات للعرض فقط · واجهة تشغيلية
         </div>
       </SheetContent>

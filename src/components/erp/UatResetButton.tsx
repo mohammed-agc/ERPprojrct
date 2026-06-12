@@ -14,7 +14,7 @@ export function UatResetButton() {
       <Button
         variant="outline"
         size="sm"
-        className="h-8 gap-1.5 text-[11px] border-amber-500/60 text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+        className="h-8 gap-1.5 text-[12px] border-amber-500/60 text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/40"
         onClick={() => setOpen(true)}
         title="تهيئة بيئة الاختبار — Administrator فقط"
       >

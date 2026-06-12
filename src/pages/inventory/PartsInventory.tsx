@@ -84,20 +84,20 @@ export default function PartsInventory() {
               const isOut = p.on_hand === 0;
               return (
                 <tr key={p.id}>
-                  <td className="font-mono text-[11px]"><div className="flex items-center gap-1.5"><Package className="h-3 w-3 text-muted-foreground" />{p.sku}</div></td>
+                  <td className="font-mono text-[12px]"><div className="flex items-center gap-1.5"><Package className="h-3 w-3 text-muted-foreground" />{p.sku}</div></td>
                   <td className="text-xs">
                     <div>{p.description}</div>
-                    <div className="text-[10px] text-muted-foreground">{p.compatible.slice(0, 2).join(" · ")}</div>
+                    <div className="text-[11.5px] text-muted-foreground">{p.compatible.slice(0, 2).join(" · ")}</div>
                   </td>
-                  <td className="font-mono text-[10px] text-muted-foreground">{p.oem_no}<div>{p.barcode}</div></td>
+                  <td className="font-mono text-[11.5px] text-muted-foreground">{p.oem_no}<div>{p.barcode}</div></td>
                   <td className="text-xs">{p.category}</td>
-                  <td className="text-xs">{wh?.name ?? "—"}<div className="text-[10px] text-muted-foreground font-mono">{p.bin_id ?? "—"}</div></td>
+                  <td className="text-xs">{wh?.name ?? "—"}<div className="text-[11.5px] text-muted-foreground font-mono">{p.bin_id ?? "—"}</div></td>
                   <td className="num text-xs font-semibold">{p.on_hand}</td>
                   <td className="num text-xs text-warning">{p.reserved}</td>
                   <td className={`num text-xs font-semibold ${avail === 0 ? "text-destructive" : "text-success"}`}>{avail}</td>
                   <td className="num text-xs text-muted-foreground">{p.reorder_level}
                     {isOut ? (
-                      <Badge className="bg-destructive/10 text-destructive border border-destructive/40 mr-1 mt-0.5 text-[9px]">نفاد</Badge>
+                      <Badge className="bg-destructive/10 text-destructive border border-destructive/40 mr-1 mt-0.5 text-[12px]">نفاد</Badge>
                     ) : isLow ? (
                       <span className="text-warning inline-flex items-center gap-0.5 mr-1"><AlertTriangle className="h-3 w-3" /></span>
                     ) : null}

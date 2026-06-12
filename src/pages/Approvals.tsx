@@ -145,11 +145,11 @@ export default function ApprovalsPage({ scope }: Props) {
                 <td className="text-xs">{r.requester}</td>
                 <td className="text-xs">{r.reviewer ?? "—"}</td>
                 <td>
-                  <Badge variant="outline" className={cn("text-[10px]", approvalStatusTone[r.status])}>
+                  <Badge variant="outline" className={cn("text-[11.5px]", approvalStatusTone[r.status])}>
                     {approvalStatusLabel[r.status]}
                   </Badge>
                   {r.status === "rejected" && r.rejection_reason && (
-                    <div className="text-[10px] text-rose-600 mt-0.5">{r.rejection_reason}</div>
+                    <div className="text-[11.5px] text-rose-600 mt-0.5">{r.rejection_reason}</div>
                   )}
                 </td>
                 <td className="text-left">
@@ -214,7 +214,7 @@ export default function ApprovalsPage({ scope }: Props) {
               <li key={i} className="border rounded p-2 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-medium">{h.action}</span>
-                  <span className="text-[10px] text-muted-foreground">{h.at.slice(0, 16).replace("T", " ")}</span>
+                  <span className="text-[11.5px] text-muted-foreground">{h.at.slice(0, 16).replace("T", " ")}</span>
                 </div>
                 <div className="text-xs text-muted-foreground">{h.actor}</div>
                 {h.note && <div className="text-xs mt-1">{h.note}</div>}

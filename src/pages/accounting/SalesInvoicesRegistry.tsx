@@ -207,7 +207,7 @@ export default function SalesInvoicesRegistry() {
               const vehs: any[] = r._vehicles ?? [];
               return (
                 <tr key={r.id}>
-                  <td className="font-mono text-[11px]">
+                  <td className="font-mono text-[12px]">
                     <Link to={`/invoices/${r.id}`} className="flex items-center gap-1 text-primary hover:underline">
                       <Receipt className="h-3 w-3" />{r.invoice_no}
                     </Link>
@@ -223,14 +223,14 @@ export default function SalesInvoicesRegistry() {
                       : vehs.length === 1 ? (
                         <div>
                           <div>{vehs[0].brand} {vehs[0].model} <span className="text-muted-foreground">{vehs[0].year}</span></div>
-                          <div className="font-mono text-[10px] text-muted-foreground" dir="ltr">{vehs[0].vin || "—"}</div>
+                          <div className="font-mono text-[11.5px] text-muted-foreground" dir="ltr">{vehs[0].vin || "—"}</div>
                         </div>
                       ) : <span>{vehs.length} مركبات</span>}
                   </td>
                   <td className="num text-left text-xs font-bold">{fmtSAR(total)}</td>
                   <td className="num text-left text-xs text-success">{fmtSAR(paid)}</td>
                   <td className={`num text-left text-xs ${remaining > 0 ? "text-warning font-semibold" : "text-muted-foreground"}`}>{fmtSAR(remaining)}
-                    {credited > 0 && <div className="text-[9px] text-red-600">دائن: {fmtSAR(credited)}</div>}
+                    {credited > 0 && <div className="text-[12px] text-red-600">دائن: {fmtSAR(credited)}</div>}
                   </td>
                   <td>{payBadge(payStatus)}</td>
                   <td className="text-left">

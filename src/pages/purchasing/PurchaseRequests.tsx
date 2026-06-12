@@ -106,7 +106,7 @@ export default function PurchaseRequests() {
             )}
             {filtered.map(p => (
               <tr key={p.id} className="cursor-pointer hover:bg-muted/40" onClick={() => nav(`/purchasing/requests/${p.id}`)}>
-                <td className="font-mono text-[11px] text-primary hover:underline">{p.pr_no}</td>
+                <td className="font-mono text-[12px] text-primary hover:underline">{p.pr_no}</td>
                 <td className="text-xs">{fmtDate(p.request_date)}</td>
                 <td className="text-xs">{p.department_code}</td>
                 <td className="num text-xs">{fmtSAR(Number(p.total_estimated))}</td>
@@ -114,7 +114,7 @@ export default function PurchaseRequests() {
                 <td className="text-xs line-clamp-1 max-w-[300px]">{p.notes ?? "—"}</td>
                 <td className="whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                   {p.status === "draft" && (
-                    <Button size="sm" variant="outline" className="h-7 text-[11px]"
+                    <Button size="sm" variant="outline" className="h-7 text-[12px]"
                       onClick={() => onAction(p.id, "submitted", "أُرسل للاعتماد")}>إرسال</Button>
                   )}
                   {p.status === "submitted" && (

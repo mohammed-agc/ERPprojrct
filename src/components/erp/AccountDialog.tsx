@@ -1,4 +1,4 @@
-﻿/**
+/**
  * AccountDialog — create / edit ERP chart-of-account entry.
  *
  * Frontend operational contract. Writes through `accountOverlay`.
@@ -152,7 +152,7 @@ export function AccountDialog({ open, onClose, onSaved, mode, accounts, target, 
               </SelectContent>
             </Select>
             {parent && mode === "create" && (
-              <div className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
+              <div className="text-[12px] text-muted-foreground mt-1 flex items-center gap-1">
                 <Lightbulb className="h-3 w-3" /> سيتم وراثة النوع ({accountTypeLabel[parent.type]}) من الأب.
               </div>
             )}
@@ -169,7 +169,7 @@ export function AccountDialog({ open, onClose, onSaved, mode, accounts, target, 
               placeholder={parent ? `${parent.code}…` : "1101"}
             />
             {codeError && (
-              <div className="text-[11px] text-destructive mt-1 flex items-center gap-1">
+              <div className="text-[12px] text-destructive mt-1 flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" /> {codeError}
               </div>
             )}
@@ -185,7 +185,7 @@ export function AccountDialog({ open, onClose, onSaved, mode, accounts, target, 
               </SelectContent>
             </Select>
             {parentMismatch && (
-              <div className="text-[11px] text-destructive mt-1 flex items-center gap-1">
+              <div className="text-[12px] text-destructive mt-1 flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" /> نوع الحساب يجب أن يطابق نوع الأب.
               </div>
             )}
@@ -214,28 +214,28 @@ export function AccountDialog({ open, onClose, onSaved, mode, accounts, target, 
             <div className="border rounded-md px-3 py-2 flex items-center justify-between">
               <div>
                 <div className="text-xs font-medium">حساب ترحيل</div>
-                <div className="text-[10px] text-muted-foreground">يستقبل قيود مباشرة</div>
+                <div className="text-[11.5px] text-muted-foreground">يستقبل قيود مباشرة</div>
               </div>
               <Switch checked={isPosting} onCheckedChange={setIsPosting} disabled={childCount > 0} />
             </div>
             <div className="border rounded-md px-3 py-2 flex items-center justify-between">
               <div>
                 <div className="text-xs font-medium">يتأثر بالضريبة</div>
-                <div className="text-[10px] text-muted-foreground">VAT applicable</div>
+                <div className="text-[11.5px] text-muted-foreground">VAT applicable</div>
               </div>
               <Switch checked={vatApplicable} onCheckedChange={setVatApplicable} />
             </div>
             <div className="border rounded-md px-3 py-2 flex items-center justify-between">
               <div>
                 <div className="text-xs font-medium">مركز تكلفة</div>
-                <div className="text-[10px] text-muted-foreground">Cost-center applicable</div>
+                <div className="text-[11.5px] text-muted-foreground">Cost-center applicable</div>
               </div>
               <Switch checked={costCenterApplicable} onCheckedChange={setCostCenterApplicable} />
             </div>
           </div>
 
           {editPostingBlocked && (
-            <div className="col-span-12 text-[11px] text-destructive flex items-center gap-1">
+            <div className="col-span-12 text-[12px] text-destructive flex items-center gap-1">
               <AlertTriangle className="h-3 w-3" /> لا يمكن تحويل حساب أب ({childCount} حساب فرعي) إلى حساب ترحيل.
             </div>
           )}

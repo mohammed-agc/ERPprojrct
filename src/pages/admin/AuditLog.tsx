@@ -127,9 +127,9 @@ export default function AdminAuditLog() {
             )}
             {rows?.map((r) => (
               <tr key={r.id}>
-                <td className="font-mono text-[11px] whitespace-nowrap">{new Date(r.created_at).toLocaleString("ar-SA")}</td>
+                <td className="font-mono text-[12px] whitespace-nowrap">{new Date(r.created_at).toLocaleString("ar-SA")}</td>
                 <td>{r.user_name ?? "—"}</td>
-                <td><Badge variant="secondary" className="text-[10px]">{r.action}</Badge></td>
+                <td><Badge variant="secondary" className="text-[11.5px]">{r.action}</Badge></td>
                 <td className="text-xs">{r.module}</td>
                 <td className="text-xs">{r.document_type ?? "—"}</td>
                 <td className="font-mono text-xs">{r.document_code ?? "—"}</td>

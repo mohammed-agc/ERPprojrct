@@ -27,7 +27,7 @@ export function QuickActionsMenu() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="text-[11px]">العمليات السريعة</DropdownMenuLabel>
+        <DropdownMenuLabel className="text-[12px]">العمليات السريعة</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {ITEMS.map((it, i) => {
           if ("sep" in it) return <DropdownMenuSeparator key={`s${i}`} />;

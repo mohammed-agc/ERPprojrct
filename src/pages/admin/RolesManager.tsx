@@ -157,7 +157,7 @@ export default function RolesManager() {
         subtitle="حدد الأدوار ثم امنح أو اسحب الصلاحيات دفعة واحدة. يتم الحفظ في قاعدة البيانات مع تطبيق RLS."
         actions={
           <div className="flex items-center gap-2">
-            {dirty && <Badge variant="destructive" className="text-[10px]">تغييرات غير محفوظة</Badge>}
+            {dirty && <Badge variant="destructive" className="text-[11.5px]">تغييرات غير محفوظة</Badge>}
             <Button size="sm" variant="outline" onClick={reset} disabled={!dirty || saving}>
               <RotateCcw className="h-4 w-4 mr-1" /> تراجع
             </Button>
@@ -181,14 +181,14 @@ export default function RolesManager() {
             <div className="text-sm font-bold flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-primary" /> الأدوار
             </div>
-            <Badge variant="secondary" className="text-[10px]">{selectedRoles.size} محدد</Badge>
+            <Badge variant="secondary" className="text-[11.5px]">{selectedRoles.size} محدد</Badge>
           </div>
           <div className="flex gap-1 mb-2">
-            <Button size="sm" variant="outline" className="flex-1 h-7 text-[11px]"
+            <Button size="sm" variant="outline" className="flex-1 h-7 text-[12px]"
               onClick={() => setSelectedRoles(new Set(DEFAULT_ROLES))}>
               <CheckSquare className="h-3 w-3 mr-1" /> الكل
             </Button>
-            <Button size="sm" variant="outline" className="flex-1 h-7 text-[11px]"
+            <Button size="sm" variant="outline" className="flex-1 h-7 text-[12px]"
               onClick={() => setSelectedRoles(new Set())}>
               <Square className="h-3 w-3 mr-1" /> لا شيء
             </Button>
@@ -210,10 +210,10 @@ export default function RolesManager() {
                       <Checkbox checked={selected} onCheckedChange={() => toggleRoleSelected(r)} />
                       <div className="min-w-0">
                         <div className="font-bold truncate">{ROLE_LABELS[r]}</div>
-                        <div className="text-[10px] font-mono text-muted-foreground truncate">{r}</div>
+                        <div className="text-[11.5px] font-mono text-muted-foreground truncate">{r}</div>
                       </div>
                     </div>
-                    <Badge variant="outline" className="gap-1 text-[10px]">
+                    <Badge variant="outline" className="gap-1 text-[11.5px]">
                       <UsersIcon className="h-3 w-3" /> {count}
                     </Badge>
                   </button>
@@ -269,7 +269,7 @@ export default function RolesManager() {
                   <div key={group}>
                     <div className="flex items-center justify-between mb-2 sticky top-0 bg-card z-10 py-1">
                       <div className="text-xs font-bold text-primary">{workflowGroupLabel[group]}</div>
-                      <Badge variant="secondary" className="text-[10px]">{perms.length}</Badge>
+                      <Badge variant="secondary" className="text-[11.5px]">{perms.length}</Badge>
                     </div>
                     <div className="space-y-1">
                       {perms.map(p => {
@@ -287,13 +287,13 @@ export default function RolesManager() {
                             />
                             <div className="flex-1 min-w-0">
                               <div className="text-xs font-medium">{p.label_ar}</div>
-                              <div className="text-[10px] font-mono text-muted-foreground">{p.code}</div>
+                              <div className="text-[11.5px] font-mono text-muted-foreground">{p.code}</div>
                             </div>
-                            <Badge variant="outline" className={`text-[10px] ${permTypeClass[p.type]}`}>
+                            <Badge variant="outline" className={`text-[11.5px] ${permTypeClass[p.type]}`}>
                               {permTypeLabel[p.type]}
                             </Badge>
                             {selectedRoles.size > 0 && (
-                              <Badge variant="secondary" className="text-[10px] tabular-nums">
+                              <Badge variant="secondary" className="text-[11.5px] tabular-nums">
                                 {counts.have}/{selectedRoles.size}
                               </Badge>
                             )}

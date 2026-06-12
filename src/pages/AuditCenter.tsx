@@ -136,7 +136,7 @@ export default function AuditCenter() {
                 <td className="text-xs">{r.user}</td>
                 <td className="num text-left">{r.amount ? fmtSAR(r.amount) : "—"}</td>
                 <td>
-                  <Badge variant="outline" className={cn("text-[10px]", auditSeverityTone[r.severity])}>
+                  <Badge variant="outline" className={cn("text-[11.5px]", auditSeverityTone[r.severity])}>
                     {r.severity === "critical" ? "حرج" : r.severity === "warning" ? "تحذير" : "معلوماتي"}
                   </Badge>
                 </td>

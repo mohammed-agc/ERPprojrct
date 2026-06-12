@@ -162,11 +162,11 @@ export function GRNDbCreateDialog({ open, onOpenChange, defaultShipmentId, onCre
                         }}
                       />
                     </td>
-                    <td className="font-mono text-[10px]" dir="ltr">{l.vin}</td>
+                    <td className="font-mono text-[11.5px]" dir="ltr">{l.vin}</td>
                     <td>{l.brand} {l.model}</td>
                     <td className="num">{l.year ?? "—"}</td>
                     <td>{l.color ?? "—"}</td>
-                    <td className="text-[10px]">{l.already ? "مستلم سابقاً" : "متاح"}</td>
+                    <td className="text-[11.5px]">{l.already ? "مستلم سابقاً" : "متاح"}</td>
                   </tr>
                 ))}
               </tbody>

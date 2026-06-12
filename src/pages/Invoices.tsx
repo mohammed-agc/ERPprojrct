@@ -82,10 +82,24 @@ export default function Invoices() {
       (invLines ?? []).forEach((l: any) => { (linesByInvoice[l.invoice_id] ??= []).push(l); });
     }
 
+    // التخصيصات النشطة (Open Items) — المتبقّي الصحيح لكل فاتورة (يشمل المقاصّة)
+    const allocByInv: Record<string, number> = {};
+    if (invIds.length) {
+      const { data: allocs } = await supabase
+        .from("open_item_allocations")
+        .select("target_document_id, allocated_amount")
+        .eq("target_document_type", "sales_invoice")
+        .eq("status", "active")
+        .in("target_document_id", invIds);
+      (allocs ?? []).forEach((a: any) => {
+        allocByInv[a.target_document_id] = (allocByInv[a.target_document_id] ?? 0) + Number(a.allocated_amount || 0);
+      });
+    }
     setRows(list.map(i => ({
       ...i,
       _vehicles: vehiclesByInvoice[i.id] ?? [],
       _lines: linesByInvoice[i.id] ?? [],
+      _remaining: Math.max(0, Number(i.total ?? 0) - (allocByInv[i.id] ?? 0)),
     })));
   };
   useEffect(() => { load(); }, []);
@@ -164,7 +178,7 @@ export default function Invoices() {
     const buyerVat = r.contact?.vat_number ?? "";
     const total = Number(r.total ?? 0);
     const paid = Number(r.paid_amount ?? 0);
-    const remaining = Math.max(0, total - paid);
+    const remaining = r._remaining ?? Math.max(0, total - paid);   // Open Items (يشمل المقاصّة)
     const totalDisc = lines.reduce((s, l) => s + Number(l.discount ?? 0), 0);
     const totalBeforeDisc = lines.reduce((s, l) => s + Number(l.unit_price) * Number(l.quantity ?? 1), 0);
 
@@ -342,8 +356,9 @@ export default function Invoices() {
             {filtered.map(r => {
               const total = Number(r.total);
               const paidSoFar = Number(r.paid_amount ?? 0);
+              const remainingOI = r._remaining ?? Math.max(0, total - paidSoFar);   // Open Items
               const payStatus: "unpaid" | "partial" | "paid" =
-                paidSoFar <= 0 ? "unpaid" : paidSoFar >= total ? "paid" : "partial";
+                remainingOI <= 0.01 ? "paid" : remainingOI >= total - 0.01 ? "unpaid" : "partial";
               const woState = payStatus === "paid" ? "paid" : "invoiced";
               const payPerm = canPerform("receive_payment", woState as any, role);
               const vehs: any[] = r._vehicles ?? [];
@@ -358,7 +373,7 @@ export default function Invoices() {
                     ) : vehs.length === 1 ? (
                       <div>
                         <div className="font-medium">{vehs[0].brand} {vehs[0].model} <span className="num text-muted-foreground">{vehs[0].year}</span></div>
-                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                        <div className="flex items-center gap-1.5 text-[11.5px] text-muted-foreground">
                           <span className="font-mono" dir="ltr">VIN: {vehs[0].vin || "—"}</span>
                           {vehs[0].color && <span>· {vehs[0].color}</span>}
                         </div>
@@ -366,7 +381,7 @@ export default function Invoices() {
                     ) : (
                       <div>
                         <div className="font-medium">{vehs.length} مركبات</div>
-                        <div className="text-[10px] text-muted-foreground truncate max-w-[180px]" title={vehs.map(v => v.vin).join(", ")}>
+                        <div className="text-[11.5px] text-muted-foreground truncate max-w-[180px]" title={vehs.map(v => v.vin).join(", ")}>
                           {vehs.slice(0, 2).map(v => v.vin || v.brand).join(" · ")}{vehs.length > 2 && " ..."}
                         </div>
                       </div>

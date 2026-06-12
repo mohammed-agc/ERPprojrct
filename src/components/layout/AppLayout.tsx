@@ -45,7 +45,7 @@ export default function AppLayout({ children }: { children?: ReactNode }) {
             >
               <Search className="h-3.5 w-3.5" />
               <span className="flex-1 text-right">بحث شامل، عمليات، تنقل...</span>
-              <kbd className="inline-flex items-center gap-0.5 h-5 px-1.5 rounded border bg-background text-[10px] font-mono">
+              <kbd className="inline-flex items-center gap-0.5 h-5 px-1.5 rounded border bg-background text-[11.5px] font-mono">
                 <CommandIcon className="h-2.5 w-2.5" />K
               </kbd>
             </button>
@@ -67,10 +67,10 @@ export default function AppLayout({ children }: { children?: ReactNode }) {
               <div className="font-medium text-foreground leading-tight text-xs truncate" title={profile?.full_name || user.email || ""}>
                 {profile?.full_name || user.email}
               </div>
-              <div className="text-[10px] text-muted-foreground truncate" title={user.email || ""}>
+              <div className="text-[11.5px] text-muted-foreground truncate" title={user.email || ""}>
                 {user.email}
               </div>
-              <div className="text-[10px] text-primary/80 truncate" title={roles.join(" • ")}>
+              <div className="text-[11.5px] text-primary/80 truncate" title={roles.join(" • ")}>
                 {roles.length ? roles.join(" • ") : "موظف"}
                 {department ? <span className="text-muted-foreground"> · {department.name_ar}</span> : null}
               </div>

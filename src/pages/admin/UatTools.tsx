@@ -115,7 +115,7 @@ export default function UatTools() {
                   ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
                   : <ShieldAlert className="h-3.5 w-3.5 text-rose-600" />}
                 <span className="font-medium flex-1">{v.label}</span>
-                <Badge variant="secondary" className="text-[10px]">{v.detail}</Badge>
+                <Badge variant="secondary" className="text-[11.5px]">{v.detail}</Badge>
               </div>
             ))}
           </div>

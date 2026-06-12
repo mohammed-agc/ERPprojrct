@@ -92,14 +92,14 @@ export default function SupplierCredit() {
                 <div className="flex items-start justify-between mb-3 gap-2">
                   <div className="min-w-0">
                     <div className="font-semibold text-sm truncate">{c.name}</div>
-                    <div className="text-[11px] text-muted-foreground flex items-center gap-1 flex-wrap">
+                    <div className="text-[12px] text-muted-foreground flex items-center gap-1 flex-wrap">
                       <span className="font-mono">{c.code}</span>
-                      <Badge variant="outline" className="text-[10px] h-4 px-1">
+                      <Badge variant="outline" className="text-[11.5px] h-4 px-1">
                         {SETTLEMENT_LABEL[c.settlement_policy]}
                         {c.grace_days ? ` · سماح ${c.grace_days}ي` : ""}
                       </Badge>
                       {!c.is_active && (
-                        <Badge className="text-[10px] h-4 px-1 bg-destructive/10 text-destructive border border-destructive/40">
+                        <Badge className="text-[11.5px] h-4 px-1 bg-destructive/10 text-destructive border border-destructive/40">
                           موقوف
                         </Badge>
                       )}
@@ -107,17 +107,17 @@ export default function SupplierCredit() {
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     {c.overdue_balance > 0 && (
-                      <Badge className="bg-destructive/10 text-destructive border border-destructive/40 gap-1 text-[10px]">
+                      <Badge className="bg-destructive/10 text-destructive border border-destructive/40 gap-1 text-[11.5px]">
                         <Clock className="h-3 w-3" /> متأخر {c.max_days_overdue}ي
                       </Badge>
                     )}
                     {c.over_limit && (
-                      <Badge className="bg-destructive/10 text-destructive border border-destructive/40 gap-1 text-[10px]">
+                      <Badge className="bg-destructive/10 text-destructive border border-destructive/40 gap-1 text-[11.5px]">
                         <AlertTriangle className="h-3 w-3" /> تجاوز
                       </Badge>
                     )}
                     <Button
-                      size="sm" variant="outline" className="h-7 px-2 text-[11px]"
+                      size="sm" variant="outline" className="h-7 px-2 text-[12px]"
                       onClick={() => nav(`/accounting/partner-ledger?partner=${c.id}`)}
                     >
                       <FileText className="h-3 w-3 ml-1" /> كشف
@@ -137,7 +137,7 @@ export default function SupplierCredit() {
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
+                  <div className="flex items-center justify-between text-[12px] text-muted-foreground mb-1">
                     <span>نسبة الاستخدام</span>
                     <span className={`num font-semibold ${c.over_limit ? "text-destructive" : usage > 80 ? "text-warning" : "text-success"}`}>
                       {usage.toFixed(1)}%
@@ -167,7 +167,7 @@ function Kpi({ icon: Icon, label, value, tone = "default" }: {
     tone === "destructive" ? "text-destructive" : tone === "primary" ? "text-primary" : "text-foreground";
   return (
     <div className="border border-border bg-card rounded-lg p-3">
-      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-1">
+      <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground mb-1">
         <Icon className={`h-3.5 w-3.5 ${c}`} /><span>{label}</span>
       </div>
       <div className={`text-lg font-bold num ${c}`}>{value}</div>
@@ -183,7 +183,7 @@ function Cell({ label, value, tone = "default" }: {
     tone === "destructive" ? "text-destructive" : "text-foreground";
   return (
     <div className="bg-muted/40 rounded p-2">
-      <div className="text-[10px] text-muted-foreground">{label}</div>
+      <div className="text-[11.5px] text-muted-foreground">{label}</div>
       <div className={`text-sm font-semibold num ${c}`}>{value}</div>
     </div>
   );

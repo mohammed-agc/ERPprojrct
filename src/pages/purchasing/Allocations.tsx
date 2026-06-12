@@ -99,16 +99,16 @@ export default function Allocations() {
               const cc = confirmations.find(c => c.allocation_id === a.id);
               return (
                 <tr key={a.id}>
-                  <td className="font-mono text-[11px]">
+                  <td className="font-mono text-[12px]">
                     <Link to={`/purchasing/allocations/${a.id}`} className="text-primary hover:underline">{a.alloc_no}</Link>
                   </td>
                   <td className="text-xs">{sup?.name ?? "—"}</td>
-                  <td className="font-mono text-[11px]">{po?.po_no ?? "—"}</td>
+                  <td className="font-mono text-[12px]">{po?.po_no ?? "—"}</td>
                   <td className="text-xs"><span className="num font-semibold">{lineCounts[a.id] ?? 0}</span> مركبة</td>
-                  <td className="font-mono text-[10px]">
+                  <td className="font-mono text-[11.5px]">
                     {cc ? <Link to={`/purchasing/allocation-confirmations/${cc.id}`} className="text-primary hover:underline">{cc.conf_no}</Link> : <span className="text-muted-foreground">—</span>}
                   </td>
-                  <td className="text-[10px]">{a.purchase_invoice_id ? <span className="text-success">مفوتر</span> : <span className="text-muted-foreground">—</span>}</td>
+                  <td className="text-[11.5px]">{a.purchase_invoice_id ? <span className="text-success">مفوتر</span> : <span className="text-muted-foreground">—</span>}</td>
                   <td><Badge className={ALC_STATUS_TONE[a.status]}>{ALC_STATUS_LABEL[a.status]}</Badge></td>
                   <td className="text-xs">{fmtDate(a.created_at)}</td>
                 </tr>

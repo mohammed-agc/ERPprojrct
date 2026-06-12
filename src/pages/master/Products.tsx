@@ -158,7 +158,7 @@ function ProductDialog({ open, onOpenChange, product, onSaved }: {
             )}
             <div><Label className="text-xs">سعر افتراضي (ر.س)</Label><Input type="number" value={price} onChange={e => setPrice(e.target.value === "" ? "" : Number(e.target.value))} className="h-9" /></div>
           </div>
-          <div className="text-[11px] text-muted-foreground bg-muted/30 rounded p-2">
+          <div className="text-[12px] text-muted-foreground bg-muted/30 rounded p-2">
             ملاحظة: لا تخزّن رقم الهيكل (VIN) أو رقم المحرك في الأصناف الرئيسية — هذه خصائص للوحدة الفعلية في المخزون أو التخصيص.
           </div>
         </div>

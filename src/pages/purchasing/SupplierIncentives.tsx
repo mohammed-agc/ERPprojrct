@@ -168,12 +168,12 @@ export default function SupplierIncentives() {
               <tr key={program.id}>
                 <td>
                   <div className="font-medium">{supplier?.name ?? "—"}</div>
-                  <div className="text-[10px] text-muted-foreground font-mono">{supplier?.code}</div>
+                  <div className="text-[11.5px] text-muted-foreground font-mono">{supplier?.code}</div>
                 </td>
                 <td>
                   <div className="font-medium">{program.name}</div>
                   {(program.brand || program.model) && (
-                    <div className="text-[10px] text-muted-foreground">
+                    <div className="text-[11.5px] text-muted-foreground">
                       {[program.brand, program.model].filter(Boolean).join(" · ")}
                     </div>
                   )}
@@ -203,7 +203,7 @@ export default function SupplierIncentives() {
                   <div className="flex flex-col gap-0.5 items-start">
                     <Badge className={STATUS_TONE[program.status]}>{STATUS_LABEL[program.status]}</Badge>
                     {perf.eligible && program.status !== "closed" && (
-                      <Badge className="bg-amber-500/10 text-amber-700 border border-amber-400/40 gap-1 text-[10px]">
+                      <Badge className="bg-amber-500/10 text-amber-700 border border-amber-400/40 gap-1 text-[11.5px]">
                         <Sparkles className="h-2.5 w-2.5" /> مؤهل
                       </Badge>
                     )}
@@ -211,7 +211,7 @@ export default function SupplierIncentives() {
                 </td>
                 <td>
                   {supplier && (
-                    <Link to={`/contacts`} className="text-primary hover:underline text-[11px] inline-flex items-center gap-1">
+                    <Link to={`/contacts`} className="text-primary hover:underline text-[12px] inline-flex items-center gap-1">
                       <ExternalLink className="h-3 w-3" /> فتح
                     </Link>
                   )}
@@ -233,7 +233,7 @@ function Kpi({ icon: Icon, label, value, tone = "default" }: {
     tone === "primary" ? "text-primary" : "text-foreground";
   return (
     <div className="border border-border bg-card rounded-lg p-3">
-      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-1">
+      <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground mb-1">
         <Icon className={`h-3.5 w-3.5 ${c}`} /><span>{label}</span>
       </div>
       <div className={`text-base font-bold num tabular-nums ${c}`}>{value}</div>

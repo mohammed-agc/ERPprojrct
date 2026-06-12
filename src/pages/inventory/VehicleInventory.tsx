@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -183,13 +183,13 @@ export default function VehicleInventory() {
               const aged = v.aging_days >= 90 && (v.status === "available" || v.status === "blocked");
               return (
                 <tr key={v.id}>
-                  <td className="font-mono text-[10px]">
+                  <td className="font-mono text-[11.5px]">
                     <div className="flex items-center gap-1.5"><Car className="h-3 w-3 text-muted-foreground" />{v.vin}</div>
-                    <div className="text-[9px] text-muted-foreground">محرك: {v.engine_no}</div>
+                    <div className="text-[12px] text-muted-foreground">محرك: {v.engine_no}</div>
                   </td>
                   <td className="text-xs">
                     <div className="font-medium">{v.make} {v.model} {v.trim && <span className="text-muted-foreground">{v.trim}</span>}</div>
-                    <div className="text-[10px] text-muted-foreground">{v.transmission || "—"} · {v.fuel || "—"}</div>
+                    <div className="text-[11.5px] text-muted-foreground">{v.transmission || "—"} · {v.fuel || "—"}</div>
                   </td>
                   <td className="text-xs">{v.color} <span className="text-muted-foreground num">· {v.year}</span></td>
                   <td className="text-xs">{v.branch ?? "—"}</td>
@@ -203,14 +203,14 @@ export default function VehicleInventory() {
                   </td>
                   <td><Badge className={V_STATUS_TONE[v.status]}>{V_STATUS_LABEL[v.status]}</Badge>
                     {v.status === "blocked" && v.notes && (
-                      <div className="text-[10px] text-destructive mt-0.5 inline-flex items-center gap-0.5"><ShieldAlert className="h-3 w-3" />{v.notes}</div>
+                      <div className="text-[11.5px] text-destructive mt-0.5 inline-flex items-center gap-0.5"><ShieldAlert className="h-3 w-3" />{v.notes}</div>
                     )}
                   </td>
                   <td className="text-xs">
                     {v.reserved_for ? (
                       <>
                         <div>{v.reserved_for}</div>
-                        {v.reserved_until && <div className="text-[10px] text-muted-foreground">حتى {fmtDate(v.reserved_until)}</div>}
+                        {v.reserved_until && <div className="text-[11.5px] text-muted-foreground">حتى {fmtDate(v.reserved_until)}</div>}
                       </>
                     ) : <span className="text-muted-foreground">—</span>}
                   </td>

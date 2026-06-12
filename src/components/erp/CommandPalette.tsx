@@ -63,7 +63,7 @@ export function CommandPalette({ open, onOpenChange }: Props) {
                   <CommandItem key={r.id} onSelect={() => open_(r)} className="gap-2">
                     <Search className="h-3.5 w-3.5 text-muted-foreground" />
                     <span className="flex-1">{r.title}</span>
-                    <Badge variant="outline" className="text-[10px]">{r.category}</Badge>
+                    <Badge variant="outline" className="text-[11.5px]">{r.category}</Badge>
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -115,7 +115,7 @@ export function CommandPalette({ open, onOpenChange }: Props) {
               </CommandGroup>
             ))}
           </CommandList>
-          <div className="border-t px-3 py-2 text-[10px] text-muted-foreground flex items-center justify-between bg-muted/30">
+          <div className="border-t px-3 py-2 text-[11.5px] text-muted-foreground flex items-center justify-between bg-muted/30">
             <span>↑↓ للتنقل · ↵ للتنفيذ · Esc للإغلاق</span>
             <span>SARAT ERP · لوحة الأوامر</span>
           </div>

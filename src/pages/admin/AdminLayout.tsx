@@ -78,11 +78,11 @@ export default function AdminLayout() {
               <ShieldCheck className="h-4 w-4 text-primary" />
               مركز إدارة النظام
             </div>
-            <div className="text-[10px] text-muted-foreground mt-0.5">للمسؤولين فقط</div>
+            <div className="text-[11.5px] text-muted-foreground mt-0.5">للمسؤولين فقط</div>
           </div>
           {SECTIONS.map((sec) => (
             <div key={sec.title} className="mb-2">
-              <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="px-2 py-1 text-[11.5px] font-semibold uppercase tracking-wider text-muted-foreground">
                 {sec.title}
               </div>
               {sec.items.map((it) => {

@@ -134,7 +134,7 @@ export default function AdminUsers() {
                 <td>
                   <div className="flex flex-wrap items-center gap-1">
                     {u.roles.map(r => (
-                      <Badge key={r} variant="secondary" className="text-[10px] gap-1">
+                      <Badge key={r} variant="secondary" className="text-[11.5px] gap-1">
                         {ROLE_LABELS[r as ErpRole] ?? r}
                         <button onClick={() => removeRole(u.id, r)} className="hover:text-destructive">
                           <X className="h-2.5 w-2.5" />
@@ -142,7 +142,7 @@ export default function AdminUsers() {
                       </Badge>
                     ))}
                     <Select value="" onValueChange={(v) => v && addRole(u.id, v)}>
-                      <SelectTrigger className="h-6 w-32 text-[10px]">
+                      <SelectTrigger className="h-6 w-32 text-[11.5px]">
                         <Plus className="h-3 w-3" />
                       </SelectTrigger>
                       <SelectContent>

@@ -115,13 +115,13 @@ export default function PurchaseInvoicesRegistry() {
               const overdue = r.remaining > 0 && r.due_date && new Date(r.due_date) < new Date();
               return (
                 <tr key={r.id}>
-                  <td className="font-mono text-[11px]">
+                  <td className="font-mono text-[12px]">
                     <Link to={`/accounting/purchase-invoices/${r.id}`} className="flex items-center gap-1.5 text-primary hover:underline">
                       <Receipt className="h-3 w-3" />{r.invoice_no}
                     </Link>
                   </td>
                   <td className="text-xs">{r.supplier_name ?? "—"}</td>
-                  <td className="font-mono text-[10px] text-muted-foreground">{r.supplier_invoice_ref ?? "—"}</td>
+                  <td className="font-mono text-[11.5px] text-muted-foreground">{r.supplier_invoice_ref ?? "—"}</td>
                   <td className="text-xs">{fmtDate(r.invoice_date)}</td>
                   <td className={`text-xs ${overdue ? "text-destructive font-semibold" : ""}`}>{fmtDate(r.due_date)}</td>
                   <td className="num text-xs text-left">{fmtSAR(r.subtotal)}</td>
@@ -130,10 +130,10 @@ export default function PurchaseInvoicesRegistry() {
                   <td className="num text-xs text-left">{fmtSAR(r.remaining)}</td>
                   <td>
                     {r.journal_entry_id ? (
-                      <Link to={`/journals/${r.journal_entry_id}`} className="inline-flex items-center gap-1 text-primary text-[11px] hover:underline">
+                      <Link to={`/journals/${r.journal_entry_id}`} className="inline-flex items-center gap-1 text-primary text-[12px] hover:underline">
                         <BookOpen className="h-3 w-3" /> مرتبط
                       </Link>
-                    ) : <span className="text-[10px] text-muted-foreground">—</span>}
+                    ) : <span className="text-[11.5px] text-muted-foreground">—</span>}
                   </td>
                   <td><Badge className={STATUS_TONE[r.status] ?? "bg-muted"}>{STATUS_LABEL[r.status] ?? r.status}</Badge></td>
                 </tr>

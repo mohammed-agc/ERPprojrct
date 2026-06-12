@@ -175,7 +175,7 @@ export default function IncentiveManagement() {
                     <td className="text-left">
                       <div className="flex items-center justify-end gap-0.5">
                         <Button size="sm" variant="outline" className="h-7 px-2 text-success border-success/40 hover:bg-success/10 gap-1" onClick={() => accrue(p)} title="احتساب الحافز المستحق">
-                          <Coins className="h-3.5 w-3.5" /> <span className="text-[11px]">احتساب</span>
+                          <Coins className="h-3.5 w-3.5" /> <span className="text-[12px]">احتساب</span>
                         </Button>
                         <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEdit(p)} title="تعديل">
                           <Pencil className="h-3.5 w-3.5" />
@@ -209,7 +209,7 @@ function Stat({ label, value, icon: Icon, tone = "default" }: any) {
   const c = tone === "success" ? "text-success" : "text-foreground";
   return (
     <div className="border border-border rounded-lg p-2.5">
-      <div className="flex items-center gap-1 text-[11px] text-muted-foreground"><Icon className="h-3 w-3" /> {label}</div>
+      <div className="flex items-center gap-1 text-[12px] text-muted-foreground"><Icon className="h-3 w-3" /> {label}</div>
       <div className={`text-lg font-bold num ${c}`}>{value}</div>
     </div>
   );
@@ -374,9 +374,9 @@ function ProgramDialog({ open, onOpenChange, program, types, suppliers, onSaved 
             <div className="col-span-2 border border-border rounded p-2 space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-semibold">الشرائح</Label>
-                <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={addTier}><Plus className="h-3 w-3 ml-1" /> شريحة</Button>
+                <Button size="sm" variant="outline" className="h-7 text-[12px]" onClick={addTier}><Plus className="h-3 w-3 ml-1" /> شريحة</Button>
               </div>
-              {tiers.length === 0 && <p className="text-[11px] text-muted-foreground">أضف شرائح: من — إلى — نسبة/مبلغ</p>}
+              {tiers.length === 0 && <p className="text-[12px] text-muted-foreground">أضف شرائح: من — إلى — نسبة/مبلغ</p>}
               {tiers.map((t, i) => (
                 <div key={i} className="flex items-center gap-1.5">
                   <Input type="number" className="h-8 num" placeholder="من" value={t.from_qty} onChange={e => updTier(i, { from_qty: Number(e.target.value) })} />

@@ -57,35 +57,35 @@ export default function PurchaseInvoiceAccountingDetail() {
             </div>
             <div className="text-muted-foreground">
               المورد: <span className="font-medium text-foreground">{inv.supplier_name ?? "—"}</span>
-              {inv.supplier_code && <span className="font-mono text-[10px] mr-2">({inv.supplier_code})</span>}
+              {inv.supplier_code && <span className="font-mono text-[11.5px] mr-2">({inv.supplier_code})</span>}
             </div>
             {inv.supplier_invoice_ref && (
-              <div className="text-muted-foreground">مرجع المورد: <span className="font-mono text-[11px]">{inv.supplier_invoice_ref}</span></div>
+              <div className="text-muted-foreground">مرجع المورد: <span className="font-mono text-[12px]">{inv.supplier_invoice_ref}</span></div>
             )}
           </div>
           <Badge className={STATUS_TONE[inv.status] ?? "bg-muted"}>{STATUS_LABEL[inv.status] ?? inv.status}</Badge>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2 border-t border-border">
-          <div><div className="text-[10px] text-muted-foreground">تاريخ الإصدار</div><div>{fmtDate(inv.invoice_date)}</div></div>
-          <div><div className="text-[10px] text-muted-foreground">تاريخ الاستحقاق</div><div>{fmtDate(inv.due_date)}</div></div>
-          <div><div className="text-[10px] text-muted-foreground">الصافي</div><div>{fmtSAR(inv.subtotal)}</div></div>
-          <div><div className="text-[10px] text-muted-foreground">الضريبة</div><div>{fmtSAR(inv.vat_amount)}</div></div>
-          <div><div className="text-[10px] text-muted-foreground">الإجمالي</div><div className="font-bold">{fmtSAR(inv.total)}</div></div>
+          <div><div className="text-[11.5px] text-muted-foreground">تاريخ الإصدار</div><div>{fmtDate(inv.invoice_date)}</div></div>
+          <div><div className="text-[11.5px] text-muted-foreground">تاريخ الاستحقاق</div><div>{fmtDate(inv.due_date)}</div></div>
+          <div><div className="text-[11.5px] text-muted-foreground">الصافي</div><div>{fmtSAR(inv.subtotal)}</div></div>
+          <div><div className="text-[11.5px] text-muted-foreground">الضريبة</div><div>{fmtSAR(inv.vat_amount)}</div></div>
+          <div><div className="text-[11.5px] text-muted-foreground">الإجمالي</div><div className="font-bold">{fmtSAR(inv.total)}</div></div>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-border">
-          <div><div className="text-[10px] text-muted-foreground">المدفوع</div><div className="text-success">{fmtSAR(inv.paid_amount)}</div></div>
-          <div><div className="text-[10px] text-muted-foreground">المتبقي</div><div className="font-bold text-warning">{fmtSAR(inv.remaining)}</div></div>
+          <div><div className="text-[11.5px] text-muted-foreground">المدفوع</div><div className="text-success">{fmtSAR(inv.paid_amount)}</div></div>
+          <div><div className="text-[11.5px] text-muted-foreground">المتبقي</div><div className="font-bold text-warning">{fmtSAR(inv.remaining)}</div></div>
           <div>
-            <div className="text-[10px] text-muted-foreground">قيد محاسبي</div>
+            <div className="text-[11.5px] text-muted-foreground">قيد محاسبي</div>
             {inv.journal_entry_id ? (
               <Link to={`/journals/${inv.journal_entry_id}`} className="inline-flex items-center gap-1 text-primary text-xs hover:underline">
                 <BookOpen className="h-3 w-3" /> عرض القيد
               </Link>
             ) : <div className="text-xs text-muted-foreground">—</div>}
           </div>
-          <div><div className="text-[10px] text-muted-foreground">تاريخ الترحيل</div><div className="text-xs">{fmtDate(inv.posted_at)}</div></div>
+          <div><div className="text-[11.5px] text-muted-foreground">تاريخ الترحيل</div><div className="text-xs">{fmtDate(inv.posted_at)}</div></div>
         </div>
       </div>
 
@@ -113,7 +113,7 @@ export default function PurchaseInvoiceAccountingDetail() {
               <tr key={l.id}>
                 <td className="num">{l.line_no}</td>
                 <td>{l.description}</td>
-                <td className="font-mono text-[10px]">
+                <td className="font-mono text-[11.5px]">
                   {l.vehicle_id ? (
                     <Link to={`/vehicles/${l.vehicle_id}`} className="text-primary hover:underline">
                       {l.vehicle_vin ?? l.vehicle_code ?? l.vehicle_id.slice(0, 8)}
@@ -152,17 +152,17 @@ export default function PurchaseInvoiceAccountingDetail() {
             )}
             {inv.payments.map(p => (
               <tr key={p.id}>
-                <td className="font-mono text-[11px]">{p.payment_no}</td>
+                <td className="font-mono text-[12px]">{p.payment_no}</td>
                 <td>{fmtDate(p.payment_date)}</td>
                 <td>{METHOD_LABEL[p.method] ?? p.method}</td>
-                <td className="font-mono text-[10px] text-muted-foreground">{p.reference ?? "—"}</td>
+                <td className="font-mono text-[11.5px] text-muted-foreground">{p.reference ?? "—"}</td>
                 <td className="num text-left font-semibold">{fmtSAR(p.amount)}</td>
                 <td>
                   {p.journal_entry_id ? (
-                    <Link to={`/journals/${p.journal_entry_id}`} className="inline-flex items-center gap-1 text-primary text-[11px] hover:underline">
+                    <Link to={`/journals/${p.journal_entry_id}`} className="inline-flex items-center gap-1 text-primary text-[12px] hover:underline">
                       <BookOpen className="h-3 w-3" /> مرتبط
                     </Link>
-                  ) : <span className="text-[10px] text-muted-foreground">—</span>}
+                  ) : <span className="text-[11.5px] text-muted-foreground">—</span>}
                 </td>
                 <td><Badge className={STATUS_TONE[p.status] ?? "bg-muted"}>{STATUS_LABEL[p.status] ?? p.status}</Badge></td>
               </tr>

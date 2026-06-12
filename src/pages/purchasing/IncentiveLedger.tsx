@@ -123,7 +123,7 @@ export default function IncentiveLedger() {
                 <td className="text-xs whitespace-nowrap">{fmtDate(r.entry_date)}</td>
                 <td><Badge className={MOVE_TONE[r.movement] ?? "bg-muted"}>{MOVE_LABEL[r.movement] ?? r.movement}</Badge></td>
                 <td className="text-xs">{r.supplier_name ?? "—"}</td>
-                <td className="font-mono text-[10px]" dir="ltr">{r.reference ?? "—"}</td>
+                <td className="font-mono text-[11.5px]" dir="ltr">{r.reference ?? "—"}</td>
                 <td className="text-xs text-muted-foreground">{r.description ?? "—"}</td>
                 <td className="num text-xs text-primary">{Number(r.debit) > 0 ? fmtSAR(r.debit) : "—"}</td>
                 <td className="num text-xs text-success">{Number(r.credit) > 0 ? fmtSAR(r.credit) : "—"}</td>
@@ -139,7 +139,7 @@ export default function IncentiveLedger() {
 function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
     <div className="bg-card border border-border rounded-lg p-3">
-      <div className="text-[10px] text-muted-foreground mb-1">{label}</div>
+      <div className="text-[11.5px] text-muted-foreground mb-1">{label}</div>
       <div className={`text-sm font-bold num ${tone ?? ""}`}>{value}</div>
     </div>
   );

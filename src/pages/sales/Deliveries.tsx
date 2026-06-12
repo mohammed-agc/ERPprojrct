@@ -348,7 +348,7 @@ export default function Deliveries() {
                   <td className="px-3 py-2">
                     <div className="font-medium text-xs">{d.customer_name || d.contact?.name || "—"}</div>
                     {d.checklist?.recipient_name && d.checklist.recipient_name !== (d.customer_name || d.contact?.name) && (
-                      <div className="text-[10px] text-muted-foreground">المستلِم: {d.checklist.recipient_name}</div>
+                      <div className="text-[11.5px] text-muted-foreground">المستلِم: {d.checklist.recipient_name}</div>
                     )}
                   </td>
                   <td className="px-3 py-2 text-xs">{d.vehicle_desc || "—"}</td>

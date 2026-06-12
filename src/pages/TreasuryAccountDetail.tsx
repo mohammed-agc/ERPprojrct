@@ -77,7 +77,7 @@ export default function TreasuryAccountDetail() {
     <div>
       <PageHeader
         title={account ? `${account.code} — ${account.name_ar}` : "حساب خزينة"}
-        subtitle={account && <span className={`text-[10px] px-1.5 py-0.5 rounded border ${accountTypeColor[account.type]}`}>{accountTypeLabel[account.type]}</span>}
+        subtitle={account && <span className={`text-[11.5px] px-1.5 py-0.5 rounded border ${accountTypeColor[account.type]}`}>{accountTypeLabel[account.type]}</span>}
         sticky
         actions={
           <div className="flex gap-2">
@@ -90,33 +90,33 @@ export default function TreasuryAccountDetail() {
       {/* Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
         <div className="bg-card border rounded-md p-3">
-          <div className="text-[11px] text-muted-foreground">العملة</div>
+          <div className="text-[12px] text-muted-foreground">العملة</div>
           <div className="text-lg font-bold">{account?.currency ?? "—"}</div>
         </div>
         <div className="bg-card border rounded-md p-3">
-          <div className="text-[11px] text-muted-foreground">الرصيد الحالي</div>
+          <div className="text-[12px] text-muted-foreground">الرصيد الحالي</div>
           <div className={`text-lg font-bold ${currentBalance < 0 ? "text-destructive" : "text-success"}`}>{fmtSAR(currentBalance)}</div>
         </div>
         <div className="bg-emerald-50 border border-emerald-200 rounded-md p-3">
-          <div className="text-[11px] text-emerald-700">إجمالي الوارد</div>
+          <div className="text-[12px] text-emerald-700">إجمالي الوارد</div>
           <div className="text-lg font-bold text-emerald-700">{fmtSAR(totals.inflow)}</div>
         </div>
         <div className="bg-rose-50 border border-rose-200 rounded-md p-3">
-          <div className="text-[11px] text-rose-700">إجمالي الصادر</div>
+          <div className="text-[12px] text-rose-700">إجمالي الصادر</div>
           <div className="text-lg font-bold text-rose-700">{fmtSAR(totals.outflow)}</div>
         </div>
         <div className="bg-card border rounded-md p-3">
-          <div className="text-[11px] text-muted-foreground">صافي الفترة</div>
+          <div className="text-[12px] text-muted-foreground">صافي الفترة</div>
           <div className={`text-lg font-bold ${totals.net < 0 ? "text-destructive" : "text-success"}`}>{fmtSAR(totals.net)}</div>
         </div>
       </div>
 
       {account && (account.bank_name || account.responsible || account.branch) && (
         <div className="bg-card border rounded-md p-3 mb-3 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-          {account.bank_name && <div><div className="text-[11px] text-muted-foreground">البنك</div>{account.bank_name}</div>}
-          {account.iban && <div className="col-span-2"><div className="text-[11px] text-muted-foreground">IBAN</div><span className="font-mono text-xs" dir="ltr">{account.iban}</span></div>}
-          {account.branch && <div><div className="text-[11px] text-muted-foreground">الفرع</div>{account.branch}</div>}
-          {account.responsible && <div><div className="text-[11px] text-muted-foreground">المسؤول</div>{account.responsible}</div>}
+          {account.bank_name && <div><div className="text-[12px] text-muted-foreground">البنك</div>{account.bank_name}</div>}
+          {account.iban && <div className="col-span-2"><div className="text-[12px] text-muted-foreground">IBAN</div><span className="font-mono text-xs" dir="ltr">{account.iban}</span></div>}
+          {account.branch && <div><div className="text-[12px] text-muted-foreground">الفرع</div>{account.branch}</div>}
+          {account.responsible && <div><div className="text-[12px] text-muted-foreground">المسؤول</div>{account.responsible}</div>}
         </div>
       )}
 
@@ -148,7 +148,7 @@ export default function TreasuryAccountDetail() {
                 <td className="num text-left text-emerald-600">{m.amount > 0 ? fmtSAR(m.amount) : "—"}</td>
                 <td className="num text-left text-rose-600">{m.amount < 0 ? fmtSAR(-m.amount) : "—"}</td>
                 <td className={`num text-left font-semibold ${m.running < 0 ? "text-destructive" : ""}`}>{fmtSAR(m.running)}</td>
-                <td><Badge variant="secondary" className="text-[10px]">{statusLabel[m.status] ?? m.status}</Badge></td>
+                <td><Badge variant="secondary" className="text-[11.5px]">{statusLabel[m.status] ?? m.status}</Badge></td>
               </tr>
             ))}
           </tbody>

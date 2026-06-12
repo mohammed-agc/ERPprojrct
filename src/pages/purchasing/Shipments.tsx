@@ -133,14 +133,14 @@ export default function Shipments() {
                     <td className="text-muted-foreground">
                       {units.length > 0 && (isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />)}
                     </td>
-                    <td className="font-mono text-[11px]">
+                    <td className="font-mono text-[12px]">
                       <div className="flex items-center gap-1.5"><Ship className="h-3 w-3 text-muted-foreground" />{s.shipment_no}</div>
-                      {units.length > 0 && <div className="text-[10px] text-muted-foreground mt-0.5">{units.length} مركبة</div>}
+                      {units.length > 0 && <div className="text-[11.5px] text-muted-foreground mt-0.5">{units.length} مركبة</div>}
                     </td>
-                    <td className="font-mono text-[11px]">{po?.po_no ?? "—"}</td>
-                    <td className="font-mono text-[11px]">{alloc?.alloc_no ?? "—"}</td>
+                    <td className="font-mono text-[12px]">{po?.po_no ?? "—"}</td>
+                    <td className="font-mono text-[12px]">{alloc?.alloc_no ?? "—"}</td>
                     <td className="text-xs">{s.carrier}</td>
-                    <td className="font-mono text-[11px]" dir="ltr">{s.reference ?? "—"}</td>
+                    <td className="font-mono text-[12px]" dir="ltr">{s.reference ?? "—"}</td>
                     <td className="text-xs">{s.origin ?? "—"}</td>
                     <td className="text-xs">{s.destination ?? "—"}</td>
                     <td className="text-xs">{fmtDate(s.eta)}</td>
@@ -148,20 +148,20 @@ export default function Shipments() {
                     <td><Badge className={SHIPMENT_TONE[s.status]}>{SHIPMENT_LABEL[s.status]}</Badge></td>
                     <td onClick={(e) => e.stopPropagation()}>
                       {NEXT_STATUS[s.status] ? (
-                        <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => advanceShipment(s.id, s.status)}>
+                        <Button size="sm" variant="outline" className="h-7 text-[12px]" onClick={() => advanceShipment(s.id, s.status)}>
                           {NEXT_LABEL[s.status]} <ChevronLeft className="h-3 w-3 mr-1" />
                         </Button>
-                      ) : <span className="text-[10px] text-muted-foreground">—</span>}
+                      ) : <span className="text-[11.5px] text-muted-foreground">—</span>}
                     </td>
                   </tr>
                   {isOpen && units.length > 0 && (
                     <tr className="bg-muted/20">
                       <td></td>
                       <td colSpan={11} className="p-2">
-                        <div className="text-[11px] font-semibold mb-1.5">المركبات في هذه الشحنة ({units.length})</div>
+                        <div className="text-[12px] font-semibold mb-1.5">المركبات في هذه الشحنة ({units.length})</div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
                           {units.map(u => (
-                            <div key={u.vin} className="bg-background border border-border rounded px-2 py-1 text-[10px] flex items-center justify-between gap-2">
+                            <div key={u.vin} className="bg-background border border-border rounded px-2 py-1 text-[11.5px] flex items-center justify-between gap-2">
                               <div dir="ltr" className="font-mono font-semibold">{u.vin}</div>
                               <div className="text-muted-foreground truncate">
                                 {u.brand} {u.model} {u.year ?? ""} {u.color ? "· " + u.color : ""}

@@ -97,7 +97,7 @@ export function LineChecklistPanel({ inspectionLineId, readOnly, onFinalized }: 
               style={{ width: `${pct}%` }}
             />
           </div>
-          <div className="flex gap-3 mt-1.5 text-[11px]">
+          <div className="flex gap-3 mt-1.5 text-[12px]">
             <span className="inline-flex items-center gap-1 text-success"><CheckCircle2 className="h-3 w-3" /> {passed} سليم</span>
             {failed > 0 && <span className="inline-flex items-center gap-1 text-destructive"><AlertTriangle className="h-3 w-3" /> {failed} ملاحظة</span>}
             {total - done > 0 && <span className="inline-flex items-center gap-1 text-muted-foreground"><Circle className="h-3 w-3" /> {total - done} بانتظار</span>}
@@ -128,7 +128,7 @@ export function LineChecklistPanel({ inspectionLineId, readOnly, onFinalized }: 
               {!readOnly && (
                 <Button
                   size="sm" variant="ghost"
-                  className="h-6 px-2 text-[10px] text-success hover:bg-success/10 gap-1"
+                  className="h-6 px-2 text-[11.5px] text-success hover:bg-success/10 gap-1"
                   onClick={() => bulkMut.mutate({ checkIds: secIds, result: "passed" })}
                 >
                   <CheckCheck className="h-3 w-3" /> القسم سليم
@@ -159,7 +159,7 @@ export function LineChecklistPanel({ inspectionLineId, readOnly, onFinalized }: 
       {/* زر إنهاء فحص المركبة — يحسب النتيجة من البنود ويطبّقها */}
       {!readOnly && (
         <div className="flex items-center justify-between bg-background rounded-lg border border-border p-3">
-          <div className="text-[11px] text-muted-foreground">
+          <div className="text-[12px] text-muted-foreground">
             {done < total
               ? `أكمل فحص كل البنود (${total - done} متبقٍّ) لإنهاء فحص المركبة`
               : failed > 0
@@ -202,7 +202,7 @@ function ChecklistRow({
       <div className="flex-1 min-w-0 flex items-center gap-1.5">
         <span className="text-xs">{item.label}</span>
         {item.is_critical && (
-          <span className="text-[9px] bg-destructive/10 text-destructive px-1 py-0.5 rounded shrink-0">حرج</span>
+          <span className="text-[12px] bg-destructive/10 text-destructive px-1 py-0.5 rounded shrink-0">حرج</span>
         )}
       </div>
 
@@ -232,7 +232,7 @@ function ChecklistRow({
           <Button
             size="sm"
             variant={check.result === "passed" ? "default" : "outline"}
-            className={`h-8 px-2.5 gap-1 text-[11px] ${check.result === "passed" ? "bg-success hover:bg-success/90 text-white" : "text-success border-success/30 hover:bg-success/10"}`}
+            className={`h-8 px-2.5 gap-1 text-[12px] ${check.result === "passed" ? "bg-success hover:bg-success/90 text-white" : "text-success border-success/30 hover:bg-success/10"}`}
             onClick={() => onResult("passed")}
           >
             <CheckCircle2 className="h-3.5 w-3.5" /> سليم
@@ -240,7 +240,7 @@ function ChecklistRow({
           <Button
             size="sm"
             variant={check.result === "rejected" ? "default" : "outline"}
-            className={`h-8 px-2.5 gap-1 text-[11px] ${check.result === "rejected" ? "bg-destructive hover:bg-destructive/90 text-white" : "text-destructive border-destructive/30 hover:bg-destructive/10"}`}
+            className={`h-8 px-2.5 gap-1 text-[12px] ${check.result === "rejected" ? "bg-destructive hover:bg-destructive/90 text-white" : "text-destructive border-destructive/30 hover:bg-destructive/10"}`}
             onClick={() => onResult("rejected")}
           >
             <AlertTriangle className="h-3.5 w-3.5" /> ملاحظة

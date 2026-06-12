@@ -132,17 +132,17 @@ export default function ContactDetail() {
             <span>·</span>
             <span>{CONTACT_TYPE_LABELS[meta.contact_type ?? "company"]}</span>
             {(meta.roles ?? []).map(r => (
-              <span key={r} className={cn("px-1.5 py-0.5 rounded border text-[10px]", ROLE_CLASSES[r])}>
+              <span key={r} className={cn("px-1.5 py-0.5 rounded border text-[11.5px]", ROLE_CLASSES[r])}>
                 {ROLE_LABELS[r]}
               </span>
             ))}
             {meta.risk_class && (
-              <span className={cn("px-1.5 py-0.5 rounded border text-[10px]", RISK_CLASSES[meta.risk_class as keyof typeof RISK_CLASSES])}>
+              <span className={cn("px-1.5 py-0.5 rounded border text-[11.5px]", RISK_CLASSES[meta.risk_class as keyof typeof RISK_CLASSES])}>
                 مخاطر: {RISK_LABELS[meta.risk_class as keyof typeof RISK_LABELS]}
               </span>
             )}
             <span className="text-muted-foreground">· اكتمال الملف: <b className={cn(score >= 80 ? "text-success" : score >= 50 ? "text-warning-foreground" : "text-destructive")}>{score}%</b></span>
-            <span className={cn("px-1.5 py-0.5 rounded border text-[10px]", (row.active ?? true) ? "border-success/40 text-success" : "border-destructive/40 text-destructive")}>
+            <span className={cn("px-1.5 py-0.5 rounded border text-[11.5px]", (row.active ?? true) ? "border-success/40 text-success" : "border-destructive/40 text-destructive")}>
               {(row.active ?? true) ? "نشط" : "غير نشط"}
             </span>
             {(row.updated_at || updatedByName) && (
@@ -309,7 +309,7 @@ export default function ContactDetail() {
                     );
                   })}
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-2">
+                <p className="text-[11.5px] text-muted-foreground mt-2">
                   جهة واحدة قد تكون عميلًا ومورّدًا في نفس الوقت — الأدوار توجّه السلوك التشغيلي في باقي وحدات النظام.
                 </p>
               </div>
@@ -340,7 +340,7 @@ export default function ContactDetail() {
                 <Field label="الدولة" value={meta.primary_address?.country ?? "SA"} onChange={v=>setMeta({...meta, primary_address:{...meta.primary_address, country:v}})} ltr />
               </div>
               <div className="bg-muted/40 rounded border border-dashed border-border p-3 text-xs">
-                <div className="text-[10px] text-muted-foreground mb-1">معاينة العنوان المنسق</div>
+                <div className="text-[11.5px] text-muted-foreground mb-1">معاينة العنوان المنسق</div>
                 <div className="font-medium">{formatSaudiAddress(meta.primary_address) || "—"}</div>
               </div>
               <div className="bg-muted/30 rounded border border-border h-32 flex items-center justify-center text-xs text-muted-foreground">
@@ -369,14 +369,14 @@ export default function ContactDetail() {
               {(meta.addresses ?? []).map((a, idx) => (
                 <div key={a.id} className="border border-border rounded p-2 grid grid-cols-12 gap-2 items-start text-xs">
                   <div className="col-span-3">
-                    <Label className="text-[10px]">التسمية</Label>
+                    <Label className="text-[11.5px]">التسمية</Label>
                     <Input value={a.label} className="h-7 text-xs" onChange={e=>{
                       const arr = [...(meta.addresses ?? [])]; arr[idx] = {...a, label: e.target.value};
                       setMeta({...meta, addresses: arr});
                     }} />
                   </div>
                   <div className="col-span-2">
-                    <Label className="text-[10px]">النوع</Label>
+                    <Label className="text-[11.5px]">النوع</Label>
                     <Select value={a.kind} onValueChange={(v)=>{
                       const arr = [...(meta.addresses ?? [])]; arr[idx] = {...a, kind: v as any};
                       setMeta({...meta, addresses: arr});
@@ -399,7 +399,7 @@ export default function ContactDetail() {
                   <div className="col-span-12 grid grid-cols-5 gap-2 mt-1">
                     {(["city","district","street","building_number","additional_number","postal_code","unit_number","short_address","po_box"] as const).map(field => (
                       <div key={field}>
-                        <Label className="text-[10px]">{ADDR_FIELD_LABELS[field]}</Label>
+                        <Label className="text-[11.5px]">{ADDR_FIELD_LABELS[field]}</Label>
                         <Input className="h-7 text-xs" value={(a.address as any)[field] ?? ""} dir={field === "city" || field === "district" || field === "street" ? "rtl" : "ltr"}
                           onChange={e=>{
                             const arr = [...(meta.addresses ?? [])]; arr[idx] = {...a, address: {...a.address, [field]: e.target.value}};
@@ -444,7 +444,7 @@ export default function ContactDetail() {
                   <Label className="text-xs">معفى من الضريبة</Label>
                   <Switch checked={!!meta.tax_exempt} onCheckedChange={v=>setMeta({...meta, tax_exempt:v})} />
                 </div>
-                <p className="text-[10px] text-muted-foreground">يستخدم في فواتير ZATCA لتحديد طبيعة العميل ونوع الفاتورة (B2B / B2C).</p>
+                <p className="text-[11.5px] text-muted-foreground">يستخدم في فواتير ZATCA لتحديد طبيعة العميل ونوع الفاتورة (B2B / B2C).</p>
               </CardContent>
             </Card>
           </div>
@@ -520,27 +520,27 @@ export default function ContactDetail() {
               <div className="space-y-2">
                 {(meta.related ?? []).map((p, idx) => (
                   <div key={p.id} className="grid grid-cols-12 gap-2 items-end border border-border rounded p-2">
-                    <div className="col-span-3"><Label className="text-[10px]">الاسم</Label>
+                    <div className="col-span-3"><Label className="text-[11.5px]">الاسم</Label>
                       <Input className="h-7 text-xs" value={p.name} onChange={e=>{
                         const arr=[...(meta.related ?? [])]; arr[idx]={...p, name:e.target.value}; setMeta({...meta, related:arr});
                       }} />
                     </div>
-                    <div className="col-span-2"><Label className="text-[10px]">الدور</Label>
+                    <div className="col-span-2"><Label className="text-[11.5px]">الدور</Label>
                       <Input className="h-7 text-xs" value={p.role} placeholder="محاسب / سائق ..." onChange={e=>{
                         const arr=[...(meta.related ?? [])]; arr[idx]={...p, role:e.target.value}; setMeta({...meta, related:arr});
                       }} />
                     </div>
-                    <div className="col-span-2"><Label className="text-[10px]">الجوال</Label>
+                    <div className="col-span-2"><Label className="text-[11.5px]">الجوال</Label>
                       <Input className="h-7 text-xs" dir="ltr" value={p.phone ?? ""} onChange={e=>{
                         const arr=[...(meta.related ?? [])]; arr[idx]={...p, phone:e.target.value}; setMeta({...meta, related:arr});
                       }} />
                     </div>
-                    <div className="col-span-2"><Label className="text-[10px]">البريد</Label>
+                    <div className="col-span-2"><Label className="text-[11.5px]">البريد</Label>
                       <Input className="h-7 text-xs" dir="ltr" value={p.email ?? ""} onChange={e=>{
                         const arr=[...(meta.related ?? [])]; arr[idx]={...p, email:e.target.value}; setMeta({...meta, related:arr});
                       }} />
                     </div>
-                    <div className="col-span-2"><Label className="text-[10px]">ملاحظة</Label>
+                    <div className="col-span-2"><Label className="text-[11.5px]">ملاحظة</Label>
                       <Input className="h-7 text-xs" value={p.note ?? ""} onChange={e=>{
                         const arr=[...(meta.related ?? [])]; arr[idx]={...p, note:e.target.value}; setMeta({...meta, related:arr});
                       }} />
@@ -569,8 +569,8 @@ export default function ContactDetail() {
                 {timeline.map((t, i) => (
                   <div key={i} className="py-2 flex items-center gap-3 text-xs">
                     <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="font-mono text-[10px] text-muted-foreground w-24">{t.date}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent text-accent-foreground border border-border">{t.kind}</span>
+                    <span className="font-mono text-[11.5px] text-muted-foreground w-24">{t.date}</span>
+                    <span className="text-[11.5px] px-1.5 py-0.5 rounded bg-accent text-accent-foreground border border-border">{t.kind}</span>
                     {t.href ? <Link to={t.href} className="hover:text-primary flex-1">{t.title}</Link> : <span className="flex-1">{t.title}</span>}
                     {t.amount !== undefined && <span className="num font-mono">{fmtMoney(t.amount)}</span>}
                   </div>
@@ -619,7 +619,7 @@ function Field({ label, value, onChange, ltr, type, placeholder, icon: Icon }: {
 }) {
   return (
     <div>
-      <Label className="text-[10px] flex items-center gap-1">{Icon && <Icon className="h-3 w-3" />} {label}</Label>
+      <Label className="text-[11.5px] flex items-center gap-1">{Icon && <Icon className="h-3 w-3" />} {label}</Label>
       <Input value={value ?? ""} onChange={e=>onChange(e.target.value)} dir={ltr ? "ltr" : "rtl"}
         type={type} placeholder={placeholder} className="h-8 text-xs" />
     </div>

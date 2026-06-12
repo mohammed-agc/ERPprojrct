@@ -21,12 +21,12 @@ function Kpi({ icon: Icon, label, value, tone = "default", sub, to }: {
     tone === "primary" ? "text-primary" : "text-foreground";
   const inner = (
     <div className="border border-border bg-card rounded-lg p-3 hover:bg-accent/30 transition-colors">
-      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-1">
+      <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground mb-1">
         <Icon className={`h-3.5 w-3.5 ${c}`} />
         <span>{label}</span>
       </div>
       <div className={`text-2xl font-bold num ${c}`}>{value}</div>
-      {sub && <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>}
+      {sub && <div className="text-[11.5px] text-muted-foreground mt-0.5">{sub}</div>}
     </div>
   );
   return to ? <Link to={to}>{inner}</Link> : inner;
@@ -75,7 +75,7 @@ export default function PurchasingDashboard() {
                   <tr key={s.id}>
                     <td>
                       <div className="font-medium text-sm">{s.name}</div>
-                      <div className="text-[10px] text-muted-foreground">{s.country} · {s.code}</div>
+                      <div className="text-[11.5px] text-muted-foreground">{s.country} · {s.code}</div>
                     </td>
                     <td className="num text-xs">{fmtSAR(s.credit_limit)}</td>
                     <td className="num text-xs">{fmtSAR(s.utilized)}</td>
@@ -83,7 +83,7 @@ export default function PurchasingDashboard() {
                       <div className="h-1.5 bg-muted rounded overflow-hidden">
                         <div className={`h-full ${c.over ? "bg-destructive" : c.usage > 80 ? "bg-warning" : "bg-success"}`} style={{ width: `${Math.min(100, c.usage)}%` }} />
                       </div>
-                      <div className={`text-[10px] mt-0.5 ${c.over ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                      <div className={`text-[11.5px] mt-0.5 ${c.over ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
                         {c.usage.toFixed(0)}% {c.over && "· تجاوز"}
                       </div>
                     </td>
@@ -111,7 +111,7 @@ export default function PurchasingDashboard() {
                 const s = purchasingService.getSupplier(p.supplier_id);
                 return (
                   <tr key={p.id}>
-                    <td className="font-mono text-[11px]">{p.code}</td>
+                    <td className="font-mono text-[12px]">{p.code}</td>
                     <td className="text-xs">{s?.name ?? "—"}</td>
                     <td className="text-xs">{p.branch_destination}</td>
                     <td className="num text-xs">{fmtSAR(p.total)}</td>
@@ -138,9 +138,9 @@ export default function PurchasingDashboard() {
             <tbody>
               {shipments.map(s => (
                 <tr key={s.id}>
-                  <td className="font-mono text-[11px]">{s.code}</td>
+                  <td className="font-mono text-[12px]">{s.code}</td>
                   <td className="text-xs">{s.carrier}</td>
-                  <td className="font-mono text-[11px]" dir="ltr">{s.reference}</td>
+                  <td className="font-mono text-[12px]" dir="ltr">{s.reference}</td>
                   <td className="text-xs">{s.origin}</td>
                   <td className="text-xs">{s.destination}</td>
                   <td className="text-xs">{fmtDate(s.eta)}</td>

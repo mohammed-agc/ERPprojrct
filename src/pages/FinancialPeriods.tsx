@@ -51,13 +51,13 @@ export default function FinancialPeriods() {
                 <CalendarRange className="h-4 w-4 text-muted-foreground" />
                 <span className="font-bold">السنة المالية {fy.year}</span>
               </div>
-              <Badge variant="outline" className={cn("text-[10px]", periodStatusTone[fy.status])}>
+              <Badge variant="outline" className={cn("text-[11.5px]", periodStatusTone[fy.status])}>
                 {periodStatusLabel[fy.status]}
               </Badge>
             </div>
             <div className="text-xs text-muted-foreground">{fy.start} ← {fy.end}</div>
             {fy.closed_at && (
-              <div className="text-[10px] text-muted-foreground mt-1">
+              <div className="text-[11.5px] text-muted-foreground mt-1">
                 أُقفلت {fy.closed_at.slice(0, 10)} بواسطة {fy.closed_by}
               </div>
             )}
@@ -101,7 +101,7 @@ export default function FinancialPeriods() {
                 <td className="num text-xs">{p.start}</td>
                 <td className="num text-xs">{p.end}</td>
                 <td>
-                  <Badge variant="outline" className={cn("text-[10px]", periodStatusTone[p.status])}>
+                  <Badge variant="outline" className={cn("text-[11.5px]", periodStatusTone[p.status])}>
                     {p.status === "locked" && <Lock className="h-3 w-3 ml-1 inline" />}
                     {periodStatusLabel[p.status]}
                   </Badge>
@@ -141,7 +141,7 @@ export default function FinancialPeriods() {
                       </>
                     )}
                     {p.status === "locked" && (
-                      <span className="text-[10px] text-muted-foreground">لا يمكن التعديل</span>
+                      <span className="text-[11.5px] text-muted-foreground">لا يمكن التعديل</span>
                     )}
                   </div>
                 </td>

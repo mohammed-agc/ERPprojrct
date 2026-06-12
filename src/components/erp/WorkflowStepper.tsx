@@ -46,7 +46,7 @@ export function WorkflowStepper({ steps, current, cancelled }: Props) {
             style={!isLast ? { clipPath: "polygon(8px 0, 100% 0, 100% 100%, 8px 100%, 0 50%)" } : undefined}
           >
             <span className={cn(
-              "h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold border shrink-0",
+              "h-5 w-5 rounded-full flex items-center justify-center text-[11.5px] font-bold border shrink-0",
               isDone && "bg-success text-success-foreground border-success",
               isActive && "bg-primary-foreground/20 text-primary-foreground border-primary-foreground/40",
               isPending && "bg-background border-border text-muted-foreground",

@@ -74,7 +74,7 @@ export default function FinancialAnalysis() {
                 <div className="w-2 bg-destructive rounded-t-sm" style={{ height: `${(t.cost / max) * 100}%` }} title={`تكلفة: ${fmtCompact(t.cost)}`} />
                 <div className="w-2 bg-primary rounded-t-sm" style={{ height: `${Math.max(0, t.net / max) * 100}%` }} title={`صافي: ${fmtCompact(t.net)}`} />
               </div>
-              <div className="text-[10px] text-muted-foreground">{t.month}</div>
+              <div className="text-[11.5px] text-muted-foreground">{t.month}</div>
             </div>
           ))}
         </div>
@@ -97,11 +97,11 @@ export default function FinancialAnalysis() {
                     className="block p-2 border rounded hover:bg-muted/30 transition-colors">
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-medium text-sm">{b.center.name_ar}</span>
-                  <Badge variant="outline" className={`text-[10px] ${b.net >= 0 ? "border-success text-success" : "border-destructive text-destructive"}`}>
+                  <Badge variant="outline" className={`text-[11.5px] ${b.net >= 0 ? "border-success text-success" : "border-destructive text-destructive"}`}>
                     {b.net_margin.toFixed(1)}%
                   </Badge>
                 </div>
-                <div className="flex justify-between text-[11px] text-muted-foreground tabular-nums">
+                <div className="flex justify-between text-[12px] text-muted-foreground tabular-nums">
                   <span>إيراد {fmtCompact(b.revenue)}</span>
                   <span className={b.net >= 0 ? "text-success" : "text-destructive"}>صافي {fmtCompact(b.net)}</span>
                 </div>
@@ -139,11 +139,11 @@ function Kpi({ label, value, sub, icon: Icon, tone = "default" }: any) {
   return (
     <div className={`bg-card border rounded-md p-3 ${cls}`}>
       <div className="flex items-center justify-between">
-        <div className="text-[11px] text-muted-foreground font-medium">{label}</div>
+        <div className="text-[12px] text-muted-foreground font-medium">{label}</div>
         <Icon className="h-3.5 w-3.5 text-muted-foreground" />
       </div>
       <div className="text-lg font-bold mt-1 tabular-nums">{value}</div>
-      {sub && <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>}
+      {sub && <div className="text-[11.5px] text-muted-foreground mt-0.5">{sub}</div>}
     </div>
   );
 }
@@ -164,10 +164,10 @@ function RankCard({ title, icon: Icon, items, valueKey, tone }: {
           return (
             <div key={r.center.id} className="flex items-center justify-between p-2 border rounded">
               <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-muted text-[10px] flex items-center justify-center font-bold">{i + 1}</span>
+                <span className="w-5 h-5 rounded-full bg-muted text-[11.5px] flex items-center justify-center font-bold">{i + 1}</span>
                 <div>
                   <div className="text-sm font-medium">{r.center.name_ar}</div>
-                  <Badge variant="outline" className={`text-[10px] ${centerKindColor[r.center.kind]}`}>{centerKindLabel[r.center.kind]}</Badge>
+                  <Badge variant="outline" className={`text-[11.5px] ${centerKindColor[r.center.kind]}`}>{centerKindLabel[r.center.kind]}</Badge>
                 </div>
               </div>
               <div className={`text-sm font-semibold tabular-nums ${tone === "good" ? "text-success" : "text-destructive"}`}>{fmtCompact(v)}</div>

@@ -297,31 +297,31 @@ export default function Contacts() {
                   <td>
                     <Link to={`/contacts/${r.id}`} className="font-medium hover:text-primary">{r.name}</Link>
                     {m.contact_type && (
-                      <div className="text-[10px] text-muted-foreground">{CONTACT_TYPE_LABELS[m.contact_type]}</div>
+                      <div className="text-[11.5px] text-muted-foreground">{CONTACT_TYPE_LABELS[m.contact_type]}</div>
                     )}
                   </td>
                   <td>
                     <div className="flex flex-wrap gap-1">
                       {(m.roles ?? []).slice(0, 3).map(role => (
-                        <span key={role} className={cn("px-1.5 py-0.5 text-[10px] rounded border", ROLE_CLASSES[role])}>
+                        <span key={role} className={cn("px-1.5 py-0.5 text-[11.5px] rounded border", ROLE_CLASSES[role])}>
                           {ROLE_LABELS[role]}
                         </span>
                       ))}
                       {(m.roles ?? []).length > 3 && (
-                        <span className="text-[10px] text-muted-foreground">+{(m.roles ?? []).length - 3}</span>
+                        <span className="text-[11.5px] text-muted-foreground">+{(m.roles ?? []).length - 3}</span>
                       )}
-                      {!(m.roles ?? []).length && <span className="text-[10px] text-muted-foreground">—</span>}
+                      {!(m.roles ?? []).length && <span className="text-[11.5px] text-muted-foreground">—</span>}
                     </div>
                   </td>
                   <td className="num text-xs" dir="ltr">
                     {idField || "—"}
-                    {isInd && idField && <div className="text-[9px] text-muted-foreground">هوية</div>}
+                    {isInd && idField && <div className="text-[12px] text-muted-foreground">هوية</div>}
                   </td>
                   <td className="text-xs" dir="ltr">
                     {phoneDisplay ? (
                       <div>
                         <div>{phoneDisplay}</div>
-                        {r.phone2 && <div className="text-[10px] text-muted-foreground">{r.phone2}</div>}
+                        {r.phone2 && <div className="text-[11.5px] text-muted-foreground">{r.phone2}</div>}
                       </div>
                     ) : "—"}
                   </td>
@@ -330,7 +330,7 @@ export default function Contacts() {
                       <a href={`https://wa.me/${r.whatsapp.replace(/\D/g,"")}`} target="_blank" rel="noreferrer" title={r.whatsapp}>
                         <MessageCircle className="h-3.5 w-3.5 text-green-600 mx-auto" />
                       </a>
-                    ) : <span className="text-muted-foreground text-[10px]">—</span>}
+                    ) : <span className="text-muted-foreground text-[11.5px]">—</span>}
                   </td>
                   <td className="text-xs">{r.city || m.primary_address?.city || "—"}</td>
                   <td>

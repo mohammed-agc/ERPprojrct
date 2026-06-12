@@ -42,7 +42,7 @@ export function ColorPicker({ value, onChange, disabled }: Props) {
                   isSel && "bg-primary/10")}>
                 {c.hex && <span className="h-4 w-4 rounded-full border border-border shrink-0" style={{ background: c.hex }} />}
                 <span className="flex-1 truncate">{c.name_ar}</span>
-                {c.name_en && <span className="text-[10px] text-muted-foreground">{c.name_en}</span>}
+                {c.name_en && <span className="text-[11.5px] text-muted-foreground">{c.name_en}</span>}
                 {isSel && <Check className="h-3 w-3 text-primary" />}
               </div>
             );

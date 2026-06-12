@@ -149,7 +149,7 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) 
         <div className="text-sm font-semibold flex items-center gap-2">
           <Wallet className="h-4 w-4 text-primary" /> الربح والخسارة (P&L)
         </div>
-        <div className="flex items-center gap-1.5 text-[11px]">
+        <div className="flex items-center gap-1.5 text-[12px]">
           {pl.net_profit >= 0
             ? <TrendingUp className="h-3.5 w-3.5 text-success" />
             : <TrendingDown className="h-3.5 w-3.5 text-destructive" />}
@@ -179,7 +179,7 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) 
       <div className="mt-3 pt-3 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">حالة المخزون:</span>
-          <Badge variant={status === "sold" ? "default" : "secondary"} className="text-[10px]">
+          <Badge variant={status === "sold" ? "default" : "secondary"} className="text-[11.5px]">
             {status === "sold" ? "مباعة" : status === "available" ? "متوفّرة" : status === "reserved" ? "محجوزة" : status}
           </Badge>
         </div>
@@ -187,7 +187,7 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) 
           <span className="text-muted-foreground">حالة COGS:</span>
           <Badge
             variant="outline"
-            className={`text-[10px] ${
+            className={`text-[11.5px] ${
               cogsStatus.tone === "success"
                 ? "border-success/40 text-success bg-success/5"
                 : cogsStatus.tone === "warning"
@@ -224,7 +224,7 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) 
             <Badge
               key={i}
               variant="outline"
-              className={`text-[10px] ${f.ok ? "border-success/40 text-success bg-success/5" : "border-destructive/40 text-destructive bg-destructive/5"}`}
+              className={`text-[11.5px] ${f.ok ? "border-success/40 text-success bg-success/5" : "border-destructive/40 text-destructive bg-destructive/5"}`}
             >
               {f.ok ? <CheckCircle2 className="h-3 w-3 ml-1" /> : <AlertTriangle className="h-3 w-3 ml-1" />}
               {f.label}
@@ -241,7 +241,7 @@ function Cell({ label, value, accent, muted, danger, tone, icon }:
   const colorCls = tone === "success" ? "text-success" : tone === "destructive" ? "text-destructive" : danger ? "text-destructive" : muted ? "text-muted-foreground" : "";
   return (
     <div className={`rounded-md border p-2 ${accent ? "border-primary/40 bg-primary/5" : "border-border"}`}>
-      <div className="text-[10px] text-muted-foreground flex items-center gap-1">{icon}{label}</div>
+      <div className="text-[11.5px] text-muted-foreground flex items-center gap-1">{icon}{label}</div>
       <div className={`text-sm font-semibold tabular-nums mt-0.5 ${colorCls}`}>{value}</div>
     </div>
   );

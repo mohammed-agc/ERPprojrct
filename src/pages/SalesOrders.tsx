@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -123,7 +123,7 @@ export default function SalesOrders() {
                     className={`w-full text-right px-3 py-2 text-sm border-b border-border last:border-b-0 hover:bg-accent ${custId === c.id ? "bg-accent text-accent-foreground font-medium" : ""}`}
                   >
                     <div>{c.name}</div>
-                    <div className="text-[11px] text-muted-foreground font-mono">{c.code}</div>
+                    <div className="text-[12px] text-muted-foreground font-mono">{c.code}</div>
                   </button>
                 ))}
               </div>

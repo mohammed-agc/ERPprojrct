@@ -73,13 +73,13 @@ export default function Receiving() {
             )}
             {filtered.map(g => (
               <tr key={g.id}>
-                <td className="font-mono text-[11px]">
+                <td className="font-mono text-[12px]">
                   <Link to={`/grn/${g.id}`} className="hover:underline flex items-center gap-1.5">
                     <PackageCheck className="h-3 w-3 text-muted-foreground" />{g.grn_no}
                   </Link>
                 </td>
-                <td className="font-mono text-[11px] text-muted-foreground">{g.shipment_id.slice(0, 8)}</td>
-                <td className="font-mono text-[11px] text-muted-foreground">{g.allocation_id.slice(0, 8)}</td>
+                <td className="font-mono text-[12px] text-muted-foreground">{g.shipment_id.slice(0, 8)}</td>
+                <td className="font-mono text-[12px] text-muted-foreground">{g.allocation_id.slice(0, 8)}</td>
                 <td className="text-xs">{fmtDate(g.received_at)}</td>
                 <td className="text-xs">{g.warehouse ?? "—"}</td>
                 <td><Badge className={GRN_TONE[g.status]}>{GRN_LABEL[g.status]}</Badge></td>
@@ -97,7 +97,7 @@ function Kpi({ label, value, tone }: { label: string; value: number; tone: "prim
     : tone === "destructive" ? "text-destructive" : "text-primary";
   return (
     <div className="border border-border bg-card rounded-lg p-2.5">
-      <div className="text-[10px] text-muted-foreground mb-0.5">{label}</div>
+      <div className="text-[11.5px] text-muted-foreground mb-0.5">{label}</div>
       <div className={`text-xl font-bold num ${c}`}>{value}</div>
     </div>
   );

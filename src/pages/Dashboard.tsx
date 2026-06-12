@@ -45,7 +45,7 @@ export default function Dashboard() {
                 <div>
                   <div className="text-xs text-muted-foreground font-medium">{s.label}</div>
                   <div className="text-2xl font-bold text-foreground mt-1 num">{s.value}</div>
-                  {s.hint && <div className="text-[11px] text-muted-foreground mt-1">{s.hint}</div>}
+                  {s.hint && <div className="text-[12px] text-muted-foreground mt-1">{s.hint}</div>}
                 </div>
                 <div className="h-9 w-9 rounded-md bg-accent text-accent-foreground flex items-center justify-center">
                   <Icon className="h-4 w-4" />

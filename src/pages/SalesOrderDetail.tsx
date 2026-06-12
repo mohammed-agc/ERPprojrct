@@ -598,10 +598,10 @@ export default function SalesOrderDetail() {
                 searchKeys={["name", "code", "vat_number", "phone"] as any}
                 displayValue={(c: any) => c.name}
                 columns={[
-                  { key: "code", header: "الكود", className: "text-[11px]", render: (c: any) => <span dir="ltr" className="num">{c.code}</span> },
+                  { key: "code", header: "الكود", className: "text-[12px]", render: (c: any) => <span dir="ltr" className="num">{c.code}</span> },
                   { key: "name", header: "العميل", className: "font-medium", render: (c: any) => <span>{c.name}</span> },
-                  { key: "vat", header: "الرقم الضريبي", className: "text-[11px]", render: (c: any) => <span dir="ltr" className="num">{c.vat_number || "—"}</span> },
-                  { key: "phone", header: "الجوال", className: "text-[11px]", render: (c: any) => <span dir="ltr" className="num">{c.phone || "—"}</span> },
+                  { key: "vat", header: "الرقم الضريبي", className: "text-[12px]", render: (c: any) => <span dir="ltr" className="num">{c.vat_number || "—"}</span> },
+                  { key: "phone", header: "الجوال", className: "text-[12px]", render: (c: any) => <span dir="ltr" className="num">{c.phone || "—"}</span> },
                   { key: "city", header: "المدينة", render: (c: any) => <span className="text-muted-foreground">{c.city || "—"}</span> },
                 ]}
               />
@@ -610,7 +610,7 @@ export default function SalesOrderDetail() {
               const cust = customers.find((c: any) => c.id === order.customer_id);
               if (!cust) return null;
               return (
-                <div className="mt-2 grid grid-cols-3 gap-1.5 text-[11px] text-muted-foreground bg-muted/30 rounded px-2 py-1.5 border border-border">
+                <div className="mt-2 grid grid-cols-3 gap-1.5 text-[12px] text-muted-foreground bg-muted/30 rounded px-2 py-1.5 border border-border">
                   <div className="flex items-center gap-1 truncate"><Hash className="h-3 w-3 shrink-0" /><span dir="ltr" className="num truncate">{cust.vat_number || "بدون رقم ضريبي"}</span></div>
                   <div className="flex items-center gap-1 truncate"><Phone className="h-3 w-3 shrink-0" /><span dir="ltr" className="num truncate">{cust.phone || "—"}</span></div>
                   <div className="flex items-center gap-1 truncate"><MapPin className="h-3 w-3 shrink-0" /><span className="truncate">{cust.city || "—"}</span></div>
@@ -685,8 +685,8 @@ export default function SalesOrderDetail() {
                       return `${id.vin || "بدون VIN"} · ${id.manufacturer} ${id.model}${trimPart} ${id.year}${id.color ? " · " + id.color : ""}${enginePart}`;
                     }}
                     columns={[
-                      { key: "vin", header: "VIN", className: "text-[11px] font-mono", render: (v: any) => <span dir="ltr" className="num truncate">{v.vin || "—"}</span> },
-                      { key: "engine", header: "المحرك", className: "text-[11px] font-mono", render: (v: any) => <span dir="ltr" className="num truncate">{vehicleIdentity(v).engine || "—"}</span> },
+                      { key: "vin", header: "VIN", className: "text-[12px] font-mono", render: (v: any) => <span dir="ltr" className="num truncate">{v.vin || "—"}</span> },
+                      { key: "engine", header: "المحرك", className: "text-[12px] font-mono", render: (v: any) => <span dir="ltr" className="num truncate">{vehicleIdentity(v).engine || "—"}</span> },
                       { key: "brand", header: "الصانع", className: "font-medium", render: (v: any) => <span>{v.brand}</span> },
                       { key: "model", header: "الموديل", render: (v: any) => <span>{v.model}{vehicleIdentity(v).trim ? <span className="text-muted-foreground"> · {vehicleIdentity(v).trim}</span> : null}</span> },
                       { key: "year", header: "السنة", render: (v: any) => <span className="num">{v.year}</span> },
@@ -697,7 +697,7 @@ export default function SalesOrderDetail() {
                   {veh && (() => {
                     const idv = vehicleIdentity(veh);
                     return (
-                      <div className="flex flex-wrap items-center gap-1 px-2 mt-1 text-[10.5px]">
+                      <div className="flex flex-wrap items-center gap-1 px-2 mt-1 text-[12px]">
                         <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono" dir="ltr">VIN: {idv.vin || "—"}</span>
                         {idv.engine && <span className="px-1.5 py-0.5 rounded bg-success/10 text-success font-mono" dir="ltr">المحرك: {idv.engine}</span>}
                         <span className="px-1.5 py-0.5 rounded bg-muted">الصانع: {idv.manufacturer}</span>
@@ -709,7 +709,7 @@ export default function SalesOrderDetail() {
                     );
                   })()}
                   <textarea
-                    className="erp-input text-[11px] mt-1 w-full leading-snug"
+                    className="erp-input text-[12px] mt-1 w-full leading-snug"
                     rows={2}
                     value={l.description}
                     onChange={e => updateLine(i, { description: e.target.value })}
@@ -735,7 +735,7 @@ export default function SalesOrderDetail() {
                     <NumberCell value={l.discount_input} onChange={v => updateLine(i, { discount_input: v ?? 0 })} min={0} disabled={!canEditLines} />
                   </div>
                   {l.discount_type === "pct" && l.discount_input > 0 && (
-                    <div className="text-[10px] text-muted-foreground px-1 mt-0.5">
+                    <div className="text-[11.5px] text-muted-foreground px-1 mt-0.5">
                       {discountAmount(l).toLocaleString("ar-SA", { minimumFractionDigits: 2 })} ر.س
                     </div>
                   )}
@@ -793,7 +793,7 @@ export default function SalesOrderDetail() {
                     onChange={e => setOverrideReason(e.target.value)}
                     placeholder="مثال: العميل سدّد نقداً خارج النظام / موافقة إدارة عليا..." />
                 </div>
-                <p className="text-[11px] text-muted-foreground">سيُسجّل هذا القرار في سجل التدقيق باسمك وتاريخه.</p>
+                <p className="text-[12px] text-muted-foreground">سيُسجّل هذا القرار في سجل التدقيق باسمك وتاريخه.</p>
               </>
             ) : (
               <div className="text-sm text-muted-foreground bg-muted/40 rounded p-3">

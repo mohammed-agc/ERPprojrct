@@ -289,7 +289,7 @@ function Kpi({
         : "text-foreground";
   return (
     <div className="p-2.5 bg-card border border-border rounded">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="text-[11.5px] uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className={`text-base font-bold mt-0.5 num ${color}`}>{value}</div>
     </div>
   );

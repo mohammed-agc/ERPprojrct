@@ -71,23 +71,23 @@ export function CreditGateBanner({
                   : "حالة الائتمان جيدة"}
               </div>
               {!summary.is_active && (
-                <Badge className="bg-destructive/15 text-destructive border border-destructive/40 text-[10px]">
+                <Badge className="bg-destructive/15 text-destructive border border-destructive/40 text-[11.5px]">
                   حساب موقوف
                 </Badge>
               )}
               {summary.over_limit && (
-                <Badge className="bg-destructive/15 text-destructive border border-destructive/40 text-[10px]">
+                <Badge className="bg-destructive/15 text-destructive border border-destructive/40 text-[11.5px]">
                   تجاوز الحد
                 </Badge>
               )}
               {summary.overdue_balance > 0 && (
-                <Badge className="bg-warning/15 text-warning border border-warning/40 text-[10px]">
+                <Badge className="bg-warning/15 text-warning border border-warning/40 text-[11.5px]">
                   متأخر {summary.max_days_overdue} يوم
                 </Badge>
               )}
             </div>
             <div className="flex items-center gap-1.5">
-              <Button asChild size="sm" variant="ghost" className="h-7 px-2 text-[11px]">
+              <Button asChild size="sm" variant="ghost" className="h-7 px-2 text-[12px]">
                 <Link to={`/ar/${summary.id}`}>
                   <ExternalLink className="h-3 w-3 ml-1" /> كشف الحساب
                 </Link>
@@ -96,7 +96,7 @@ export function CreditGateBanner({
           </div>
 
           {!compact && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-[11px]">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-[12px]">
               <Stat label="الحد الائتماني" value={fmtSAR(summary.credit_limit)} />
               <Stat label="المستخدم" value={fmtSAR(summary.utilized)} tone="warning" />
               <Stat
@@ -115,7 +115,7 @@ export function CreditGateBanner({
           {warnings.length > 0 && (
             <ul className="mt-2 space-y-1">
               {warnings.map((w, i) => (
-                <li key={i} className="text-[11px] flex items-start gap-1.5">
+                <li key={i} className="text-[12px] flex items-start gap-1.5">
                   <AlertTriangle
                     className={`h-3 w-3 mt-0.5 shrink-0 ${
                       w.severity === "critical" ? "text-destructive" : "text-warning"
@@ -128,7 +128,7 @@ export function CreditGateBanner({
           )}
 
           {ok && warnings.length === 0 && (
-            <div className="text-[11px] text-muted-foreground mt-1">
+            <div className="text-[12px] text-muted-foreground mt-1">
               لا توجد تحذيرات — يمكن إصدار {documentType === "sales_order" ? "أمر البيع" : documentType === "invoice" ? "الفاتورة" : "التسليم"} بأمان.
             </div>
           )}
@@ -147,7 +147,7 @@ function Stat({ label, value, tone = "default" }: {
     tone === "destructive" ? "text-destructive" : "text-foreground";
   return (
     <div className="bg-background/60 border border-border rounded px-2 py-1.5">
-      <div className="text-[10px] text-muted-foreground">{label}</div>
+      <div className="text-[11.5px] text-muted-foreground">{label}</div>
       <div className={`font-semibold num ${c}`}>{value}</div>
     </div>
   );

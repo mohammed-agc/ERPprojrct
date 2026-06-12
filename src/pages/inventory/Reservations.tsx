@@ -87,13 +87,13 @@ export default function Reservations() {
               const expiringSoon = r.status === "active" && new Date(r.expires_at).getTime() - Date.now() < 86_400_000 * 2;
               return (
                 <tr key={r.id}>
-                  <td className="font-mono text-[11px]"><div className="flex items-center gap-1.5"><CalendarCheck className="h-3 w-3 text-muted-foreground" />{r.code}</div></td>
+                  <td className="font-mono text-[12px]"><div className="flex items-center gap-1.5"><CalendarCheck className="h-3 w-3 text-muted-foreground" />{r.code}</div></td>
                   <td className="text-xs">{r.kind === "vehicle" ? "مركبة" : "قطعة"}</td>
                   <td className="text-xs">{unitLabel(r)}</td>
                   <td className="num text-xs">{r.qty}</td>
                   <td className="text-xs">{r.customer}</td>
                   <td className="text-xs">{r.branch}</td>
-                  <td className="font-mono text-[11px] text-muted-foreground">{r.order_ref ?? "—"}</td>
+                  <td className="font-mono text-[12px] text-muted-foreground">{r.order_ref ?? "—"}</td>
                   <td className="text-xs">{fmtDate(r.created_at)}</td>
                   <td className={`text-xs ${expiringSoon ? "text-warning font-semibold" : ""}`}>{fmtDate(r.expires_at)}</td>
                   <td><Badge className={RES_TONE[r.status]}>{RES_LABEL[r.status]}</Badge></td>

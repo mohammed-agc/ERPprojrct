@@ -74,12 +74,12 @@ export default function PurchaseInvoices() {
               const remaining = Number(inv.total) - Number(inv.paid_amount);
               return (
                 <tr key={inv.id}>
-                  <td className="font-mono text-[11px]">
+                  <td className="font-mono text-[12px]">
                     <Link to={`/purchasing/invoices/${inv.id}`} className="text-primary hover:underline flex items-center gap-1">
                       <Receipt className="h-3 w-3" />{inv.code}
                     </Link>
                   </td>
-                  <td className="font-mono text-[11px]" dir="ltr">{inv.invoice_no ?? "—"}</td>
+                  <td className="font-mono text-[12px]" dir="ltr">{inv.invoice_no ?? "—"}</td>
                   <td className="text-xs">{inv.supplier_name ?? "—"}</td>
                   <td className="text-xs">{fmtDate(inv.invoice_date)}</td>
                   <td className="num text-xs font-semibold">{fmtSAR(inv.total)}</td>

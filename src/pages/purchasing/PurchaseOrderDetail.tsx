@@ -51,21 +51,21 @@ export default function PurchaseOrderDetail() {
               <Badge className={PO_STATUS_TONE[po.status]}>{PO_STATUS_LABEL[po.status]}</Badge>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-border">
-              <div><div className="text-[10px] text-muted-foreground">التاريخ</div><div>{fmtDate(po.order_date)}</div></div>
-              <div><div className="text-[10px] text-muted-foreground">الوصول المتوقع</div><div>{fmtDate(po.expected_delivery)}</div></div>
-              <div><div className="text-[10px] text-muted-foreground">عدد البنود</div><div>{lines.length}</div></div>
-              <div><div className="text-[10px] text-muted-foreground">الإجمالي</div><div className="font-bold">{fmtSAR(Number(po.total))}</div></div>
+              <div><div className="text-[11.5px] text-muted-foreground">التاريخ</div><div>{fmtDate(po.order_date)}</div></div>
+              <div><div className="text-[11.5px] text-muted-foreground">الوصول المتوقع</div><div>{fmtDate(po.expected_delivery)}</div></div>
+              <div><div className="text-[11.5px] text-muted-foreground">عدد البنود</div><div>{lines.length}</div></div>
+              <div><div className="text-[11.5px] text-muted-foreground">الإجمالي</div><div className="font-bold">{fmtSAR(Number(po.total))}</div></div>
             </div>
             <div className="grid grid-cols-3 gap-3 pt-2 border-t border-border">
-              <div><div className="text-[10px] text-muted-foreground">الفرعي</div><div className="num">{fmtSAR(Number(po.subtotal))}</div></div>
-              <div><div className="text-[10px] text-muted-foreground">الضريبة</div><div className="num">{fmtSAR(Number(po.vat_amount))}</div></div>
-              <div><div className="text-[10px] text-muted-foreground">طلب الشراء</div>
+              <div><div className="text-[11.5px] text-muted-foreground">الفرعي</div><div className="num">{fmtSAR(Number(po.subtotal))}</div></div>
+              <div><div className="text-[11.5px] text-muted-foreground">الضريبة</div><div className="num">{fmtSAR(Number(po.vat_amount))}</div></div>
+              <div><div className="text-[11.5px] text-muted-foreground">طلب الشراء</div>
                 <div>{po.pr_id ? <Link to={`/purchasing/requests/${po.pr_id}`} className="text-primary hover:underline">عرض</Link> : "—"}</div>
               </div>
             </div>
             {po.notes && (
               <div>
-                <div className="text-[10px] text-muted-foreground mb-1">ملاحظات</div>
+                <div className="text-[11.5px] text-muted-foreground mb-1">ملاحظات</div>
                 <div className="bg-muted/30 rounded p-2">{po.notes}</div>
               </div>
             )}
@@ -112,7 +112,7 @@ export default function PurchaseOrderDetail() {
               onClick={() => onStatus("cancelled", "تم إلغاء أمر الشراء")}>إلغاء</Button>
           )}
           {po.acknowledged_at && (
-            <div className="text-[11px] text-muted-foreground bg-muted/30 rounded p-2">
+            <div className="text-[12px] text-muted-foreground bg-muted/30 rounded p-2">
               أكّده المورد في {fmtDate(po.acknowledged_at)}
             </div>
           )}

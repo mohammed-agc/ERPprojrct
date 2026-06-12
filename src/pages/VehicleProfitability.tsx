@@ -410,35 +410,35 @@ export default function VehicleProfitability() {
               <tr key={r.id} className="border-t hover:bg-muted/30">
                 <td className="p-2">
                   <div className="font-medium">{r.brand} {r.model} {r.year}</div>
-                  <div className="text-[10px] text-muted-foreground font-mono">{r.code}</div>
+                  <div className="text-[11.5px] text-muted-foreground font-mono">{r.code}</div>
                 </td>
                 <td className="p-2 font-mono text-xs">{r.vin || <span className="text-muted-foreground">—</span>}</td>
                 <td className="p-2">
-                  <Badge variant={r.status === "sold" ? "default" : "secondary"} className="text-[10px]">
+                  <Badge variant={r.status === "sold" ? "default" : "secondary"} className="text-[11.5px]">
                     {r.status === "sold" ? "مباعة" : r.status === "available" ? "متوفّرة" : r.status}
                   </Badge>
                 </td>
                 <td className="p-2 text-right tabular-nums text-xs">
                   {r.days_in_stock !== null ? `${r.days_in_stock} يوم` : "—"}
-                  {r.sold_at && <div className="text-[10px] text-muted-foreground">بيع: {r.sold_at}</div>}
+                  {r.sold_at && <div className="text-[11.5px] text-muted-foreground">بيع: {r.sold_at}</div>}
                 </td>
                 <td className="p-2 text-left tabular-nums">
                   {fmtSAR(r.net_revenue)}
                   {r.credited > 0 && (
-                    <div className="text-[10px] text-destructive">−{fmtSAR(r.credited)} مرتجع</div>
+                    <div className="text-[11.5px] text-destructive">−{fmtSAR(r.credited)} مرتجع</div>
                   )}
                 </td>
                 <td className="p-2 text-left tabular-nums text-muted-foreground">{fmtSAR(r.landed_cost)}</td>
                 <td className="p-2">
                   <div className="flex flex-col items-end gap-0.5">
-                    <Badge variant="outline" className={`text-[10px] ${COGS_STATUS_TONE[r.cogs_status]}`}>
+                    <Badge variant="outline" className={`text-[11.5px] ${COGS_STATUS_TONE[r.cogs_status]}`}>
                       {COGS_STATUS_LABEL[r.cogs_status]}
                     </Badge>
-                    <div className="text-[10px] tabular-nums text-muted-foreground">
+                    <div className="text-[11.5px] tabular-nums text-muted-foreground">
                       {r.cogs_posted ? fmtSAR(r.cogs_amount) : "—"}
                     </div>
                     {r.cogs_je_no && (
-                      <div className="text-[10px] font-mono text-muted-foreground">{r.cogs_je_no}</div>
+                      <div className="text-[11.5px] font-mono text-muted-foreground">{r.cogs_je_no}</div>
                     )}
                   </div>
                 </td>
@@ -456,11 +456,11 @@ export default function VehicleProfitability() {
                 </td>
                 <td className="p-2">
                   {r.flags.length === 0 ? (
-                    <Badge variant="outline" className="text-[10px] border-success/40 text-success">سليم</Badge>
+                    <Badge variant="outline" className="text-[11.5px] border-success/40 text-success">سليم</Badge>
                   ) : (
                     <div className="flex flex-wrap gap-1 justify-end max-w-[180px]">
                       {r.flags.map((f, i) => (
-                        <Badge key={i} variant="outline" className="text-[10px] border-destructive/40 text-destructive bg-destructive/5">{f}</Badge>
+                        <Badge key={i} variant="outline" className="text-[11.5px] border-destructive/40 text-destructive bg-destructive/5">{f}</Badge>
                       ))}
                     </div>
                   )}
@@ -478,7 +478,7 @@ function KPI({ label, value, tone }: { label: string; value: string; tone?: "goo
   const cls = tone === "good" ? "border-success/40 bg-success/5" : tone === "bad" ? "border-destructive/40 bg-destructive/5" : "border-border";
   return (
     <div className={`bg-card border rounded-md p-3 ${cls}`}>
-      <div className="text-[11px] text-muted-foreground font-medium">{label}</div>
+      <div className="text-[12px] text-muted-foreground font-medium">{label}</div>
       <div className="text-lg font-bold mt-1 tabular-nums">{value}</div>
     </div>
   );

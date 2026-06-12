@@ -251,7 +251,7 @@ export function PaymentDialog({
               <CreditTile label="الفاتورة الحالية" value={outstanding} tone="primary" />
             </div>
             {supplierCredit.credit_expiry && (
-              <div className="text-[11px] text-muted-foreground">
+              <div className="text-[12px] text-muted-foreground">
                 انتهاء الاتفاقية: <span dir="ltr" className="tabular-nums">{supplierCredit.credit_expiry}</span>
               </div>
             )}
@@ -286,7 +286,7 @@ export function PaymentDialog({
           <SummaryTile label="المدفوع سابقًا" value={alreadyPaid} />
           <SummaryTile label="المتبقي" value={outstanding} highlight />
           <div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wide">الحالة</div>
+            <div className="text-[11.5px] text-muted-foreground uppercase tracking-wide">الحالة</div>
             <div className="mt-1">{statusBadge}</div>
           </div>
         </div>
@@ -346,7 +346,7 @@ export function PaymentDialog({
                       setCreditAmount(c);
                       setCashAmount(Math.max(0, outstanding - c));
                     }}
-                    className="text-[10px] text-primary hover:underline"
+                    className="text-[11.5px] text-primary hover:underline"
                   >
                     تعبئة المتاح
                   </button>
@@ -361,7 +361,7 @@ export function PaymentDialog({
                   placeholder="0.00"
                 />
                 {mixedCreditOver && (
-                  <p className="text-[10px] text-destructive">يتجاوز الائتمان المتاح ({fmt(creditRemaining)})</p>
+                  <p className="text-[11.5px] text-destructive">يتجاوز الائتمان المتاح ({fmt(creditRemaining)})</p>
                 )}
               </div>
 
@@ -411,7 +411,7 @@ export function PaymentDialog({
                   <button
                     type="button"
                     onClick={() => setAmount(method === "supplier_credit" ? Math.min(creditRemaining, outstanding) : outstanding)}
-                    className="text-[10px] text-primary hover:underline"
+                    className="text-[11.5px] text-primary hover:underline"
                   >
                     {method === "supplier_credit" ? "أقصى ائتمان متاح" : "المبلغ الكامل"}
                   </button>
@@ -423,10 +423,10 @@ export function PaymentDialog({
                   placeholder="0.00"
                 />
                 {overpay && (
-                  <p className="text-[10px] text-destructive">المبلغ يتجاوز المستحق</p>
+                  <p className="text-[11.5px] text-destructive">المبلغ يتجاوز المستحق</p>
                 )}
                 {method === "supplier_credit" && (amount ?? 0) > creditRemaining + 0.005 && (
-                  <p className="text-[10px] text-destructive">المبلغ يتجاوز الائتمان المتاح ({fmt(creditRemaining)})</p>
+                  <p className="text-[11.5px] text-destructive">المبلغ يتجاوز الائتمان المتاح ({fmt(creditRemaining)})</p>
                 )}
               </div>
 
@@ -505,7 +505,7 @@ export function PaymentDialog({
 function SummaryTile({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) {
   return (
     <div>
-      <div className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</div>
+      <div className="text-[11.5px] text-muted-foreground uppercase tracking-wide">{label}</div>
       <div className={`text-lg font-bold tabular-nums ${highlight ? "text-primary" : ""}`} dir="ltr">{fmt(value)}</div>
     </div>
   );
@@ -518,7 +518,7 @@ function CreditTile({ label, value, tone }: { label: string; value: number; tone
     tone === "primary" ? "text-primary" : "";
   return (
     <div className="bg-card border border-border rounded p-2">
-      <div className="text-[10px] text-muted-foreground">{label}</div>
+      <div className="text-[11.5px] text-muted-foreground">{label}</div>
       <div className={`text-base font-bold tabular-nums num ${colorCls}`} dir="ltr">{fmt(value)}</div>
     </div>
   );

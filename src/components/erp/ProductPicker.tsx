@@ -69,7 +69,7 @@ export function ProductPicker({ value, onChange, category, disabled, placeholder
             placeholder="بحث عن منتج..." className="flex-1 bg-transparent outline-none text-xs" />
         </div>
         {!category && (
-          <div className="flex gap-1 px-2 py-1.5 border-b border-border text-[11px]">
+          <div className="flex gap-1 px-2 py-1.5 border-b border-border text-[12px]">
             {(["all", "vehicle", "part", "service"] as const).map(c => (
               <button key={c} onClick={() => setActiveCat(c)}
                 className={cn("px-2 py-0.5 rounded", activeCat === c ? "bg-primary text-primary-foreground" : "hover:bg-accent")}>
@@ -96,7 +96,7 @@ export function ProductPicker({ value, onChange, category, disabled, placeholder
                   <span className="font-mono text-muted-foreground">{p.code}</span>
                   <span className="font-semibold truncate">{p.name}</span>
                 </div>
-                <div className="flex gap-3 text-[10px] text-muted-foreground mt-0.5 pr-5">
+                <div className="flex gap-3 text-[11.5px] text-muted-foreground mt-0.5 pr-5">
                   <span className="px-1 rounded bg-muted">{PRODUCT_CATEGORY_LABEL[p.category]}</span>
                   {p.brand && <span>{p.brand}</span>}
                   {p.year && <span>{p.year}</span>}

@@ -30,7 +30,7 @@ export function FavoritesMenu({ currentLabel }: { currentLabel?: string }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
-        <DropdownMenuLabel className="text-[11px]">المفضلات والشاشات المثبتة</DropdownMenuLabel>
+        <DropdownMenuLabel className="text-[12px]">المفضلات والشاشات المثبتة</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={toggle} className="gap-2 text-xs">
           {isFav ? <StarOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
@@ -38,7 +38,7 @@ export function FavoritesMenu({ currentLabel }: { currentLabel?: string }) {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         {favs.length === 0 ? (
-          <div className="px-3 py-4 text-[11px] text-muted-foreground text-center">لا توجد شاشات مثبتة</div>
+          <div className="px-3 py-4 text-[12px] text-muted-foreground text-center">لا توجد شاشات مثبتة</div>
         ) : (
           favs.map(f => (
             <DropdownMenuItem key={f.id} onClick={() => navigate(f.to)} className="gap-2 text-xs">

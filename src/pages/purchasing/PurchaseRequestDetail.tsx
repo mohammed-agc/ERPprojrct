@@ -58,20 +58,20 @@ export default function PurchaseRequestDetail() {
               <Badge className={PR_STATUS_TONE[pr.status]}>{PR_STATUS_LABEL[pr.status]}</Badge>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-border">
-              <div><div className="text-[10px] text-muted-foreground">التاريخ</div><div>{fmtDate(pr.request_date)}</div></div>
-              <div><div className="text-[10px] text-muted-foreground">عدد البنود</div><div>{lines.length}</div></div>
-              <div><div className="text-[10px] text-muted-foreground">إجمالي تقديري</div><div className="font-bold">{fmtSAR(Number(pr.total_estimated))}</div></div>
-              <div><div className="text-[10px] text-muted-foreground">آخر تحديث</div><div>{fmtDate(pr.updated_at)}</div></div>
+              <div><div className="text-[11.5px] text-muted-foreground">التاريخ</div><div>{fmtDate(pr.request_date)}</div></div>
+              <div><div className="text-[11.5px] text-muted-foreground">عدد البنود</div><div>{lines.length}</div></div>
+              <div><div className="text-[11.5px] text-muted-foreground">إجمالي تقديري</div><div className="font-bold">{fmtSAR(Number(pr.total_estimated))}</div></div>
+              <div><div className="text-[11.5px] text-muted-foreground">آخر تحديث</div><div>{fmtDate(pr.updated_at)}</div></div>
             </div>
             {pr.notes && (
               <div>
-                <div className="text-[10px] text-muted-foreground mb-1">ملاحظات</div>
+                <div className="text-[11.5px] text-muted-foreground mb-1">ملاحظات</div>
                 <div className="bg-muted/30 rounded p-2">{pr.notes}</div>
               </div>
             )}
             {pr.rejected_reason && (
               <div>
-                <div className="text-[10px] text-destructive mb-1">سبب الرفض</div>
+                <div className="text-[11.5px] text-destructive mb-1">سبب الرفض</div>
                 <div className="bg-destructive/5 border border-destructive/30 rounded p-2">{pr.rejected_reason}</div>
               </div>
             )}

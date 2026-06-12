@@ -79,7 +79,7 @@ export default function YearEndClosing() {
             <div className="border rounded-lg p-3 bg-card">
               <div className="text-xs text-muted-foreground">السنة المالية</div>
               <div className="font-bold text-xl">{fy.year}</div>
-              <Badge variant="outline" className={cn("text-[10px] mt-1", periodStatusTone[fy.status])}>
+              <Badge variant="outline" className={cn("text-[11.5px] mt-1", periodStatusTone[fy.status])}>
                 {periodStatusLabel[fy.status]}
               </Badge>
             </div>

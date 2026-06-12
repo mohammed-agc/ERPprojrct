@@ -67,21 +67,21 @@ export default function CashFlow() {
           {/* Summary */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
             <div className="bg-card border rounded-md p-3">
-              <div className="text-[11px] text-muted-foreground">الرصيد الافتتاحي</div>
+              <div className="text-[12px] text-muted-foreground">الرصيد الافتتاحي</div>
               <div className="text-lg font-bold">{fmtSAR(report.opening)}</div>
             </div>
             <div className="bg-emerald-50 border border-emerald-200 rounded-md p-3">
-              <div className="text-[11px] text-emerald-700">إجمالي الداخل</div>
+              <div className="text-[12px] text-emerald-700">إجمالي الداخل</div>
               <div className="text-lg font-bold text-emerald-700">{fmtSAR(totalIn)}</div>
             </div>
             <div className="bg-rose-50 border border-rose-200 rounded-md p-3">
-              <div className="text-[11px] text-rose-700">إجمالي الخارج</div>
+              <div className="text-[12px] text-rose-700">إجمالي الخارج</div>
               <div className="text-lg font-bold text-rose-700">{fmtSAR(totalOut)}</div>
             </div>
             <div className="bg-card border rounded-md p-3">
-              <div className="text-[11px] text-muted-foreground">الرصيد الختامي</div>
+              <div className="text-[12px] text-muted-foreground">الرصيد الختامي</div>
               <div className={`text-lg font-bold ${report.closing < 0 ? "text-destructive" : "text-success"}`}>{fmtSAR(report.closing)}</div>
-              <Badge variant="secondary" className="mt-1 text-[10px]">صافي {fmtSAR(report.net_change)}</Badge>
+              <Badge variant="secondary" className="mt-1 text-[11.5px]">صافي {fmtSAR(report.net_change)}</Badge>
             </div>
           </div>
 

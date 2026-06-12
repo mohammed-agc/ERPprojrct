@@ -88,27 +88,27 @@ export default function AllocationDetail() {
       {supplier && (
         <div className="border border-primary/30 bg-primary/5 rounded-md p-3 grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
           <div>
-            <div className="text-[10px] text-muted-foreground">المورد</div>
+            <div className="text-[11.5px] text-muted-foreground">المورد</div>
             <div className="font-semibold text-sm">{supplier.name}</div>
-            <div className="text-[10px] text-muted-foreground font-mono">{supplier.code}</div>
+            <div className="text-[11.5px] text-muted-foreground font-mono">{supplier.code}</div>
           </div>
           <div>
-            <div className="text-[10px] text-muted-foreground">أمر الشراء</div>
+            <div className="text-[11.5px] text-muted-foreground">أمر الشراء</div>
             {po
               ? <Link to={`/purchasing/orders/${po.id}`} className="font-mono font-semibold text-primary hover:underline whitespace-nowrap">{po.po_no}</Link>
               : <div>—</div>}
-            <div className="text-[10px] text-muted-foreground">{po ? fmtDate(po.created_at) : "—"}</div>
+            <div className="text-[11.5px] text-muted-foreground">{po ? fmtDate(po.created_at) : "—"}</div>
           </div>
           <div>
-            <div className="text-[10px] text-muted-foreground">التسليم المتوقع</div>
+            <div className="text-[11.5px] text-muted-foreground">التسليم المتوقع</div>
             <div>{fmtDate(po?.expected_delivery)}</div>
           </div>
           <div>
-            <div className="text-[10px] text-muted-foreground">عدد المركبات</div>
+            <div className="text-[11.5px] text-muted-foreground">عدد المركبات</div>
             <div className="num font-bold">{lines.length}</div>
           </div>
           <div>
-            <div className="text-[10px] text-muted-foreground">إجمالي تقديري</div>
+            <div className="text-[11.5px] text-muted-foreground">إجمالي تقديري</div>
             <div className="num font-bold">
               {lines.reduce((s, l) => s + (Number(l.unit_cost) || 0), 0).toLocaleString("ar-SA")} ر.س
             </div>
@@ -142,8 +142,8 @@ export default function AllocationDetail() {
                     <td className="text-xs">{l.trim || "—"}</td>
                     <td className="text-xs num">{l.year ?? "—"}</td>
                     <td className="text-xs">{l.color ?? "—"}</td>
-                    <td className="font-mono text-[11px]">{l.vin}</td>
-                    <td className="font-mono text-[11px]">{l.engine_no}</td>
+                    <td className="font-mono text-[12px]">{l.vin}</td>
+                    <td className="font-mono text-[12px]">{l.engine_no}</td>
                     <td className="text-xs num">{l.unit_cost ? Number(l.unit_cost).toLocaleString("ar-SA") : "—"}</td>
                     <td><Badge className={ALC_VSTATUS_TONE[l.status]}>{ALC_VSTATUS_LABEL[l.status]}</Badge></td>
                   </tr>
@@ -158,12 +158,12 @@ export default function AllocationDetail() {
                 <div className="font-semibold text-sm">وثيقة تأكيد التخصيص</div>
                 <Link to={`/purchasing/allocation-confirmations/${cc.id}`} className="font-mono text-primary hover:underline">{cc.conf_no}</Link>
               </div>
-              <div className="grid grid-cols-3 gap-2 text-[11px]">
+              <div className="grid grid-cols-3 gap-2 text-[12px]">
                 <div><span className="text-muted-foreground">تاريخ التخصيص:</span> {fmtDate(cc.allocation_date)}</div>
                 <div><span className="text-muted-foreground">عدد المركبات:</span> {cc.vehicle_count}</div>
                 <div><span className="text-muted-foreground">الفاتورة:</span> {cc.purchase_invoice_id ? "مرتبطة" : "—"}</div>
               </div>
-              {cc.notes && <div className="mt-2 text-[11px] text-muted-foreground">{cc.notes}</div>}
+              {cc.notes && <div className="mt-2 text-[12px] text-muted-foreground">{cc.notes}</div>}
             </div>
           )}
         </div>

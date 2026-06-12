@@ -284,7 +284,7 @@ export default function QuotationNew() {
                             onChange={e => updateLine(i, { discount: Number(e.target.value) })} />
                         </div>
                         {discAmt > 0 && l.discount_type === "pct" && (
-                          <div className="text-[10px] text-muted-foreground px-1 mt-0.5">{fmtSAR(discAmt)} ر.س</div>
+                          <div className="text-[11.5px] text-muted-foreground px-1 mt-0.5">{fmtSAR(discAmt)} ر.س</div>
                         )}
                       </td>
                       <td className="px-2 py-1">

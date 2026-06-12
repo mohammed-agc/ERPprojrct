@@ -41,7 +41,7 @@ export default function CostAllocation() {
                 <div>
                   <div className="flex items-center gap-2">
                     <div className="font-semibold">{r.name_ar}</div>
-                    <Badge variant={r.is_active ? "default" : "secondary"} className="text-[10px]">
+                    <Badge variant={r.is_active ? "default" : "secondary"} className="text-[11.5px]">
                       {r.is_active ? "نشط" : "غير مفعّل"}
                     </Badge>
                   </div>
@@ -49,7 +49,7 @@ export default function CostAllocation() {
                     طريقة التوزيع: <span className="font-medium">{methodLabel[r.method]}</span>
                   </div>
                 </div>
-                <Badge variant="outline" className="text-[10px]">
+                <Badge variant="outline" className="text-[11.5px]">
                   {r.targets.length} مركز مستهدف
                 </Badge>
               </div>
@@ -69,7 +69,7 @@ export default function CostAllocation() {
                   return (
                     <div key={t.center_id} className="flex items-center gap-3">
                       <div className="w-44 text-sm truncate">
-                        <span className="font-mono text-[10px] text-muted-foreground ml-1">{codeOf(t.center_id)}</span>
+                        <span className="font-mono text-[11.5px] text-muted-foreground ml-1">{codeOf(t.center_id)}</span>
                         {nameOf(t.center_id)}
                       </div>
                       <div className="flex-1 h-3 bg-muted rounded overflow-hidden">

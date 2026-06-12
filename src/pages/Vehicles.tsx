@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -357,7 +357,7 @@ export default function Vehicles() {
                   <td className="font-medium">{r.name}</td>
                   <td className="text-muted-foreground">{r.brand} {r.model}{r._meta.trim ? ` · ${r._meta.trim}` : ""}</td>
                   <td className="num">{r.year}</td>
-                  <td className="font-mono text-[11px]" dir="ltr">{r.vin || "—"}</td>
+                  <td className="font-mono text-[12px]" dir="ltr">{r.vin || "—"}</td>
                   <td className="text-xs">{r._meta.branch || "—"}</td>
                   <td>{r.color || "—"}</td>
                   <td className="num text-left font-semibold">{Number(r.sale_price).toLocaleString("ar-SA")}</td>
@@ -365,10 +365,10 @@ export default function Vehicles() {
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <Badge className={VEHICLE_STATUS_CLASS[eff]}>{VEHICLE_STATUS_LABEL[eff]}</Badge>
                       {eff === "reserved" && r._meta.reservation?.customer_name && (
-                        <span className="text-[10px] text-muted-foreground">{r._meta.reservation.customer_name}</span>
+                        <span className="text-[11.5px] text-muted-foreground">{r._meta.reservation.customer_name}</span>
                       )}
                       {(expiringSoon || expired) && (
-                        <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium ${expired ? "text-destructive" : "text-warning"}`}>
+                        <span className={`inline-flex items-center gap-0.5 text-[11.5px] font-medium ${expired ? "text-destructive" : "text-warning"}`}>
                           <AlertTriangle className="h-3 w-3" />
                           {expired ? "منتهي" : `${r._daysLeft}ي`}
                         </span>
@@ -404,7 +404,7 @@ function KpiCard({
         <Icon className="h-4 w-4" />
       </div>
       <div>
-        <div className="text-[11px] text-muted-foreground">{label}</div>
+        <div className="text-[12px] text-muted-foreground">{label}</div>
         <div className="text-lg font-semibold leading-tight">{value.toLocaleString("ar-SA")}</div>
       </div>
     </div>

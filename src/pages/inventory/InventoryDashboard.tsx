@@ -53,7 +53,7 @@ export default function InventoryDashboard() {
       </div>
 
       {/* Vehicle KPIs */}
-      <div className="text-[11px] font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+      <div className="text-[12px] font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
         <Car className="h-3.5 w-3.5" /> مخزون المركبات
       </div>
       <div className="grid grid-cols-6 gap-2 mb-4">
@@ -72,7 +72,7 @@ export default function InventoryDashboard() {
       </div>
 
       {/* Parts KPIs */}
-      <div className="text-[11px] font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+      <div className="text-[12px] font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
         <Package className="h-3.5 w-3.5" /> مخزون قطع الغيار
       </div>
       <div className="grid grid-cols-4 gap-2 mb-6">
@@ -94,7 +94,7 @@ export default function InventoryDashboard() {
             <div className="space-y-2">
               {k.occupancy.map(o => (
                 <Link key={o.id} to="/inventory/warehouses" className="block hover:bg-muted/40 rounded p-1.5 -m-1.5 transition-colors">
-                  <div className="flex items-center justify-between text-[11px] mb-1">
+                  <div className="flex items-center justify-between text-[12px] mb-1">
                     <span className="truncate">{o.name}</span>
                     <span className="text-muted-foreground">{o.vCount} مركبة · {o.pCount} صنف</span>
                   </div>
@@ -120,7 +120,7 @@ export default function InventoryDashboard() {
                 ? <tr><td className="text-center text-muted-foreground py-3">—</td></tr>
                 : k.slowVehicles.map(v => (
                   <tr key={v.id}>
-                    <td className="font-mono text-[10px] py-1">{v.vin.slice(-6)}</td>
+                    <td className="font-mono text-[11.5px] py-1">{v.vin.slice(-6)}</td>
                     <td>{v.make} {v.model} <span className="text-muted-foreground">{v.year}</span></td>
                     <td className="text-yellow-600">{v.aging_days} يوم</td>
                   </tr>
@@ -136,7 +136,7 @@ export default function InventoryDashboard() {
                 ? <tr><td className="text-center text-muted-foreground py-3">—</td></tr>
                 : k.fastParts.map(({ part, qty }) => (
                   <tr key={part?.id}>
-                    <td className="font-mono text-[10px] py-1">{part?.sku}</td>
+                    <td className="font-mono text-[11.5px] py-1">{part?.sku}</td>
                     <td>{part?.description}</td>
                     <td className="text-green-600">{qty} حركة</td>
                   </tr>
@@ -164,7 +164,7 @@ function Kpi({ label, value, tone, icon: Icon }: {
           : "text-muted-foreground";
   return (
     <div className="border border-border bg-card rounded-lg p-2.5">
-      <div className="text-[10px] text-muted-foreground mb-0.5 flex items-center gap-1">
+      <div className="text-[11.5px] text-muted-foreground mb-0.5 flex items-center gap-1">
         {Icon && <Icon className="h-3 w-3" />} {label}
       </div>
       <div className={`text-xl font-bold tabular-nums ${c}`}>{value}</div>
@@ -185,7 +185,7 @@ function BigKpi({ label, value, icon: Icon, tone }: {
   return (
     <div className="border border-border bg-card rounded-lg p-3 flex items-center justify-between">
       <div>
-        <div className="text-[10px] text-muted-foreground mb-0.5">{label}</div>
+        <div className="text-[11.5px] text-muted-foreground mb-0.5">{label}</div>
         <div className={`text-lg font-bold tabular-nums ${c}`}>{value}</div>
       </div>
       <Icon className={`h-6 w-6 ${c}`} />

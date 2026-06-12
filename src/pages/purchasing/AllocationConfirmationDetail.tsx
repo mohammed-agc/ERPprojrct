@@ -40,13 +40,13 @@ export default function AllocationConfirmationDetail() {
             <div><span className="text-muted-foreground">تاريخ التخصيص:</span> {fmtDate(cc.allocation_date)}</div>
             <div><span className="text-muted-foreground">عدد المركبات:</span> <span className="font-semibold">{cc.vehicle_count}</span></div>
             <div className="col-span-2"><span className="text-muted-foreground">الفاتورة المرتبطة:</span> {cc.purchase_invoice_id ? <span className="text-success">مرتبطة</span> : <span className="text-muted-foreground">لم تُربط بعد</span>}</div>
-            {cc.notes && <div className="col-span-2 text-muted-foreground text-[11px] pt-1 border-t border-border mt-1">{cc.notes}</div>}
+            {cc.notes && <div className="col-span-2 text-muted-foreground text-[12px] pt-1 border-t border-border mt-1">{cc.notes}</div>}
           </div>
           <div className="bg-card border border-border rounded-lg overflow-hidden">
             <div className="px-3 py-2 border-b border-border bg-muted/40 font-semibold text-sm">قائمة VIN</div>
             <ul className="divide-y divide-border">
               {cc.vin_list.map((v, i) => (
-                <li key={i} className="px-3 py-1.5 font-mono text-[11px]">{v}</li>
+                <li key={i} className="px-3 py-1.5 font-mono text-[12px]">{v}</li>
               ))}
             </ul>
           </div>

@@ -52,14 +52,14 @@ export function ShortcutsDialog() {
           <div className="space-y-4 max-h-[60vh] overflow-auto">
             {Object.entries(groups).map(([group, items]) => (
               <div key={group}>
-                <div className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">{group}</div>
+                <div className="text-[11.5px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">{group}</div>
                 <ul className="space-y-1">
                   {items.map((s, i) => (
                     <li key={i} className="flex items-center justify-between text-xs py-1.5 px-2 rounded hover:bg-muted/40">
                       <span>{s.label}</span>
                       <span className="flex items-center gap-1">
                         {s.keys.map(k => (
-                          <kbd key={k} className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded border bg-muted text-[10px] font-mono font-semibold">
+                          <kbd key={k} className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded border bg-muted text-[11.5px] font-mono font-semibold">
                             {k}
                           </kbd>
                         ))}

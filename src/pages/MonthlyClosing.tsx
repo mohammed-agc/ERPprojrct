@@ -84,7 +84,7 @@ export default function MonthlyClosing() {
             <div className="border rounded-lg p-3 bg-card">
               <div className="text-xs text-muted-foreground">الفترة</div>
               <div className="font-bold text-lg">{monthsLabel[current.month - 1]} {current.year}</div>
-              <Badge variant="outline" className={cn("text-[10px] mt-1", periodStatusTone[current.status])}>
+              <Badge variant="outline" className={cn("text-[11.5px] mt-1", periodStatusTone[current.status])}>
                 {periodStatusLabel[current.status]}
               </Badge>
             </div>
@@ -98,12 +98,12 @@ export default function MonthlyClosing() {
               <div className="font-bold text-2xl text-rose-600 flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5" /> {blockers.length}
               </div>
-              <div className="text-[10px] text-muted-foreground mt-1">تمنع الإقفال</div>
+              <div className="text-[11.5px] text-muted-foreground mt-1">تمنع الإقفال</div>
             </div>
             <div className="border rounded-lg p-3 bg-card">
               <div className="text-xs text-muted-foreground">تحذيرات</div>
               <div className="font-bold text-2xl text-amber-600">{warnings.length}</div>
-              <div className="text-[10px] text-muted-foreground mt-1">يُنصح بمعالجتها</div>
+              <div className="text-[11.5px] text-muted-foreground mt-1">يُنصح بمعالجتها</div>
             </div>
           </div>
 
@@ -125,7 +125,7 @@ export default function MonthlyClosing() {
                         {it.label}
                       </span>
                       {it.blocker && !it.done && (
-                        <Badge variant="outline" className="text-[9px] bg-rose-500/10 text-rose-700 border-rose-300">عائق</Badge>
+                        <Badge variant="outline" className="text-[12px] bg-rose-500/10 text-rose-700 border-rose-300">عائق</Badge>
                       )}
                       {it.done && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
                     </div>

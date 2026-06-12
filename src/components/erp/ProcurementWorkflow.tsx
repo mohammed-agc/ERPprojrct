@@ -145,7 +145,7 @@ export function ProcurementWorkflow({
   };
 
   const stateBadge = p.state
-    ? <Badge variant="outline" className="text-[10px]">{PROCUREMENT_STATE_LABEL[p.state as Exclude<ProcurementState, "">]}</Badge>
+    ? <Badge variant="outline" className="text-[11.5px]">{PROCUREMENT_STATE_LABEL[p.state as Exclude<ProcurementState, "">]}</Badge>
     : null;
 
   return (
@@ -315,7 +315,7 @@ export function ProcurementWorkflow({
                 </Field>
               </Grid>
 
-              <div className="text-[11px] font-semibold text-muted-foreground mt-2 mb-1">عناصر الفحص</div>
+              <div className="text-[12px] font-semibold text-muted-foreground mt-2 mb-1">عناصر الفحص</div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {INSPECTION_ITEMS.map((it) => (
                   <div key={it.key} className="flex items-center gap-2 border border-border rounded-md px-2 py-1.5">
@@ -423,7 +423,7 @@ export function ProcurementWorkflow({
                 <span className="text-muted-foreground">إجمالي التكلفة المُحمَّلة</span>
                 <span className="font-bold text-base text-primary num">{fmtNum(total)}</span>
               </div>
-              <div className="text-[11px] text-muted-foreground">
+              <div className="text-[12px] text-muted-foreground">
                 ملاحظة: هذه قيم تشغيلية فقط. القيد المحاسبي وتسعير المخزون يُدار من المحرك الخلفي.
               </div>
             </Section>
@@ -476,7 +476,7 @@ function Grid({ children, cols }: { children: any; cols?: number }) {
 function Field({ label, children, full }: { label: string; children: any; full?: boolean }) {
   return (
     <div className={full ? "md:col-span-3" : ""}>
-      <Label className="text-[11px]">{label}</Label>
+      <Label className="text-[12px]">{label}</Label>
       {children}
     </div>
   );

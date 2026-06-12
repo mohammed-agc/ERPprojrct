@@ -145,7 +145,7 @@ export default function AdminLoginHistory() {
                   </div>
                 </td>
                 <td>
-                  <Badge variant="secondary" className="text-[10px]">
+                  <Badge variant="secondary" className="text-[11.5px]">
                     {r.action === "login"
                       ? "تسجيل دخول"
                       : r.action === "logout"
@@ -153,7 +153,7 @@ export default function AdminLoginHistory() {
                       : "إعادة تعيين كلمة مرور"}
                   </Badge>
                 </td>
-                <td className="font-mono text-[11px]">
+                <td className="font-mono text-[12px]">
                   {new Date(r.created_at).toLocaleString("ar-SA")}
                 </td>
               </tr>

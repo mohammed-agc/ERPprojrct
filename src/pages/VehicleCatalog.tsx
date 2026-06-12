@@ -240,7 +240,7 @@ export default function VehicleCatalog() {
                 <div className="w-10 h-10 rounded-full border-2 border-border shadow-sm"
                   style={{ background: c.hex ?? "#ccc" }} />
                 <span className="text-xs font-medium">{c.name}</span>
-                {c.hex && <span className="text-[10px] text-muted-foreground font-mono">{c.hex}</span>}
+                {c.hex && <span className="text-[11.5px] text-muted-foreground font-mono">{c.hex}</span>}
                 <div className="flex gap-1">
                   <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setDialog({ type: "colors", item: c })}>
                     <Pencil className="h-3 w-3" />
@@ -389,7 +389,7 @@ function CatalogDialog({ type, item, brands, models, onClose, onSaved }: {
                     className="flex flex-col items-center gap-1 p-1 rounded hover:bg-muted/50 transition-colors">
                     <div className="w-7 h-7 rounded-full border border-border shadow-sm"
                       style={{ background: pc.hex }} />
-                    <span className="text-[9px] text-muted-foreground leading-tight text-center">{pc.name}</span>
+                    <span className="text-[12px] text-muted-foreground leading-tight text-center">{pc.name}</span>
                   </button>
                 ))}
               </div>

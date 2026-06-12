@@ -143,7 +143,7 @@ export function PurchaseInvoiceCreateDialog({ open, onOpenChange, allocationId }
                 return (
                   <tr key={l.allocation_line_id}>
                     <td className="text-xs">{[l.manufacturer || l.brand, l.model, l.year].filter(Boolean).join(" ")}</td>
-                    <td className="font-mono text-[10px]" dir="ltr">{l.vin}</td>
+                    <td className="font-mono text-[11.5px]" dir="ltr">{l.vin}</td>
                     <td className="num text-xs">{fmtSAR(l.unit_cost)}</td>
                     {/* الخصم مع مبدّل النوع */}
                     <td>
@@ -157,16 +157,16 @@ export function PurchaseInvoiceCreateDialog({ open, onOpenChange, allocationId }
                         </button>
                         <Input type="number" value={d.value} dir="ltr" placeholder="0"
                           onChange={e => setLD(l.allocation_line_id, { value: e.target.value })}
-                          className="h-7 w-16 text-[11px]" />
+                          className="h-7 w-16 text-[12px]" />
                       </div>
                       {l.discount_amount > 0 && d.type === "pct" && (
-                        <div className="text-[10px] text-muted-foreground px-1 mt-0.5">{fmtSAR(l.discount_amount)}</div>
+                        <div className="text-[11.5px] text-muted-foreground px-1 mt-0.5">{fmtSAR(l.discount_amount)}</div>
                       )}
                     </td>
                     {/* الضريبة */}
                     <td>
                       <Select value={String(vat)} onValueChange={v => setLineVat(prev => ({ ...prev, [l.allocation_line_id]: Number(v) }))}>
-                        <SelectTrigger className="h-7 w-20 text-[11px]"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-7 w-20 text-[12px]"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="15">15%</SelectItem>
                           <SelectItem value="0">0% معفي</SelectItem>
@@ -197,7 +197,7 @@ export function PurchaseInvoiceCreateDialog({ open, onOpenChange, allocationId }
                 onChange={e => setHeaderDisc(e.target.value)} className="h-8 text-xs flex-1" />
             </div>
             <div>
-              <Label className="text-[10px] text-muted-foreground">ملاحظات</Label>
+              <Label className="text-[11.5px] text-muted-foreground">ملاحظات</Label>
               <Input value={notes} onChange={e => setNotes(e.target.value)} className="h-8 text-xs" />
             </div>
           </div>

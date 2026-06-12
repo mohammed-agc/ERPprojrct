@@ -131,16 +131,16 @@ function NodeRow(p: RowProps) {
               <Link to={`/accounts/${node.id}`} className={`hover:text-primary ${node.depth === 0 ? "font-bold" : node.is_posting ? "" : "font-semibold"}`}>
                 {node.name_ar}
               </Link>
-              {node.name_en && <span className="text-[10px] text-muted-foreground" dir="ltr">{node.name_en}</span>}
+              {node.name_en && <span className="text-[11.5px] text-muted-foreground" dir="ltr">{node.name_en}</span>}
               {/* meta chips */}
-              {meta.vat_applicable && <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-amber-300 text-amber-700">VAT</Badge>}
-              {meta.cost_center_applicable && <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-purple-300 text-purple-700">CC</Badge>}
+              {meta.vat_applicable && <Badge variant="outline" className="text-[12px] px-1 py-0 h-4 border-amber-300 text-amber-700">VAT</Badge>}
+              {meta.cost_center_applicable && <Badge variant="outline" className="text-[12px] px-1 py-0 h-4 border-purple-300 text-purple-700">CC</Badge>}
             </div>
           </td>
 
           {/* type badge */}
           <td>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded border ${accountTypeColor[node.type]}`}>
+            <span className={`text-[11.5px] px-1.5 py-0.5 rounded border ${accountTypeColor[node.type]}`}>
               {accountTypeLabel[node.type]}
             </span>
           </td>
@@ -148,15 +148,15 @@ function NodeRow(p: RowProps) {
           {/* posting */}
           <td>
             {node.is_posting
-              ? <Badge variant="outline" className="text-[10px] h-5 border-emerald-300 text-emerald-700 bg-emerald-500/5">ترحيل</Badge>
-              : <Badge variant="outline" className="text-[10px] h-5 border-slate-300 text-slate-600 bg-muted/40">رئيسي</Badge>}
+              ? <Badge variant="outline" className="text-[11.5px] h-5 border-emerald-300 text-emerald-700 bg-emerald-500/5">ترحيل</Badge>
+              : <Badge variant="outline" className="text-[11.5px] h-5 border-slate-300 text-slate-600 bg-muted/40">رئيسي</Badge>}
           </td>
 
           {/* active */}
           <td>
             {node.is_active
               ? <span className="text-success text-xs">●</span>
-              : <Badge variant="secondary" className="text-[10px]">مؤرشف</Badge>}
+              : <Badge variant="secondary" className="text-[11.5px]">مؤرشف</Badge>}
           </td>
 
           {/* tx count */}
@@ -346,11 +346,11 @@ export default function Accounts() {
               className={`border rounded-md p-2 text-right transition ${accountTypeColor[k]} ${typeFilter === k ? "ring-2 ring-offset-1 ring-primary/40" : "hover:brightness-95"}`}
             >
               <div className="flex items-center justify-between">
-                <div className="text-[10px] opacity-80">{accountTypeLabel[k]}</div>
+                <div className="text-[11.5px] opacity-80">{accountTypeLabel[k]}</div>
                 <Icon className="h-3.5 w-3.5 opacity-70" />
               </div>
               <div className="text-lg font-bold">{summary.byType[k]?.count ?? 0}</div>
-              <div className="text-[10px] opacity-70">حساب</div>
+              <div className="text-[11.5px] opacity-70">حساب</div>
             </button>
           );
         })}
@@ -382,16 +382,16 @@ export default function Accounts() {
               <button
                 key={c.key}
                 onClick={() => setTypeFilter(c.key)}
-                className={`text-[11px] px-2 py-0.5 rounded-full border transition ${typeFilter === c.key ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
+                className={`text-[12px] px-2 py-0.5 rounded-full border transition ${typeFilter === c.key ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
               >{c.label}</button>
             ))}
           </div>
           <div className="flex-1" />
-          <label className="text-[11px] flex items-center gap-1 cursor-pointer">
+          <label className="text-[12px] flex items-center gap-1 cursor-pointer">
             <input type="checkbox" checked={hideZero} onChange={e => setHideZero(e.target.checked)} className="accent-primary" />
             إخفاء بدون رصيد
           </label>
-          <label className="text-[11px] flex items-center gap-1 cursor-pointer">
+          <label className="text-[12px] flex items-center gap-1 cursor-pointer">
             <input type="checkbox" checked={hideInactive} onChange={e => setHideInactive(e.target.checked)} className="accent-primary" />
             إخفاء المؤرشف
           </label>
@@ -440,11 +440,11 @@ export default function Accounts() {
       </div>
 
       {/* Footer legend */}
-      <div className="mt-3 text-[11px] text-muted-foreground flex flex-wrap gap-3 px-1">
+      <div className="mt-3 text-[12px] text-muted-foreground flex flex-wrap gap-3 px-1">
         <span className="flex items-center gap-1"><FolderTree className="h-3 w-3" /> حساب رئيسي (تجميع فقط)</span>
         <span className="flex items-center gap-1"><FileText className="h-3 w-3" /> حساب ترحيل (يقبل قيود)</span>
-        <span className="flex items-center gap-1"><Badge variant="outline" className="h-4 px-1 text-[9px] border-amber-300 text-amber-700">VAT</Badge> خاضع لضريبة القيمة المضافة</span>
-        <span className="flex items-center gap-1"><Badge variant="outline" className="h-4 px-1 text-[9px] border-purple-300 text-purple-700">CC</Badge> يتطلب مركز تكلفة</span>
+        <span className="flex items-center gap-1"><Badge variant="outline" className="h-4 px-1 text-[12px] border-amber-300 text-amber-700">VAT</Badge> خاضع لضريبة القيمة المضافة</span>
+        <span className="flex items-center gap-1"><Badge variant="outline" className="h-4 px-1 text-[12px] border-purple-300 text-purple-700">CC</Badge> يتطلب مركز تكلفة</span>
       </div>
 
       <AccountDialog
