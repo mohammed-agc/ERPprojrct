@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,8 @@ import {
 
 export default function PartnerBalanceSummary() {
   const qc = useQueryClient();
-  const [q, setQ] = useState("");
+  const [searchParams] = useSearchParams();
+  const [q, setQ] = useState(searchParams.get("q") ?? "");
   const [settleTarget, setSettleTarget] = useState<PartnerBalance | null>(null);
   const [settleAmount, setSettleAmount] = useState<number | undefined>(undefined);
   const [reason, setReason] = useState("");
