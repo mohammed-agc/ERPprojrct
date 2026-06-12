@@ -26,7 +26,7 @@ export default function AgingReport() {
   });
 
   const totals = useMemo(() => {
-    const t = { current_amount: 0, d1_30: 0, d31_60: 0, d61_90: 0, d91_120: 0, over_120: 0, total_outstanding: 0 };
+    const t = { current_amount: 0, d1_30: 0, d31_60: 0, d61_90: 0, d91_120: 0, over_120: 0, total_outstanding: 0, open_items_count: 0 };
     rows.forEach(r => {
       t.current_amount += Number(r.current_amount);
       t.d1_30 += Number(r.d1_30);
@@ -35,6 +35,7 @@ export default function AgingReport() {
       t.d91_120 += Number(r.d91_120);
       t.over_120 += Number(r.over_120);
       t.total_outstanding += Number(r.total_outstanding);
+      t.open_items_count += Number(r.open_items_count ?? 0);
     });
     return t;
   }, [rows]);
@@ -95,6 +96,7 @@ export default function AgingReport() {
               <th>الطرف</th>
               {BUCKETS.map(b => <th key={b.key} className="text-center">{b.label}</th>)}
               <th className="text-center">الإجمالي</th>
+              <th className="text-center">عدد البنود</th>
             </tr>
           </thead>
           <tbody>
@@ -119,6 +121,7 @@ export default function AgingReport() {
                   </td>
                 ))}
                 <td className="num text-xs text-center font-bold">{fmtSAR(r.total_outstanding)}</td>
+                <td className="num text-xs text-center text-muted-foreground">{r.open_items_count ?? "—"}</td>
               </tr>
             ))}
           </tbody>
@@ -130,6 +133,7 @@ export default function AgingReport() {
                   <td key={b.key} className="num text-xs text-center">{fmtSAR(Number(totals[b.key]))}</td>
                 ))}
                 <td className="num text-xs text-center text-primary">{fmtSAR(totals.total_outstanding)}</td>
+                <td className="num text-xs text-center text-muted-foreground">{totals.open_items_count}</td>
               </tr>
             </tfoot>
           )}

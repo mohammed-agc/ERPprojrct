@@ -12,6 +12,7 @@ export interface AgingRow {
   d91_120: number;
   over_120: number;
   total_outstanding: number;
+  open_items_count: number;
 }
 
 export async function getAging(
