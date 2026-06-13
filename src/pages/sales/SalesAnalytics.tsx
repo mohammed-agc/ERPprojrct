@@ -15,7 +15,7 @@ const monthLabel = (k: string) => {
 
 interface Inv {
   id: string; total: number; subtotal: number; vat_amount: number;
-  paid_amount: number; status: string; invoice_date: string; customer_id: string | null;
+  paid_amount: number; cleared?: number; status: string; invoice_date: string; customer_id: string | null;
 }
 
 function Kpi({ icon: Icon, label, value, sub, tone = "default" }: any) {
@@ -49,6 +49,23 @@ export default function SalesAnalytics() {
       const list = (invs ?? []) as Inv[];
       setInvoices(list);
 
+      // المسوّى (cleared) لكل فاتورة من Open Items — المعيار
+      const invIds0 = list.map(i => i.id);
+      const clearedByInv: Record<string, number> = {};
+      if (invIds0.length) {
+        const { data: al } = await supabase
+          .from("open_item_allocations")
+          .select("target_document_id, allocated_amount")
+          .eq("target_document_type", "sales_invoice")
+          .eq("status", "active")
+          .in("target_document_id", invIds0);
+        for (const x of (al ?? []) as any[]) {
+          clearedByInv[x.target_document_id] = (clearedByInv[x.target_document_id] ?? 0) + Number(x.allocated_amount || 0);
+        }
+      }
+      (list as any).forEach((i: any) => { i.cleared = clearedByInv[i.id] ?? 0; });
+      setInvoices([...list]);
+
       const custIds = Array.from(new Set(list.map(i => i.customer_id).filter(Boolean))) as string[];
       if (custIds.length) {
         const { data: cs } = await supabase.from("contacts").select("id, name").in("id", custIds);
@@ -70,27 +87,26 @@ export default function SalesAnalytics() {
   }, []);
 
   const a = useMemo(() => {
-    // المبيعات المحقّقة = الفواتير المدفوعة بالكامل فقط
-    const paid = invoices.filter(i => i.status === "paid");
-    const realizedRevenue = paid.reduce((s, i) => s + Number(i.total), 0);
-    const realizedNet = paid.reduce((s, i) => s + Number(i.subtotal), 0);
-    const realizedVat = paid.reduce((s, i) => s + Number(i.vat_amount), 0);
+    // المبيعات المحقّقة = المسوّى (cleared) من Open Items — كل التسويات أياً كان نوعها
+    const cleared = invoices.filter(i => Number((i as any).cleared ?? 0) > 0.01);   // الفواتير المسوّاة (كلياً أو جزئياً)
+    const realizedRevenue = invoices.reduce((s, i) => s + (Number((i as any).cleared ?? 0)), 0);
+    const realizedNet = invoices.reduce((s, i) => s + (Number((i as any).cleared ?? 0)) / (Number(i.total) || 1) * Number(i.subtotal), 0);
+    const realizedVat = invoices.reduce((s, i) => s + (Number((i as any).cleared ?? 0)) / (Number(i.total) || 1) * Number(i.vat_amount), 0);
 
     // المفوتر غير المحصّل (للعلم فقط — لا يُحتسب مبيعات محقّقة)
     const unpaid = invoices.filter(i => i.status !== "paid");
-    const outstanding = unpaid.reduce((s, i) => s + (Number(i.total) - Number(i.paid_amount ?? 0)), 0);
-    const collectedFromPartial = invoices.filter(i => i.status !== "paid")
-      .reduce((s, i) => s + Number(i.paid_amount ?? 0), 0);
+    const outstanding = invoices.reduce((s, i) => s + Math.max(0, Number(i.total) - Number((i as any).cleared ?? 0)), 0);
+    const collectedFromPartial = invoices.filter(i => Number((i as any).cleared ?? 0) > 0.01 && Number((i as any).cleared ?? 0) < Number(i.total) - 0.01).reduce((s, i) => s + Number((i as any).cleared ?? 0), 0);   // المسوّى من الفواتير المسوّاة جزئياً
 
-    const paidCount = paid.length;
+    const paidCount = cleared.length;
     const avgInvoice = paidCount ? realizedRevenue / paidCount : 0;
 
     // حسب الشهر (من الفواتير المدفوعة)
     const byMonthMap = new Map<string, { revenue: number; count: number }>();
-    for (const i of paid) {
+    for (const i of cleared) {
       const k = monthKey(i.invoice_date);
       const prev = byMonthMap.get(k) ?? { revenue: 0, count: 0 };
-      prev.revenue += Number(i.total); prev.count += 1;
+      prev.revenue += Number((i as any).cleared ?? 0); prev.count += 1;
       byMonthMap.set(k, prev);
     }
     const byMonth = Array.from(byMonthMap.entries())
@@ -101,10 +117,10 @@ export default function SalesAnalytics() {
 
     // أعلى العملاء (من الفواتير المدفوعة)
     const byCustMap = new Map<string, { revenue: number; count: number }>();
-    for (const i of paid) {
+    for (const i of cleared) {
       if (!i.customer_id) continue;
       const prev = byCustMap.get(i.customer_id) ?? { revenue: 0, count: 0 };
-      prev.revenue += Number(i.total); prev.count += 1;
+      prev.revenue += Number((i as any).cleared ?? 0); prev.count += 1;
       byCustMap.set(i.customer_id, prev);
     }
     const topCustomers = Array.from(byCustMap.entries())
@@ -126,7 +142,7 @@ export default function SalesAnalytics() {
     <div dir="rtl">
       <PageHeader
         title="تحليلات أداء المبيعات"
-        subtitle="المبيعات المحقّقة محسوبة من الفواتير المدفوعة بالكامل فقط — مصدرها الفواتير الفعلية"
+        subtitle="المبيعات المحقّقة = المبالغ المسوّاة فعلياً (Open Items) — دفعات نقدية ومقاصّات وكل أنواع التسوية"
       />
 
       {loading ? (
@@ -134,15 +150,15 @@ export default function SalesAnalytics() {
       ) : (
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
-            <Kpi icon={TrendingUp} label="المبيعات المحقّقة (مدفوعة)" value={fmtSAR(a.realizedRevenue)} tone="success" sub={`${a.paidCount} فاتورة مدفوعة`} />
+            <Kpi icon={TrendingUp} label="المبيعات المحقّقة (المسوّى)" value={fmtSAR(a.realizedRevenue)} tone="success" sub={`${a.paidCount} فاتورة فيها تسوية`} />
             <Kpi icon={Wallet} label="صافي قبل الضريبة" value={fmtSAR(a.realizedNet)} tone="primary" sub={`ضريبة: ${fmtSAR(a.realizedVat)}`} />
             <Kpi icon={Receipt} label="متوسط قيمة الفاتورة" value={fmtSAR(a.avgInvoice)} />
-            <Kpi icon={Clock} label="مفوتر غير محصّل" value={fmtSAR(a.outstanding)} tone={a.outstanding > 0 ? "warning" : "default"} sub={`محصّل جزئياً: ${fmtSAR(a.collectedFromPartial)}`} />
+            <Kpi icon={Clock} label="مفوتر غير محصّل" value={fmtSAR(a.outstanding)} tone={a.outstanding > 0 ? "warning" : "default"} sub={`مسوّى جزئياً: ${fmtSAR(a.collectedFromPartial)}`} />
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
             <Kpi icon={BarChart3} label="إجمالي الفواتير (غير الملغاة)" value={a.totalInvoices} />
-            <Kpi icon={Receipt} label="فواتير مدفوعة" value={a.paidCount} tone="success" />
+            <Kpi icon={Receipt} label="فواتير مسوّاة" value={a.paidCount} tone="success" />
             <Kpi icon={Percent} label="نسبة تحويل العروض" value={quoteStats.total ? `${quoteConv.toFixed(1)}%` : "—"} tone="primary" sub={quoteStats.total ? `${quoteStats.converted}/${quoteStats.total} عرض` : "لا عروض"} />
             <Kpi icon={Users} label="عملاء اشتروا فعلاً" value={a.topCustomers.length} />
           </div>
@@ -155,7 +171,7 @@ export default function SalesAnalytics() {
               </div>
               <div className="p-3">
                 {a.byMonth.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-8 text-sm">لا توجد فواتير مدفوعة بعد</div>
+                  <div className="text-center text-muted-foreground py-8 text-sm">لا توجد فواتير مسوّاة بعد</div>
                 ) : (
                   <div className="space-y-2">
                     {a.byMonth.map(m => (
@@ -207,7 +223,7 @@ export default function SalesAnalytics() {
           </div>
 
           <p className="text-[12px] text-muted-foreground mt-3 px-1">
-            * "المبيعات المحقّقة" تشمل الفواتير المسدّدة بالكامل فقط (الحالة: مدفوعة). الفواتير المسودة وغير المحصّلة لا تُحتسب ضمن الإيراد المحقّق.
+            * "المبيعات المحقّقة" = إجمالي المبالغ المسوّاة على الفواتير (Open Item Clearing): دفعات نقدية + مقاصّات + إشعارات وغيرها. الجزء غير المسوّى يظهر كـ"مفوتر غير محصّل".
           </p>
         </>
       )}
