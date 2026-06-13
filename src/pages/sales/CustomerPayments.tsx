@@ -73,6 +73,18 @@ export default function CustomerPayments() {
       ]);
       const custMap = new Map((customers ?? []).map((c: any) => [c.id, c]));
       const invMap = new Map((invoices ?? []).map((i: any) => [i.id, i]));
+      // المسوّى (cleared) لكل فاتورة من Open Items — المعيار
+      if (invIds.length) {
+        const { data: al } = await supabase
+          .from("open_item_allocations")
+          .select("target_document_id, allocated_amount")
+          .eq("target_document_type", "sales_invoice")
+          .eq("status", "active")
+          .in("target_document_id", invIds as string[]);
+        const clr: Record<string, number> = {};
+        for (const x of (al ?? []) as any[]) clr[x.target_document_id] = (clr[x.target_document_id] ?? 0) + Number(x.allocated_amount || 0);
+        for (const [, inv] of invMap) (inv as any).cleared = clr[(inv as any).id] ?? 0;
+      }
       const jeMap = new Map((jes ?? []).map((j: any) => [j.source_id, j]));
       setRows(list.map(p => ({
         ...p,
@@ -147,7 +159,7 @@ export default function CustomerPayments() {
   const buildReceipt = (r: PaymentRow) => {
     if (!r.customer) return null;
     const inv = r.invoice;
-    const outstandingAfter = inv ? Math.max(0, Number(inv.total) - Number(inv.paid_amount ?? 0) - Number(inv.credited_amount ?? 0)) : undefined;
+        const outstandingAfter = inv ? Math.max(0, Number(inv.total) - Number((inv as any).cleared ?? 0)) : undefined;   // Open Items
     return (
       <PrintableReceiptDoc
         company={{
@@ -328,9 +340,8 @@ export default function CustomerPayments() {
                 {!byInvoice.length && <EmptyState inTable colSpan={6} title="لا توجد بيانات" description="لا توجد دفعات." />}
                 {byInvoice.map(g => {
                   const total = g.invoice ? Number(g.invoice.total) : 0;
-                  const credited = g.invoice ? Number(g.invoice.credited_amount ?? 0) : 0;
-                  const paid = g.invoice ? Number(g.invoice.paid_amount ?? 0) : g.amount;
-                  const remaining = g.invoice ? Math.max(0, total - paid - credited) : 0;
+                  const cleared = g.invoice ? Number((g.invoice as any).cleared ?? 0) : g.amount;
+                  const remaining = g.invoice ? Math.max(0, total - cleared) : 0;
                   return (
                     <tr key={g.id}>
                       <td>
