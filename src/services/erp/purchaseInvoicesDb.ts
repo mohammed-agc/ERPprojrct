@@ -229,7 +229,24 @@ export async function listInvoices(): Promise<PurchaseInvoiceRow[]> {
   const { data, error } = await supabase
     .from("purchase_invoices").select("*").order("created_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as PurchaseInvoiceRow[];
+  const rows = (data ?? []) as PurchaseInvoiceRow[];
+  // المتبقّي من Open Items (كل التخصيصات النشطة) — مصدر مركزي للقائمة
+  const ids = rows.map(r => r.id);
+  if (ids.length) {
+    const { data: al } = await supabase
+      .from("open_item_allocations")
+      .select("target_document_id, allocated_amount")
+      .eq("target_document_type", "purchase_invoice")
+      .eq("status", "active")
+      .in("target_document_id", ids);
+    const clr: Record<string, number> = {};
+    for (const x of (al ?? []) as any[]) clr[x.target_document_id] = (clr[x.target_document_id] ?? 0) + Number(x.allocated_amount || 0);
+    for (const r of rows) {
+      (r as any).cleared_amount = clr[r.id] ?? 0;
+      (r as any).remaining_amount = Math.max(0, Number(r.total) - (clr[r.id] ?? 0));
+    }
+  }
+  return rows;
 }
 
 export async function getInvoice(id: string): Promise<{ header: PurchaseInvoiceRow; lines: PurchaseInvoiceLineRow[] } | null> {

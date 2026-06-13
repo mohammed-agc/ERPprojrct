@@ -35,7 +35,7 @@ export default function PurchaseInvoices() {
 
   const totalUnpaid = filtered
     .filter(i => i.status === "confirmed" || i.status === "partially_paid")
-    .reduce((s, i) => s + (Number(i.total) - Number(i.paid_amount)), 0);
+      .reduce((s, i) => s + Number((i as any).remaining_amount ?? (Number(i.total) - Number(i.paid_amount))), 0);
 
   return (
     <div className="space-y-3">
@@ -71,7 +71,7 @@ export default function PurchaseInvoices() {
               <tr><td colSpan={8} className="text-center text-muted-foreground py-8">لا توجد فواتير</td></tr>
             )}
             {filtered.map(inv => {
-              const remaining = Number(inv.total) - Number(inv.paid_amount);
+              const remaining = Number((inv as any).remaining_amount ?? (Number(inv.total) - Number(inv.paid_amount)));   // Open Items
               return (
                 <tr key={inv.id}>
                   <td className="font-mono text-[12px]">
@@ -85,7 +85,7 @@ export default function PurchaseInvoices() {
                   <td className="num text-xs font-semibold">{fmtSAR(inv.total)}</td>
                   <td className="num text-xs text-success">{fmtSAR(inv.paid_amount)}</td>
                   <td className="num text-xs text-warning">{fmtSAR(remaining)}</td>
-                  <td><Badge className={PINV_STATUS_TONE[inv.status]}>{PINV_STATUS_LABEL[inv.status]}</Badge></td>
+                  <td>{(() => { const ds = inv.status === "cancelled" ? "CANCELLED" : remaining <= 0.01 ? "CLEARED" : remaining >= Number(inv.total) - 0.01 ? "OPEN" : "PARTIALLY_CLEARED"; const lbl = ds === "CLEARED" ? "مسوّاة بالكامل" : ds === "PARTIALLY_CLEARED" ? "مسوّاة جزئياً" : ds === "CANCELLED" ? "ملغاة" : "مفتوحة"; const cls = ds === "CLEARED" ? "bg-success/10 text-success" : ds === "PARTIALLY_CLEARED" ? "bg-warning/10 text-warning" : ds === "CANCELLED" ? "bg-destructive/10 text-destructive" : "bg-muted"; return <Badge className={cls}>{lbl}</Badge>; })()}</td>
                 </tr>
               );
             })}
