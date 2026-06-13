@@ -109,7 +109,7 @@ export default function PartnerLedger() {
             <Stat label="إجمالي دائن" value={fmtSAR(totalCredit)} tone="text-success" />
             <Stat label="الرصيد الختامي" value={fmtSAR(Math.abs(closing))}
               tone={closing >= 0 ? "text-warning" : "text-destructive"}
-              hint={closing >= 0 ? "مستحق علينا/له" : "مستحق لنا"} />
+              hint={closing > 0.01 ? "مستحق لنا (مدين)" : closing < -0.01 ? "مستحق علينا (دائن)" : "مُسوّى بالكامل"} />
           </div>
 
           {/* الحركات */}

@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, Receipt } from "lucide-react";
 import { accounting, type PurchaseInvoiceDetail } from "@/services/erp/accounting";
+import { AllocationInquiry } from "@/components/erp/AllocationInquiry";
 
 const fmtSAR = (n: number) =>
   new Intl.NumberFormat("ar-SA", { style: "currency", currency: "SAR", maximumFractionDigits: 2 }).format(n);
@@ -63,7 +64,7 @@ export default function PurchaseInvoiceAccountingDetail() {
               <div className="text-muted-foreground">مرجع المورد: <span className="font-mono text-[12px]">{inv.supplier_invoice_ref}</span></div>
             )}
           </div>
-          <Badge className={STATUS_TONE[inv.status] ?? "bg-muted"}>{STATUS_LABEL[inv.status] ?? inv.status}</Badge>
+              {(() => { const ds = inv.status === "cancelled" ? "CANCELLED" : inv.remaining <= 0.01 ? "CLEARED" : inv.remaining >= inv.total - 0.01 ? "OPEN" : "PARTIALLY_CLEARED"; const lbl = ds === "CLEARED" ? "مسوّاة بالكامل" : ds === "PARTIALLY_CLEARED" ? "مسوّاة جزئياً" : ds === "CANCELLED" ? "ملغاة" : "مفتوحة"; const cls = ds === "CLEARED" ? "bg-success/10 text-success" : ds === "PARTIALLY_CLEARED" ? "bg-warning/10 text-warning" : ds === "CANCELLED" ? "bg-destructive/10 text-destructive" : "bg-muted"; return <Badge className={cls}>{lbl}</Badge>; })()}
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2 border-t border-border">
@@ -170,6 +171,9 @@ export default function PurchaseInvoiceAccountingDetail() {
           </tbody>
         </table>
       </div>
+
+      {/* سجل التسويات الكامل (Open Item Clearing) — للمحاسب */}
+      <AllocationInquiry docType="purchase_invoice" docId={inv.id} total={Number(inv.total)} />
 
       {inv.notes && (
         <div className="bg-card border border-border rounded-lg p-3 text-xs">

@@ -83,7 +83,7 @@ export function AllocationInquiry({ docType, docId, total }: Props) {
                 </td>
                 <td>{fmtDate(a.allocation_date)}</td>
                 <td className="num text-right">{fmtSAR(a.allocated_amount)}</td>
-                <td className="text-[11.5px] text-muted-foreground">{a.created_by ?? "—"}</td>
+                <td className="text-[11.5px] text-muted-foreground">{(a as any).created_by_name ?? "—"}</td>
                 <td><span className="text-[11.5px] px-1.5 py-0.5 rounded bg-success/10 text-success">{a.status === "active" ? "نشطة" : "معكوسة"}</span></td>
                 <td className="text-[11.5px] text-muted-foreground">{a.remarks ?? "—"}</td>
               </tr>

@@ -66,13 +66,14 @@ export default function PurchaseInvoicesRegistry() {
     vat: filtered.reduce((s, r) => s + r.vat_amount, 0),
     total: filtered.reduce((s, r) => s + r.total, 0),
     paid: filtered.reduce((s, r) => s + r.paid_amount, 0),
+    outstanding: filtered.reduce((s, r) => s + r.remaining, 0),
   }), [filtered]);
 
   return (
     <div dir="rtl">
       <PageHeader
         title="فواتير الشراء — سجل المحاسبة"
-        subtitle={`${totals.count} فاتورة · إجمالي ${fmtSAR(totals.total)} · مدفوع ${fmtSAR(totals.paid)} · متبقي ${fmtSAR(totals.total - totals.paid)}`}
+        subtitle={`${totals.count} فاتورة · إجمالي ${fmtSAR(totals.total)} · مدفوع ${fmtSAR(totals.paid)} · متبقي ${fmtSAR(totals.outstanding)}`}
       />
 
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border border-border rounded-lg p-3 mb-3 flex flex-wrap items-center gap-2">
@@ -135,7 +136,7 @@ export default function PurchaseInvoicesRegistry() {
                       </Link>
                     ) : <span className="text-[11.5px] text-muted-foreground">—</span>}
                   </td>
-                  <td><Badge className={STATUS_TONE[r.status] ?? "bg-muted"}>{STATUS_LABEL[r.status] ?? r.status}</Badge></td>
+                <td>{(() => { const ds = r.status === "cancelled" ? "CANCELLED" : r.remaining <= 0.01 ? "CLEARED" : r.remaining >= r.total - 0.01 ? "OPEN" : "PARTIALLY_CLEARED"; const lbl = ds === "CLEARED" ? "مسوّاة بالكامل" : ds === "PARTIALLY_CLEARED" ? "مسوّاة جزئياً" : ds === "CANCELLED" ? "ملغاة" : "مفتوحة"; const cls = ds === "CLEARED" ? "bg-success/10 text-success" : ds === "PARTIALLY_CLEARED" ? "bg-warning/10 text-warning" : ds === "CANCELLED" ? "bg-destructive/10 text-destructive" : "bg-muted"; return <Badge className={cls}>{lbl}</Badge>; })()}</td>
                 </tr>
               );
             })}
@@ -147,7 +148,7 @@ export default function PurchaseInvoicesRegistry() {
                 <td className="num text-xs text-right">{fmtSAR(totals.sub)}</td>
                 <td className="num text-xs text-right">{fmtSAR(totals.vat)}</td>
                 <td className="num text-xs text-right">{fmtSAR(totals.total)}</td>
-                <td className="num text-xs text-right">{fmtSAR(totals.total - totals.paid)}</td>
+                <td className="num text-xs text-right">{fmtSAR(totals.outstanding)}</td>
                 <td colSpan={2}><FileText className="h-3 w-3 text-muted-foreground" /></td>
               </tr>
             </tfoot>

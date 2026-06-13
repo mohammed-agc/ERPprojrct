@@ -794,16 +794,33 @@ Object.assign(accountingService, {
   async listPurchaseInvoices(filters?: { status?: string; query?: string }): Promise<PurchaseInvoiceRow[]> {
     const { data, error } = await supabase
       .from("purchase_invoices")
-      .select("*, suppliers(code, name)")
+      .select("*, contact:contacts!supplier_id(supplier_code, name)")
       .order("invoice_date", { ascending: false })
       .order("invoice_no", { ascending: false });
     if (error) throw error;
+
+    // المتبقّي الصحيح من Open Items (كل التخصيصات النشطة: دفعات + مقاصّات)
+    const allocByPInv: Record<string, number> = {};
+    {
+      const ids = (data ?? []).map((r: any) => r.id);
+      if (ids.length) {
+        const { data: allocs } = await supabase
+          .from("open_item_allocations")
+          .select("target_document_id, allocated_amount")
+          .eq("target_document_type", "purchase_invoice")
+          .eq("status", "active")
+          .in("target_document_id", ids);
+        for (const a of (allocs ?? []) as any[]) {
+          allocByPInv[a.target_document_id] = (allocByPInv[a.target_document_id] ?? 0) + Number(a.allocated_amount || 0);
+        }
+      }
+    }
     let rows = (data ?? []).map((r: any) => ({
       id: r.id,
       invoice_no: r.invoice_no,
       supplier_id: r.supplier_id,
-      supplier_code: r.suppliers?.code,
-      supplier_name: r.suppliers?.name,
+      supplier_code: r.contact?.supplier_code,
+      supplier_name: r.contact?.name,
       supplier_invoice_ref: r.supplier_invoice_ref,
       invoice_date: r.invoice_date,
       due_date: r.due_date,
@@ -812,7 +829,7 @@ Object.assign(accountingService, {
       vat_amount: Number(r.vat_amount || 0),
       total: Number(r.total || 0),
       paid_amount: Number(r.paid_amount || 0),
-      remaining: Number(r.total || 0) - Number(r.paid_amount || 0),
+      remaining: Math.max(0, Number(r.total || 0) - (allocByPInv[r.id] ?? 0)),   // Open Items
       journal_entry_id: r.journal_entry_id,
       notes: r.notes,
       posted_at: r.posted_at,
@@ -836,7 +853,7 @@ Object.assign(accountingService, {
   async getPurchaseInvoice(id: string): Promise<PurchaseInvoiceDetail | null> {
     const { data, error } = await supabase
       .from("purchase_invoices")
-      .select("*, suppliers(code, name)")
+      .select("*, contact:contacts!supplier_id(supplier_code, name)")
       .eq("id", id)
       .maybeSingle();
     if (error) throw error;
@@ -844,15 +861,23 @@ Object.assign(accountingService, {
     const [{ data: lines }, { data: payments }] = await Promise.all([
       supabase
         .from("purchase_invoice_lines")
-        .select("*, vehicles(vin, code)")
+        .select("*")
         .eq("invoice_id", id)
         .order("line_no", { ascending: true }),
       supabase
-        .from("supplier_payments")
+        .from("purchase_payments")
         .select("*")
-        .eq("purchase_invoice_id", id)
+        .eq("invoice_id", id)
         .order("payment_date", { ascending: true }),
     ]);
+    // المتبقّي من Open Items (كل التخصيصات النشطة: دفعات + مقاصّات)
+    const { data: piAllocs } = await supabase
+      .from("open_item_allocations")
+      .select("allocated_amount")
+      .eq("target_document_type", "purchase_invoice")
+      .eq("status", "active")
+      .eq("target_document_id", id);
+    const piCleared = (piAllocs ?? []).reduce((s: number, a: any) => s + Number(a.allocated_amount || 0), 0);
     const r: any = data;
     const total = Number(r.total || 0);
     const paid = Number(r.paid_amount || 0);
@@ -860,8 +885,8 @@ Object.assign(accountingService, {
       id: r.id,
       invoice_no: r.invoice_no,
       supplier_id: r.supplier_id,
-      supplier_code: r.suppliers?.code,
-      supplier_name: r.suppliers?.name,
+      supplier_code: r.contact?.supplier_code,
+      supplier_name: r.contact?.name,
       supplier_invoice_ref: r.supplier_invoice_ref,
       invoice_date: r.invoice_date,
       due_date: r.due_date,
@@ -870,7 +895,7 @@ Object.assign(accountingService, {
       vat_amount: Number(r.vat_amount || 0),
       total,
       paid_amount: paid,
-      remaining: total - paid,
+      remaining: Math.max(0, total - piCleared),   // Open Items
       journal_entry_id: r.journal_entry_id,
       notes: r.notes,
       posted_at: r.posted_at,
@@ -879,11 +904,11 @@ Object.assign(accountingService, {
         id: l.id,
         invoice_id: l.invoice_id,
         line_no: l.line_no,
-        description: l.description,
-        vehicle_id: l.vehicle_id,
-        vehicle_vin: l.vehicles?.vin ?? null,
-        vehicle_code: l.vehicles?.code ?? null,
-        quantity: Number(l.quantity || 0),
+        description: [l.brand, l.model, l.trim, l.year].filter(Boolean).join(" "),
+        vehicle_id: l.allocation_line_id ?? null,
+        vehicle_vin: l.vin ?? null,
+        vehicle_code: l.vin ?? null,
+        quantity: 1,
         unit_cost: Number(l.unit_cost || 0),
         vat_pct: Number(l.vat_pct || 0),
         line_total: Number(l.line_total || 0),
@@ -892,7 +917,7 @@ Object.assign(accountingService, {
         id: p.id,
         payment_no: p.payment_no,
         supplier_id: p.supplier_id,
-        purchase_invoice_id: p.purchase_invoice_id,
+        purchase_invoice_id: p.invoice_id,
         payment_date: p.payment_date,
         amount: Number(p.amount || 0),
         method: p.method,

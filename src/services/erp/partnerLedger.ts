@@ -124,6 +124,7 @@ export interface AllocationRow {
   status: string;
   remarks: string | null;
   created_by: string | null;
+  created_by_name?: string | null;
   created_at: string | null;
 }
 
@@ -150,6 +151,14 @@ export async function getDocumentAllocations(
   if (error) throw error;
 
   const rows = (data ?? []) as AllocationRow[];
+
+  // أسماء المستخدمين (created_by) من profiles — لعرض الاسم بدل UUID
+  const userIds = Array.from(new Set(rows.map(r => (r as any).created_by).filter(Boolean)));
+  const nameById: Record<string, string> = {};
+  if (userIds.length) {
+    const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", userIds);
+    for (const p of (profs ?? []) as any[]) nameById[p.id] = p.full_name;
+  }
   const sum = (t: string) =>
     rows.filter(r => r.allocation_type === t).reduce((s, r) => s + Number(r.allocated_amount), 0);
 
@@ -169,7 +178,7 @@ export async function getDocumentAllocations(
     credit_note_allocated: creditNote,
     other_allocated: other,
     remaining: total - totalAllocated,
-    allocations: rows.map(r => ({ ...r, allocated_amount: Number(r.allocated_amount) })),
+    allocations: rows.map(r => ({ ...r, allocated_amount: Number(r.allocated_amount), created_by_name: nameById[(r as any).created_by] ?? null })),
   };
 }
 
