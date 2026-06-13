@@ -41,7 +41,7 @@ export default function CustomerTimeline() {
   const [selected, setSelected] = useState<string>("");
   const [custSearch, setCustSearch] = useState("");
   const [events, setEvents] = useState<TLEvent[]>([]);
-  const [summary, setSummary] = useState({ invoiced: 0, paid: 0, credited: 0 });
+  const [summary, setSummary] = useState({ invoiced: 0, paid: 0, credited: 0, cleared: 0 });
   const [loading, setLoading] = useState(false);
 
   // قائمة العملاء
@@ -98,10 +98,23 @@ export default function CustomerTimeline() {
       ev.sort((a, b) => dt(b.date) - dt(a.date));
       setEvents(ev);
 
+      // المسوّى (cleared) من Open Items لفواتير العميل — كل التسويات (دفعات + مقاصّات + إشعارات)
+      const _invIds = (invs.data ?? []).filter((i: any) => i.status !== "cancelled").map((i: any) => i.id);
+      let _cleared = 0;
+      if (_invIds.length) {
+        const { data: _al } = await supabase
+          .from("open_item_allocations")
+          .select("allocated_amount")
+          .eq("target_document_type", "sales_invoice")
+          .eq("status", "active")
+          .in("target_document_id", _invIds);
+        _cleared = (_al ?? []).reduce((s: number, a: any) => s + Number(a.allocated_amount || 0), 0);
+      }
       setSummary({
         invoiced: (invs.data ?? []).filter((i: any) => i.status !== "cancelled").reduce((s: number, i: any) => s + Number(i.total), 0),
         paid: (pmts.data ?? []).reduce((s: number, p: any) => s + Number(p.amount), 0),
         credited: (cns.data ?? []).reduce((s: number, c: any) => s + Number(c.total), 0),
+        cleared: _cleared,
       });
       setLoading(false);
     })();
@@ -114,7 +127,7 @@ export default function CustomerTimeline() {
   }, [customers, custSearch]);
 
   const selectedCust = customers.find(c => c.id === selected);
-  const outstanding = Math.max(0, summary.invoiced - summary.paid - summary.credited);
+  const outstanding = Math.max(0, summary.invoiced - ((summary as any).cleared ?? (summary.paid + summary.credited)));   // Open Items
 
   return (
     <div dir="rtl">
@@ -162,8 +175,8 @@ export default function CustomerTimeline() {
               <div className="font-bold text-lg num mt-0.5">{fmtSAR(summary.invoiced)}</div>
             </div>
             <div className="border border-border rounded-lg p-3">
-              <div className="text-[12px] text-muted-foreground flex items-center gap-1"><Banknote className="h-3 w-3 text-green-600" /> المدفوع</div>
-              <div className="font-bold text-lg num mt-0.5 text-success">{fmtSAR(summary.paid)}</div>
+              <div className="text-[12px] text-muted-foreground flex items-center gap-1"><Banknote className="h-3 w-3 text-green-600" /> المسوّى (كل التسويات)</div>
+              <div className="font-bold text-lg num mt-0.5 text-success">{fmtSAR((summary as any).cleared ?? summary.paid)}</div>
             </div>
             <div className="border border-border rounded-lg p-3">
               <div className="text-[12px] text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> المتبقي</div>
