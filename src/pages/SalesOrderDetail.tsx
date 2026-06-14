@@ -119,7 +119,7 @@ export default function SalesOrderDetail() {
       supabase.from("sales_orders").select("*, contact:contacts(name, vat_number, phone, email)").eq("id", id).maybeSingle(),
       supabase.from("contacts").select("id, name, code, vat_number, phone, city").eq("is_customer", true).order("name"),
       // المتاح للاختيار في بنود جديدة
-      supabase.from("inventory_items").select(VEH_COLS).eq("status", "active"),
+      supabase.from("inventory_items").select(VEH_COLS).gt("qty_on_hand", 0).eq("qty_reserved", 0).not("status", "in", "(sold,delivered,reserved)"),
       // مركبات هذا الأمر (قد تكون reserved/sold) لضمان ظهورها في العرض
       orderVehIds.length
         ? supabase.from("inventory_items").select(VEH_COLS).in("id", orderVehIds)

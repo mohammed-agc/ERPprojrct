@@ -57,7 +57,7 @@ async function applyStatus(ids: string[], status: SalesStatus): Promise<{ error:
     switch (status) {
       case "reserved":  return { status: "reserved",  qty_reserved: qoh };
       case "sold":      return { status: "sold",      qty_reserved: qoh };
-      case "delivered": return { status: "delivered", qty_reserved: 0 };
+      case "delivered": return { status: "delivered", qty_on_hand: 0, qty_reserved: 0 };
       case "active":
       default:          return { status: "active",    qty_reserved: 0 };
     }
@@ -80,10 +80,23 @@ export const salesVehicleStatus = {
       .from(TABLE)
       .select("id, vin, status")
       .in("id", ids);
-    // مسموح: active (متاح) أو reserved (محجوز بهذا الأمر نفسه — idempotent)
-    return (data ?? [])
-      .filter((v: any) => v.status !== "active" && v.status !== "reserved")
-      .map((v: any) => v.vin || v.id);
+    // المركبة متعارضة إن كانت: مباعة/مسلّمة (status)، أو مخصّصة لأمر بيع مؤكّد آخر
+    const conflicts: string[] = [];
+    for (const v of (data ?? []) as any[]) {
+      // مباعة أو مسلّمة → متعارضة دائماً
+      if (v.status === "sold" || v.status === "delivered") { conflicts.push(v.vin || v.id); continue; }
+      // مخصّصة لأمر بيع مؤكّد/منفّذ آخر (بيع مزدوج)
+      const { data: otherLines } = await supabase
+        .from("sales_order_lines")
+        .select("order_id, sales_orders!inner(id, status)")
+        .eq("vehicle_id", v.id);
+      const soldElsewhere = (otherLines ?? []).some((ln: any) =>
+        ln.order_id !== orderId &&
+        ["confirmed", "invoiced", "delivered", "completed"].includes(ln.sales_orders?.status)
+      );
+      if (soldElsewhere) conflicts.push(v.vin || v.id);
+    }
+    return conflicts;
   },
 
   async reserveForOrder(orderId: string) {
