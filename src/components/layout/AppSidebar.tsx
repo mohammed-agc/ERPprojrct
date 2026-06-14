@@ -25,6 +25,9 @@ interface NavItem {
 }
 
 const groups: { title: string; items: NavItem[] }[] = [
+  // ─────────────────────────────────────────────────────────
+  // عام
+  // ─────────────────────────────────────────────────────────
   {
     title: "عام",
     items: [
@@ -32,14 +35,25 @@ const groups: { title: string; items: NavItem[] }[] = [
       { label: "جهات الاتصال", to: "/contacts", icon: Contact2 },
     ],
   },
+
+  // ─────────────────────────────────────────────────────────
+  // البيانات الرئيسية
+  //   - كتالوج المنتجات (قطع غيار، خدمات، إلخ — عدا المركبات)
+  //   - كتالوج المركبات (شامل: علامات، موديلات، فئات، ألوان داخله)
+  //   * تم حذف "ألوان المركبات" من السايدبار (موجودة داخل كتالوج المركبات)
+  // ─────────────────────────────────────────────────────────
   {
     title: "البيانات الرئيسية",
     items: [
       { label: "كتالوج المنتجات", to: "/master/products", icon: Database },
-    { label: "كتالوج المركبات", to: "/vehicle-catalog", icon: BookOpen },
-      { label: "ألوان المركبات", to: "/master/colors", icon: Palette },
+      { label: "كتالوج المركبات", to: "/vehicle-catalog", icon: BookOpen },
     ],
   },
+
+  // ─────────────────────────────────────────────────────────
+  // المبيعات (تشغيلية)
+  //   * "الفواتير" → "إصدار الفواتير" (تمييز عن السجل المحاسبي)
+  // ─────────────────────────────────────────────────────────
   {
     title: "المبيعات",
     items: [
@@ -48,32 +62,39 @@ const groups: { title: string; items: NavItem[] }[] = [
       { label: "عروض الأسعار", to: "/sales/quotations", icon: FileText, deptCode: "vehicles" },
       { label: "أوامر البيع", to: "/sales-orders", icon: ShoppingCart, deptCode: "vehicles" },
       { label: "الحجوزات", to: "/sales/reservations", icon: CalendarCheck, deptCode: "vehicles" },
+      { label: "إصدار الفواتير", to: "/invoices", icon: Receipt, deptCode: "vehicles" },
+      { label: "دفعات العملاء", to: "/sales/customer-payments", icon: Banknote, deptCode: "vehicles" },
       { label: "تنسيق التسليم", to: "/sales/deliveries", icon: PackageCheck, deptCode: "vehicles" },
       { label: "التمويل والتقسيط", to: "/sales/financing", icon: Banknote, deptCode: "vehicles" },
-      { label: "تحليلات المبيعات", to: "/sales/analytics", icon: TrendingUp, deptCode: "vehicles" },
-      { label: "الخط الزمني للعميل", to: "/sales/customer-timeline", icon: CalendarRange, deptCode: "vehicles" },
       { label: "ائتمان العملاء", to: "/sales/customer-credit", icon: ShieldCheck, deptCode: "vehicles" },
-      { label: "دفعات العملاء", to: "/sales/customer-payments", icon: Banknote, deptCode: "vehicles" },
-      { label: "الفواتير", to: "/invoices", icon: Receipt },
+      { label: "الخط الزمني للعميل", to: "/sales/customer-timeline", icon: CalendarRange, deptCode: "vehicles" },
+      { label: "تحليلات المبيعات", to: "/sales/analytics", icon: TrendingUp, deptCode: "vehicles" },
     ],
   },
 
+  // ─────────────────────────────────────────────────────────
+  // المشتريات (تشغيلية)
+  // ─────────────────────────────────────────────────────────
   {
     title: "المشتريات",
     items: [
       { label: "لوحة المشتريات", to: "/purchasing", icon: ShoppingBag, deptCode: "vehicles" },
       { label: "طلبات الشراء", to: "/purchasing/requests", icon: ClipboardList, deptCode: "vehicles" },
       { label: "أوامر الشراء", to: "/purchasing/orders", icon: FileText, deptCode: "vehicles" },
-      { label: "تخصيصات المركبات", to: "/purchasing/allocations", icon: Car, deptCode: "vehicles" },
-      { label: "فواتير الشراء", to: "/purchasing/invoices", icon: Receipt, deptCode: "vehicles" },
-      { label: "ائتمان الموردين", to: "/purchasing/credit", icon: ShieldCheck, deptCode: "vehicles" },
-      { label: "إدارة حوافز الموردين", to: "/incentives", icon: Trophy, deptCode: "vehicles" },
       { label: "الشحنات", to: "/purchasing/shipments", icon: Ship, deptCode: "vehicles" },
+      { label: "تخصيصات المركبات", to: "/purchasing/allocations", icon: Car, deptCode: "vehicles" },
       { label: "ورشة الاستلام والفحص", to: "/purchasing/receiving/workbench", icon: PackageCheck, deptCode: "vehicles" },
       { label: "الفحص والاعتماد", to: "/purchasing/inspection", icon: FileSearch, deptCode: "vehicles" },
-
+      { label: "فواتير الشراء", to: "/purchasing/invoices", icon: Receipt, deptCode: "vehicles" },
+      { label: "إدارة حوافز الموردين", to: "/incentives", icon: Trophy, deptCode: "vehicles" },
+      { label: "ائتمان الموردين", to: "/purchasing/credit", icon: ShieldCheck, deptCode: "vehicles" },
     ],
   },
+
+  // ─────────────────────────────────────────────────────────
+  // المخزون والمستودعات
+  //   * "التحويلات" → "تحويلات المخزون" (تمييز عن تحويلات الخزينة)
+  // ─────────────────────────────────────────────────────────
   {
     title: "المخزون والمستودعات",
     items: [
@@ -83,9 +104,15 @@ const groups: { title: string; items: NavItem[] }[] = [
       { label: "مخزون قطع الغيار", to: "/inventory/parts", icon: Package, deptCode: "inventory" },
       { label: "حركات المخزون", to: "/inventory/movements", icon: ArrowLeftRight, deptCode: "inventory" },
       { label: "الحجوزات", to: "/inventory/reservations", icon: CalendarCheck, deptCode: "inventory" },
-      { label: "التحويلات", to: "/inventory/transfers", icon: ArrowLeftRight, deptCode: "inventory" },
+      { label: "تحويلات المخزون", to: "/inventory/transfers", icon: ArrowLeftRight, deptCode: "inventory" },
     ],
   },
+
+  // ─────────────────────────────────────────────────────────
+  // العمليات (تشغيلية)
+  //   - قطع الغيار = طلبات / صرف (تشغيلي)
+  //   - مخزون قطع الغيار = السجل المخزني (في قسم المخزون)
+  // ─────────────────────────────────────────────────────────
   {
     title: "العمليات",
     items: [
@@ -93,18 +120,58 @@ const groups: { title: string; items: NavItem[] }[] = [
       { label: "الورشة", to: "/workshop", icon: Wrench, deptCode: "workshop" },
     ],
   },
+
+  // ─────────────────────────────────────────────────────────
+  // الخزينة
+  //   * "التحويلات" → "تحويلات الخزينة" (تمييز عن تحويلات المخزون)
+  // ─────────────────────────────────────────────────────────
+  {
+    title: "الخزينة",
+    items: [
+      { label: "لوحة الخزينة", to: "/treasury", icon: Vault, deptCode: "accounting" },
+      { label: "الصناديق", to: "/treasury/accounts", icon: Banknote, deptCode: "accounting" },
+      { label: "البنوك", to: "/treasury/accounts?type=bank", icon: Landmark, deptCode: "accounting" },
+      { label: "القبض", to: "/treasury/receipts", icon: ArrowDownCircle, deptCode: "accounting" },
+      { label: "الصرف", to: "/treasury/payments", icon: ArrowUpCircle, deptCode: "accounting" },
+      { label: "تحويلات الخزينة", to: "/treasury/transfers", icon: ArrowLeftRight, deptCode: "accounting" },
+      { label: "التسوية البنكية", to: "/treasury/reconciliation", icon: CheckSquare, deptCode: "accounting" },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────
+  // المحاسبة (مُعاد ترتيبها كاملة)
+  //   ترتيب منطقي: تقارير → دليل → دفاتر → سجلات → أرصدة →
+  //                قوائم مالية → إعدادات
+  //   * نُقلت 11 شاشة محاسبية من "الموارد البشرية" إلى هنا
+  //   * "فواتير المبيعات/الشراء" → "سجل فواتير المبيعات/الشراء"
+  //   * "التواصل الإلكتروني" نُقل إلى "الإدارة"
+  // ─────────────────────────────────────────────────────────
   {
     title: "المحاسبة",
     items: [
       { label: "مركز التقارير", to: "/finance", icon: PieChart, deptCode: "accounting" },
-      { label: "فواتير الشراء", to: "/accounting/purchase-invoices", icon: Receipt, deptCode: "accounting" },
-      { label: "فواتير المبيعات", to: "/accounting/sales-invoices", icon: Receipt, deptCode: "accounting" },
       { label: "دليل الحسابات", to: "/accounts", icon: BookOpen, deptCode: "accounting" },
+      { label: "قيود اليومية", to: "/journals", icon: Calculator, deptCode: "accounting" },
+      { label: "دفتر الأستاذ", to: "/general-ledger", icon: BookText, deptCode: "accounting" },
+      { label: "دفتر الأستاذ المساعد", to: "/accounting/partner-ledger", icon: BookText, deptCode: "accounting" },
+      { label: "سجل فواتير المبيعات", to: "/accounting/sales-invoices", icon: Receipt, deptCode: "accounting" },
+      { label: "سجل فواتير الشراء", to: "/accounting/purchase-invoices", icon: Receipt, deptCode: "accounting" },
+      { label: "أعمار الديون", to: "/accounting/aging", icon: Hourglass, deptCode: "accounting" },
+      { label: "أرصدة الأطراف والمقاصّة", to: "/accounting/partner-balances", icon: Scale, deptCode: "accounting" },
+      { label: "الذمم المدينة", to: "/ar", icon: HandCoins, deptCode: "accounting" },
+      { label: "الذمم الدائنة", to: "/ap", icon: Wallet, deptCode: "accounting" },
+      { label: "ميزان المراجعة", to: "/trial-balance", icon: Scale, deptCode: "accounting" },
+      { label: "قائمة الدخل", to: "/income-statement", icon: TrendingUp, deptCode: "accounting" },
+      { label: "الميزانية العمومية", to: "/balance-sheet", icon: Scale, deptCode: "accounting" },
+      { label: "التدفقات النقدية", to: "/cash-flow", icon: ArrowLeftRight, deptCode: "accounting" },
       { label: "تحديد الحسابات", to: "/admin/settings/account-determination", icon: Settings, deptCode: "accounting" },
       { label: "مجموعات الحسابات", to: "/admin/settings/account-groups", icon: Layers, deptCode: "accounting" },
-      { label: "التواصل الإلكتروني", to: "/admin/settings/communications", icon: Send, deptCode: "accounting" },
     ],
   },
+
+  // ─────────────────────────────────────────────────────────
+  // الموارد البشرية (مُنظَّفة بالكامل من الشاشات المحاسبية)
+  // ─────────────────────────────────────────────────────────
   {
     title: "الموارد البشرية",
     items: [
@@ -116,31 +183,12 @@ const groups: { title: string; items: NavItem[] }[] = [
       { label: "طلبات الإجازات", to: "/hr/leaves", icon: Calendar, deptCode: "hr" },
       { label: "كشوف الرواتب", to: "/hr/payroll", icon: DollarSign, deptCode: "hr" },
       { label: "السلف والقروض", to: "/hr/loans", icon: DollarSign, deptCode: "hr" },
-      { label: "قيود اليومية", to: "/journals", icon: Calculator, deptCode: "accounting" },
-      { label: "دفتر الأستاذ", to: "/general-ledger", icon: BookText, deptCode: "accounting" },
-      { label: "دفتر الأستاذ المساعد", to: "/accounting/partner-ledger", icon: BookText, deptCode: "accounting" },
-      { label: "أعمار الديون", to: "/accounting/aging", icon: BookText, deptCode: "accounting" },
-      { label: "أرصدة الأطراف والمقاصّة", to: "/accounting/partner-balances", icon: BookText, deptCode: "accounting" },
-      { label: "ميزان المراجعة", to: "/trial-balance", icon: Scale, deptCode: "accounting" },
-      { label: "قائمة الدخل", to: "/income-statement", icon: TrendingUp, deptCode: "accounting" },
-      { label: "الميزانية العمومية", to: "/balance-sheet", icon: Scale, deptCode: "accounting" },
-      { label: "التدفقات النقدية", to: "/cash-flow", icon: ArrowLeftRight, deptCode: "accounting" },
-      { label: "الذمم المدينة", to: "/ar", icon: HandCoins, deptCode: "accounting" },
-      { label: "الذمم الدائنة", to: "/ap", icon: Wallet, deptCode: "accounting" },
     ],
   },
-  {
-    title: "الخزينة",
-    items: [
-      { label: "الخزينة", to: "/treasury", icon: Vault, deptCode: "accounting" },
-      { label: "الصناديق", to: "/treasury/accounts", icon: Banknote, deptCode: "accounting" },
-      { label: "البنوك", to: "/treasury/accounts?type=bank", icon: Landmark, deptCode: "accounting" },
-      { label: "القبض", to: "/treasury/receipts", icon: ArrowDownCircle, deptCode: "accounting" },
-      { label: "الصرف", to: "/treasury/payments", icon: ArrowUpCircle, deptCode: "accounting" },
-      { label: "التحويلات", to: "/treasury/transfers", icon: ArrowLeftRight, deptCode: "accounting" },
-      { label: "التسوية البنكية", to: "/treasury/reconciliation", icon: CheckSquare, deptCode: "accounting" },
-    ],
-  },
+
+  // ─────────────────────────────────────────────────────────
+  // التحليل الإداري
+  // ─────────────────────────────────────────────────────────
   {
     title: "التحليل الإداري",
     items: [
@@ -153,6 +201,10 @@ const groups: { title: string; items: NavItem[] }[] = [
       { label: "توزيع التكاليف", to: "/costing/allocation", icon: Share2, deptCode: "accounting" },
     ],
   },
+
+  // ─────────────────────────────────────────────────────────
+  // الحوكمة المالية
+  // ─────────────────────────────────────────────────────────
   {
     title: "الحوكمة المالية",
     items: [
@@ -165,13 +217,19 @@ const groups: { title: string; items: NavItem[] }[] = [
       { label: "القرارات الائتمانية", to: "/governance/credit-decisions", icon: AlertTriangle, deptCode: "accounting" },
     ],
   },
+
+  // ─────────────────────────────────────────────────────────
+  // الإدارة والإعدادات
+  //   * "التواصل الإلكتروني" نُقل إلى هنا من المحاسبة
+  // ─────────────────────────────────────────────────────────
   {
-    title: "الإدارة",
+    title: "الإدارة والإعدادات",
     items: [
       { label: "التقارير", to: "/reports", icon: BarChart3 },
       { label: "الهيكل التنظيمي", to: "/organization", icon: Building2 },
       { label: "مصفوفة الصلاحيات", to: "/permissions", icon: ShieldCheck },
       { label: "المستخدمون والصلاحيات", to: "/users", icon: UserCog },
+      { label: "التواصل الإلكتروني", to: "/admin/settings/communications", icon: Send },
       { label: "مركز إدارة النظام", to: "/admin", icon: Shield },
     ],
   },
@@ -314,7 +372,3 @@ export function AppSidebar() {
     </aside>
   );
 }
-
-
-
-

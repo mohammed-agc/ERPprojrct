@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { Search, Check, ChevronsUpDown } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { EmptyState } from "@/components/erp/EmptyState";
+import { cn } from "@/lib/utils";
 import { accountingService, type AccountRow, type LedgerMovement } from "@/services/erp/accounting";
 
 const fmt = (n: number) => Number(n).toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -12,8 +16,10 @@ const fmt = (n: number) => Number(n).toLocaleString("ar-SA", { minimumFractionDi
 export default function GeneralLedger() {
   const [accounts, setAccounts] = useState<AccountRow[]>([]);
   const [accountId, setAccountId] = useState<string>("");
+  const [acctOpen, setAcctOpen] = useState(false);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [search, setSearch] = useState("");
   const [rows, setRows] = useState<LedgerMovement[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -29,10 +35,29 @@ export default function GeneralLedger() {
   }, [accountId, from, to]);
 
   const selected = accounts.find(a => a.id === accountId);
-  const totals = useMemo(() => rows.reduce(
+
+  // بحث نصّي محلي: يفلتر الحركات المعروضة (البيان، رقم القيد، المرجع، المبلغ)
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter(r =>
+      (r.description || "").toLowerCase().includes(q) ||
+      (r.entry_no || "").toLowerCase().includes(q) ||
+      (r.reference || "").toLowerCase().includes(q) ||
+      (r.entry_date || "").toLowerCase().includes(q) ||
+      String(r.debit ?? "").includes(q) ||
+      String(r.credit ?? "").includes(q)
+    );
+  }, [rows, search]);
+
+  // الإجماليات تُحسب على الصفوف المفلترة
+  const totals = useMemo(() => filteredRows.reduce(
     (a, r) => ({ d: a.d + r.debit, c: a.c + r.credit }), { d: 0, c: 0 }
-  ), [rows]);
-  const ending = rows.length ? rows[rows.length - 1].running_balance : 0;
+  ), [filteredRows]);
+
+  const ending = search.trim()
+    ? (filteredRows.length ? filteredRows[filteredRows.length - 1].running_balance : 0)
+    : (rows.length ? rows[rows.length - 1].running_balance : 0);
 
   return (
     <div>
@@ -43,19 +68,60 @@ export default function GeneralLedger() {
       />
 
       <div className="sticky top-[64px] z-10 bg-background/95 backdrop-blur border border-border rounded-lg p-3 mb-3 flex flex-wrap items-end gap-3">
-        <div className="flex flex-col gap-1 min-w-[260px] flex-1">
+        {/* اختيار الحساب — قائمة قابلة للبحث بالاسم أو الرقم */}
+        <div className="flex flex-col gap-1 min-w-[280px] flex-1">
           <Label className="text-xs">الحساب</Label>
-          <Select value={accountId} onValueChange={setAccountId}>
-            <SelectTrigger className="h-8"><SelectValue placeholder="اختر حساباً" /></SelectTrigger>
-            <SelectContent>
-              {accounts.map(a => (
-                <SelectItem key={a.id} value={a.id}>
-                  <span className="font-mono text-xs ml-2">{a.code}</span> {a.name_ar}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover open={acctOpen} onOpenChange={setAcctOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={acctOpen}
+                className="h-8 justify-between font-normal"
+              >
+                {selected ? (
+                  <span className="flex items-center gap-2 truncate">
+                    <span className="font-mono text-xs text-muted-foreground">{selected.code}</span>
+                    <span className="truncate">{selected.name_ar}</span>
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">اختر حساباً…</span>
+                )}
+                <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 flex-shrink-0" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+              <Command
+                filter={(value, query) => {
+                  // value يحوي "code name_ar" — نطابق الرقم أو الاسم
+                  return value.toLowerCase().includes(query.toLowerCase()) ? 1 : 0;
+                }}
+              >
+                <CommandInput placeholder="ابحث بالرقم أو الاسم…" className="h-9" />
+                <CommandList>
+                  <CommandEmpty>لا يوجد حساب مطابق.</CommandEmpty>
+                  <CommandGroup>
+                    {accounts.map(a => (
+                      <CommandItem
+                        key={a.id}
+                        value={`${a.code} ${a.name_ar}`}
+                        onSelect={() => {
+                          setAccountId(a.id === accountId ? "" : a.id);
+                          setAcctOpen(false);
+                        }}
+                      >
+                        <Check className={cn("h-3.5 w-3.5 ml-2", accountId === a.id ? "opacity-100" : "opacity-0")} />
+                        <span className="font-mono text-xs text-muted-foreground ml-2">{a.code}</span>
+                        <span className="truncate">{a.name_ar}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
+
         <div className="flex flex-col gap-1">
           <Label className="text-xs">من تاريخ</Label>
           <Input type="date" className="h-8 w-36" value={from} onChange={e => setFrom(e.target.value)} />
@@ -63,6 +129,19 @@ export default function GeneralLedger() {
         <div className="flex flex-col gap-1">
           <Label className="text-xs">إلى تاريخ</Label>
           <Input type="date" className="h-8 w-36" value={to} onChange={e => setTo(e.target.value)} />
+        </div>
+        <div className="flex flex-col gap-1 min-w-[220px] flex-1">
+          <Label className="text-xs">بحث في الحركات</Label>
+          <div className="relative">
+            <Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              className="h-8 pr-7"
+              placeholder="البيان، رقم القيد، المرجع، المبلغ…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              disabled={!accountId}
+            />
+          </div>
         </div>
       </div>
 
@@ -83,7 +162,8 @@ export default function GeneralLedger() {
             {!accountId && <EmptyState inTable colSpan={7} title="اختر حساباً" description="يُعرض هنا سجل الحركات والرصيد الجاري." />}
             {accountId && loading && <tr><td colSpan={7} className="text-center text-muted-foreground py-8">جارٍ التحميل…</td></tr>}
             {accountId && !loading && rows.length === 0 && <EmptyState inTable colSpan={7} title="لا توجد حركات" description="لا توجد قيود مُرحَّلة على هذا الحساب ضمن النطاق." />}
-            {accountId && !loading && rows.map((r, i) => (
+            {accountId && !loading && rows.length > 0 && filteredRows.length === 0 && <EmptyState inTable colSpan={7} title="لا نتائج للبحث" description="لا توجد حركات مطابقة لنص البحث." />}
+            {accountId && !loading && filteredRows.map((r, i) => (
               <tr key={`${r.entry_id}-${i}`}>
                 <td className="num">{r.entry_date}</td>
                 <td className="font-mono">
@@ -97,10 +177,12 @@ export default function GeneralLedger() {
               </tr>
             ))}
           </tbody>
-          {rows.length > 0 && (
+          {filteredRows.length > 0 && (
             <tfoot>
               <tr className="bg-muted/60 font-semibold">
-                <td colSpan={4} className="text-left">الإجمالي</td>
+                <td colSpan={4} className="text-left">
+                  {search.trim() ? `الإجمالي (نتائج البحث: ${filteredRows.length})` : "الإجمالي"}
+                </td>
                 <td className="num text-right">{fmt(totals.d)}</td>
                 <td className="num text-right">{fmt(totals.c)}</td>
                 <td className={`num text-right ${ending < 0 ? "text-destructive" : ""}`}>{fmt(ending)}</td>
