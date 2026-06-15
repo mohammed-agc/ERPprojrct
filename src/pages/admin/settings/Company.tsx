@@ -1,12 +1,31 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
-import { adminSettings, type CompanyInfo } from "@/services/erp/adminSettings";
+import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import { settingsService } from "@/services/erp/settingsService";
 import { toast } from "sonner";
+
+// شكل بيانات الشركة (مطابق لمفاتيح company.* في system_settings)
+interface CompanyForm {
+  name_ar: string; name_en: string; logo_url: string;
+  vat_number: string; cr_number: string; momrah_license: string; mhrsd_license: string;
+  building_no: string; street: string; secondary_no: string; district: string;
+  city: string; postal_code: string; country_code: string;
+  phone: string; email: string; website: string;
+  bank_name: string; iban: string;
+}
+
+const EMPTY: CompanyForm = {
+  name_ar: "", name_en: "", logo_url: "",
+  vat_number: "", cr_number: "", momrah_license: "", mhrsd_license: "",
+  building_no: "", street: "", secondary_no: "", district: "",
+  city: "", postal_code: "", country_code: "SA",
+  phone: "", email: "", website: "",
+  bank_name: "", iban: "",
+};
 
 // ── تحقّق وفق متطلّبات ZATCA ──
 const onlyDigits = (s: string) => /^\d*$/.test(s);
@@ -18,11 +37,20 @@ const validators = {
 };
 
 export default function SettingsCompany() {
-  const [c, setC] = useState<CompanyInfo>(() => adminSettings.get().company);
+  const [c, setC] = useState<CompanyForm>(EMPTY);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const set = <K extends keyof CompanyInfo>(k: K, v: CompanyInfo[K]) => setC(p => ({ ...p, [k]: v }));
+  // تحميل من DB
+  useEffect(() => {
+    settingsService.getCategory("company")
+      .then(data => setC({ ...EMPTY, ...data }))
+      .catch(err => { console.error(err); toast.error("تعذّر تحميل بيانات الشركة"); })
+      .finally(() => setLoading(false));
+  }, []);
 
-  // أخطاء التحقّق (للحقول التي لها قواعد ZATCA)
+  const set = <K extends keyof CompanyForm>(k: K, v: CompanyForm[K]) => setC(p => ({ ...p, [k]: v }));
+
   const errors = useMemo(() => ({
     vat_number: !validators.vat_number(c.vat_number),
     building_no: !validators.building_no(c.building_no),
@@ -32,22 +60,37 @@ export default function SettingsCompany() {
 
   const hasErrors = Object.values(errors).some(Boolean);
 
-  // اكتمال الحقول الإلزامية لـ ZATCA (للإشارة البصرية)
   const zatcaComplete = useMemo(() =>
     !!(c.name_ar && c.vat_number && c.cr_number && c.building_no && c.street && c.district && c.city && c.postal_code),
     [c]
   );
 
-  const save = () => {
-    if (hasErrors) {
-      toast.error("يرجى تصحيح الحقول غير الصالحة قبل الحفظ");
-      return;
+  const save = async () => {
+    if (hasErrors) { toast.error("يرجى تصحيح الحقول غير الصالحة قبل الحفظ"); return; }
+    setSaving(true);
+    try {
+      await settingsService.saveCategory("company", c);
+      toast.success("تم حفظ بيانات الشركة");
+    } catch (err) {
+      console.error(err);
+      toast.error("تعذّر حفظ بيانات الشركة");
+    } finally {
+      setSaving(false);
     }
-    adminSettings.saveCompany(c);
-    toast.success("تم حفظ بيانات الشركة");
   };
 
   const errCls = (bad: boolean) => bad ? "border-destructive focus-visible:ring-destructive" : "";
+
+  if (loading) {
+    return (
+      <div>
+        <PageHeader title="بيانات الشركة" subtitle="جارٍ التحميل…" />
+        <div className="flex items-center justify-center py-20 text-muted-foreground">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -55,7 +98,6 @@ export default function SettingsCompany() {
 
       <Card className="p-4 max-w-3xl space-y-6">
 
-        {/* مؤشّر اكتمال ZATCA */}
         <div className={`flex items-center gap-2 text-xs rounded-md px-3 py-2 ${zatcaComplete ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
           {zatcaComplete
             ? <><CheckCircle2 className="h-4 w-4" /> الحقول الإلزامية لـ ZATCA مكتملة</>
@@ -199,7 +241,10 @@ export default function SettingsCompany() {
 
         <div className="flex items-center justify-between pt-2 border-t">
           <p className="text-[11px] text-muted-foreground">الحقول المعلّمة بـ <span className="text-destructive">*</span> إلزامية للفاتورة الضريبية وفق ZATCA</p>
-          <Button onClick={save} disabled={hasErrors}>حفظ التغييرات</Button>
+          <Button onClick={save} disabled={hasErrors || saving}>
+            {saving && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
+            حفظ التغييرات
+          </Button>
         </div>
       </Card>
     </div>
