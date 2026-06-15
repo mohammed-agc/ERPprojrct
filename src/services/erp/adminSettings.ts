@@ -1,19 +1,43 @@
-﻿/**
+/**
  * Admin settings persistence layer.
  * Stored in localStorage to align with the rest of the ERP modules.
+ *
+ * ملاحظة: بيانات الشركة (CompanyInfo) تظهر في الفاتورة الضريبية وتخضع لمتطلّبات
+ * هيئة الزكاة والضريبة والجمارك (ZATCA). الحقول الإلزامية للبائع تشمل:
+ *  - الرقم الضريبي (15 خانة)
+ *  - السجل التجاري CRN
+ *  - العنوان الوطني السعودي: رقم المبنى (4)، الشارع، الحي، المدينة، الرمز البريدي (5)
  */
 
 const KEY = "sarat.admin.settings.v1";
 
 export interface CompanyInfo {
+  // ── الهوية ──
   name_ar: string;
   name_en: string;
-  vat_number: string;
-  cr_number: string;
-  address: string;
+  logo_url: string;
+  // ── التسجيل الضريبي والتجاري (ZATCA) ──
+  vat_number: string;        // الرقم الضريبي — 15 خانة، يبدأ بـ 3
+  cr_number: string;         // السجل التجاري (CRN)
+  momrah_license: string;    // ترخيص الشؤون البلدية (MOMRAH) — اختياري
+  mhrsd_license: string;     // ترخيص الموارد البشرية (MHRSD) — اختياري
+  // ── العنوان الوطني السعودي (National Address) ──
+  building_no: string;       // رقم المبنى — 4 خانات
+  street: string;            // اسم الشارع
+  secondary_no: string;      // الرقم الإضافي/الفرعي — 4 خانات
+  district: string;          // الحي
+  city: string;              // المدينة
+  postal_code: string;       // الرمز البريدي — 5 خانات
+  country_code: string;      // رمز الدولة — SA
+  // ── التواصل ──
   phone: string;
   email: string;
-  logo_url: string;
+  website: string;
+  // ── المعلومات المصرفية (اختياري — تُطبع أحياناً على الفاتورة) ──
+  bank_name: string;
+  iban: string;
+  // ── حقل قديم محتفظ به للتوافق العكسي (سطر عنوان حر) ──
+  address: string;
 }
 
 export interface Branch {
@@ -66,17 +90,29 @@ export interface AdminSettings {
 
 const DEFAULTS: AdminSettings = {
   company: {
-    name_ar: "شركة سرات للسيارات",
-    name_en: "Sarat Automotive Co.",
-    vat_number: "300000000000003",
-    cr_number: "1010000000",
-    address: "الرياض، المملكة العربية السعودية",
-    phone: "+966 11 000 0000",
-    email: "info@sarat.sa",
+    name_ar: "مؤسسة أرض المبارك للسيارات",
+    name_en: "Ard Al-Mubarak Motors",
     logo_url: "",
+    vat_number: "",
+    cr_number: "",
+    momrah_license: "",
+    mhrsd_license: "",
+    building_no: "",
+    street: "",
+    secondary_no: "",
+    district: "",
+    city: "",
+    postal_code: "",
+    country_code: "SA",
+    phone: "",
+    email: "",
+    website: "",
+    bank_name: "",
+    iban: "",
+    address: "",
   },
   branches: [
-    { id: "br-main", code: "BR-01", name_ar: "الفرع الرئيسي", city: "الرياض", phone: "+966 11 000 0001", is_active: true },
+    { id: "br-main", code: "BR-01", name_ar: "الفرع الرئيسي", city: "جدة", phone: "", is_active: true },
   ],
   warehouses: [
     { id: "wh-vehicles", code: "WH-VEH", name_ar: "مستودع المركبات", branch_id: "br-main", type: "vehicles", is_active: true },
@@ -84,7 +120,7 @@ const DEFAULTS: AdminSettings = {
   ],
   tax: {
     default_vat_pct: 15,
-    vat_registration_no: "300000000000003",
+    vat_registration_no: "",
     inclusive_default: false,
   },
   sequences: [
@@ -110,7 +146,13 @@ function read(): AdminSettings {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULTS;
     const parsed = JSON.parse(raw);
-    return { ...DEFAULTS, ...parsed };
+    // الدمج العميق لـ company يضمن وجود الحقول الجديدة حتى لو كان المخزّن قديماً
+    return {
+      ...DEFAULTS,
+      ...parsed,
+      company: { ...DEFAULTS.company, ...(parsed.company || {}) },
+      tax: { ...DEFAULTS.tax, ...(parsed.tax || {}) },
+    };
   } catch {
     return DEFAULTS;
   }
@@ -130,4 +172,3 @@ export const adminSettings = {
   saveSequences: (q: NumberSequence[]) => { const s = read(); s.sequences = q; write(s); },
   saveTemplates: (t: PrintTemplate[]) => { const s = read(); s.templates = t; write(s); },
 };
-
