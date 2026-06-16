@@ -361,7 +361,7 @@ export default function SalesOrderDetail() {
     }
     await supabase.from("sales_orders").update({ status: "invoiced" }).eq("id", id);
     toast.success("تم إنشاء الفاتورة");
-    nav(`/invoices`);
+    nav(`/invoices/${inv.id}`);
   };
 
   /** طباعة أمر البيع من نافذة مستقلة نظيفة (يحل الصفحة البيضاء + يتيح PDF). */
