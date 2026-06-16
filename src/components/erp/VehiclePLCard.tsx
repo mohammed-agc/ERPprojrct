@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { revenueService } from "@/services/erp/revenueService";
 import { fmtSAR } from "@/lib/erpFormat";
 import { AlertTriangle, CheckCircle2, TrendingDown, TrendingUp, Wallet, Calendar, FileText } from "lucide-react";
 
@@ -44,7 +45,7 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) 
     (async () => {
       setLoading(true);
       try {
-        const [costRes, solRes, cnRes] = await Promise.all([
+        const [costRes, solRes, cnRes, revData] = await Promise.all([
           supabase.rpc("compute_vehicle_landed_cost" as any, { p_vehicle_id: vehicleId }),
           supabase
             .from("sales_order_lines")
@@ -54,6 +55,7 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) 
             .from("credit_note_lines")
             .select("line_total, credit_note:credit_notes(status, cn_date)")
             .eq("vehicle_id", vehicleId),
+          revenueService.getVehicleNetRevenue(vehicleId),   // المصدر الموحّد للإيراد الصافي
         ]);
         const costRow = Array.isArray(costRes.data) ? costRes.data[0] : (costRes.data as any);
         const purchase_cost = Number(costRow?.purchase_cost || 0);
@@ -66,7 +68,6 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) 
         for (const l of (solRes.data ?? []) as any[]) {
           const o = l.order; if (!o || o.status === "cancelled") continue;
           const q = Number(l.quantity || 0), p = Number(l.unit_price || 0), d = Number(l.discount_pct || 0);
-          revenue += Number(l.line_total || 0);
           discounts += q * p * (d / 100);
           const invs = o.invoices ?? [];
           for (const inv of invs) {
@@ -93,12 +94,11 @@ export function VehiclePLCard({ vehicleId, status, acquiredAt, soldAt }: Props) 
           cogs_je_no = jes?.[0]?.entry_no ?? null;
         }
 
-        let credit_notes = 0;
-        for (const c of (cnRes.data ?? []) as any[]) {
-          if (c.credit_note?.status !== "cancelled") credit_notes += Number(c.line_total || 0);
-        }
+        // المصدر الموحّد: الإيراد الصافي (بلا VAT) + المرتجعات الصافية
+        revenue = revData.net_revenue;
+        const credit_notes = revData.credit_notes_net;
         const cogs_amount = cogs_posted ? landed_cost : 0;
-        const net_revenue = revenue - credit_notes;
+        const net_revenue = revData.net_after_returns;
         const gross_profit = revenue - landed_cost;
         const net_profit = net_revenue - landed_cost;
         const sold_at = soldAt ?? derived_sold_at;

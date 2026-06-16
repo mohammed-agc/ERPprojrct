@@ -34,6 +34,7 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { VehiclePLCard } from "@/components/erp/VehiclePLCard";
+import { VehicleLedgerCard } from "@/components/erp/VehicleLedgerCard";
 
 const MEDIA_BUCKET = "vehicle-media";
 
@@ -386,6 +387,7 @@ export default function VehicleDetail() {
           </Card>
 
           <VehiclePLCard vehicleId={vehicle.id} status={vehicle.status} acquiredAt={vehicle.acquired_at ?? vehicle.created_at} soldAt={vehicle.sold_at ?? null} />
+          <VehicleLedgerCard vehicleId={vehicle.id} />
 
 
           {/* Photos */}
