@@ -305,6 +305,10 @@ export default function SalesOrderDetail() {
 
   const generateInvoice = async () => {
     if (!order) return;
+    if (lines.some(l => !l.vehicle_id)) {
+      toast.error("Each vehicle line must be linked to a vehicle. Invoice rejected.");
+      return;
+    }
     const sellerName = "أرض المبارك للسيارات";
     const vatNum = "300000000000003";
     const tlv = (tag: number, val: string) => {
@@ -340,6 +344,7 @@ export default function SalesOrderDetail() {
           discount: disc,                                        // ✅ ينتقل الخصم
           total: Number((base + lineVat).toFixed(2)),            // إجمالي البند شامل الضريبة
           vat_amount: lineVat,                                   // ضريبة على القاعدة بعد الخصم
+          vehicle_id: l.vehicle_id,
           vin: veh?.vin ?? null, brand: veh?.brand ?? null, model: veh?.model ?? null,
           year: veh?.year ?? null, color: veh?.color ?? null,
         };
@@ -347,6 +352,13 @@ export default function SalesOrderDetail() {
     );
     if (lErr) { toast.error("فشل حفظ بنود الفاتورة: " + lErr.message); return; }
 
+    const { data: chk } = await supabase.from("invoice_lines").select("id, vehicle_id").eq("invoice_id", inv.id);
+    const missing = (chk ?? []).filter(r => !r.vehicle_id).length;
+    if (missing > 0) {
+      console.error("vehicle_id linkage mismatch", { invoice: inv.id, missing });
+      toast.error("Vehicle linkage error: " + missing + " line(s) missing vehicle_id.");
+      return;
+    }
     await supabase.from("sales_orders").update({ status: "invoiced" }).eq("id", id);
     toast.success("تم إنشاء الفاتورة");
     nav(`/invoices`);

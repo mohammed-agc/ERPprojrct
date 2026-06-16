@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { vehicleRepository } from "@/services/erp/vehicleRepository";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -66,10 +67,7 @@ export default function Vehicles() {
   const filteredVTrims = (vTrims as any[]).filter((t) => t.model_id === (vModels as any[]).find((m) => m.name === form.model)?.id);
 
   const load = async () => {
-    const { data } = await supabase
-      .from("vehicles")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const data = await vehicleRepository.getVehicles();
     setRows(data ?? []);
   };
   useEffect(() => { load(); }, []);
@@ -135,7 +133,7 @@ export default function Vehicles() {
         toast.error("VIN غير صالح", { description: "11–17 خانة، بدون I/O/Q" });
         return;
       }
-      const { data: dup } = await supabase.from("vehicles").select("id,code").eq("vin", vin).maybeSingle();
+      const dup = await vehicleRepository.findByVin(vin);
       if (dup) {
         toast.error("VIN موجود مسبقاً", { description: `مرتبط بالمركبة ${dup.code} — لا يمكن تكرار VIN` });
         return;
@@ -150,16 +148,18 @@ export default function Vehicles() {
       supplier: form.supplier,
       note: form.note,
     };
-    const persistedStatus = (PERSISTED_STATUSES as readonly string[]).includes(form.status) ? form.status : "available";
-    const { error } = await supabase.from("vehicles").insert({
-      code: form.code,
+    const rawStatus = (PERSISTED_STATUSES as readonly string[]).includes(form.status) ? form.status : "available";
+    const persistedStatus = rawStatus === "available" ? "active" : rawStatus;
+    const { error } = await supabase.from("inventory_items").insert({
+      item_type: "vehicle",
+      qty_on_hand: 1,
+      sku: form.code,
       name: form.name,
       brand: form.brand,
       model: form.model,
       year: Number(form.year),
       vin: vin || null,
       color: form.color,
-      mileage: Number(form.mileage),
       cost_price: Number(form.cost_price),
       sale_price: Number(form.sale_price),
       status: persistedStatus as "available" | "reserved" | "sold",

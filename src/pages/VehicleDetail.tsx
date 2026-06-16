@@ -81,7 +81,7 @@ export default function VehicleDetail() {
     if (!id) return;
     setLoading(true);
     const [{ data: v }, { data: ls }] = await Promise.all([
-      supabase.from("vehicles").select("*").eq("id", id).maybeSingle(),
+      supabase.from("inventory_items").select("*").eq("id", id).eq("item_type", "vehicle").maybeSingle(),
       supabase
         .from("sales_order_lines")
         .select("*, sales_orders(id, order_no, order_date, status, customer_id, customers(name, code))")
@@ -234,7 +234,7 @@ export default function VehicleDetail() {
     const next: VehicleMeta = { ...meta, ...patch };
     const payload: any = { notes: serializeVehicleMeta(next) || null };
     if (dbStatus) payload.status = dbStatus;
-    const { error } = await supabase.from("vehicles").update(payload).eq("id", vehicle.id);
+    const { error } = await supabase.from("inventory_items").update(payload).eq("id", vehicle.id).eq("item_type", "vehicle");
     if (error) { toast.error(error.message); return false; }
     await load();
     return true;
