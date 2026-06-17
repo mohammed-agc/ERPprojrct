@@ -8,6 +8,7 @@ import { Trash2, CheckCircle2, AlertTriangle, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { creditNotesService } from "@/services/erp/creditNotes";
+import { cancellationMessage } from "@/services/erp/cancellationMessages";
 
 const fmt = (n: number) =>
   Number(n).toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -182,62 +183,51 @@ export function CreditNoteDialog({ open, onOpenChange, invoice, invoiceLines, on
   };
 
   const submit = async () => {
-    const active = lines.filter(l => l._selected !== false && l.quantity > 0 && l.unit_price > 0);
-    if (active.length === 0) {
-      toast.error("أضِف بنداً واحداً على الأقل بكمية وسعر صالحَين");
-      return;
-    }
+    // F5.1: الإلغاء الكامل عبر محرّك العكس المالي (cancel_sales_invoice RPC).
+    // الحوار يعكس الفاتورة بالكامل (الجزئي مؤجّل إلى F5.2).
     setSubmitting(true);
     try {
       const expected = {
-        subtotal: Number(totals.subtotal.toFixed(2)),
-        vat: Number(totals.vat.toFixed(2)),
-        total: Number(totals.total.toFixed(2)),
+        subtotal: Number(invoice.subtotal ?? totals.subtotal),
+        vat: Number(invoice.vat_amount ?? totals.vat),
+        total: Number(invoice.total ?? totals.total),
       };
-      const { cnId, journalEntryId, inventory } = await creditNotesService.issueFromLines({
-        invoiceId: invoice.id,
-        customerId: invoice.customer_id,
-        reason,
-        notes,
-        lines: active.map(({ description, quantity, unit_price, vat_pct, vehicle_id }) => ({
-          description, quantity, unit_price, vat_pct, vehicle_id: vehicle_id ?? null,
-        })),
-      });
-
-      // Round-trip verification against DB
+      // الإلغاء الكامل (يفحص can_cancel داخلياً ثم ينفّذ العكس الذرّي)
+      const res = await creditNotesService.issueFullReversal(invoice.id, reason || "invoice_cancellation");
+      // قراءة النتيجة الحقيقية من قاعدة البيانات
       const [{ data: cnRow }, { data: invRow }] = await Promise.all([
-        supabase.from("credit_notes").select("subtotal, vat_amount, total, credit_note_no").eq("id", cnId).maybeSingle(),
+        supabase.from("credit_notes").select("amount, vat_amount, total, cn_no").eq("id", res.credit_note_id!).maybeSingle(),
         supabase.from("invoices").select("credited_amount, status").eq("id", invoice.id).maybeSingle(),
       ]);
       const actual = {
-        subtotal: Number(cnRow?.subtotal ?? 0),
+        subtotal: Number(cnRow?.amount ?? 0),
         vat: Number(cnRow?.vat_amount ?? 0),
         total: Number(cnRow?.total ?? 0),
-        credit_note_no: String(cnRow?.credit_note_no ?? "—"),
+        credit_note_no: String(cnRow?.cn_no ?? res.cn_no ?? "—"),
       };
       const near = (a: number, b: number) => Math.abs(a - b) < 0.02;
       const match = near(actual.subtotal, expected.subtotal) && near(actual.vat, expected.vat) && near(actual.total, expected.total);
       setVerify({
-        cnId,
+        cnId: res.credit_note_id!,
         expected,
         actual,
         match,
         invoiceCreditedAfter: Number(invRow?.credited_amount ?? 0),
         invoiceStatusAfter: String(invRow?.status ?? "—"),
-        journalEntryId,
-        inventoryReleased: inventory.released.length,
-        blockedDelivered: inventory.blockedDelivered,
+        journalEntryId: res.revenue_reversal_je ?? null,
+        inventoryReleased: 1,
+        blockedDelivered: [],
       });
       setStep("verified");
-      if (match) toast.success("تم النشر مع قيد محاسبي وتحديث المخزون");
-      else toast.error("تم النشر لكن النتيجة لا تطابق المعاينة");
+      if (match) toast.success(`تم الإلغاء الكامل — إشعار دائن ${actual.credit_note_no}`);
+      else toast.error("تم الإلغاء لكن القيم لا تطابق المعاينة — راجع التفاصيل");
     } catch (e: any) {
-      toast.error(e.message ?? "فشل إصدار الإشعار الدائن");
+      const r = e?.reason;
+      toast.error(r ? cancellationMessage(r) : (e?.message ?? "فشل إلغاء الفاتورة"));
     } finally {
       setSubmitting(false);
     }
   };
-
   const glLineRows = useMemo(() => buildGlLineRows(lines), [lines]);
   const glRows = useMemo(() => aggregateGl(glLineRows), [glLineRows]);
   const glDebit = glRows.reduce((s, r) => s + r.debit, 0);

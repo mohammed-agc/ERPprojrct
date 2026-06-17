@@ -60,7 +60,8 @@ BEGIN
     RETURN jsonb_build_object('can_cancel', false, 'reason', 'REVENUE_JE_MISSING');
   END IF;
 
-  IF v_inv.cogs_posted = true AND NOT EXISTS (SELECT 1 FROM public.journal_entries WHERE source_id=p_invoice_id AND source_type='sales_invoice_cogs' AND COALESCE(is_reversed,false)=false) THEN
+  -- COGS: إن وُجد cogs_journal_entry_id لكن لا COGS JE نشط → خلل (لا نعتمد cogs_posted لأنه قد يكون خاطئاً)
+  IF v_inv.cogs_journal_entry_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.journal_entries WHERE source_id=p_invoice_id AND source_type='sales_invoice_cogs' AND COALESCE(is_reversed,false)=false) THEN
     RETURN jsonb_build_object('can_cancel', false, 'reason', 'COGS_JE_MISSING');
   END IF;
 
@@ -97,7 +98,7 @@ BEGIN
   SELECT * INTO v_inv FROM public.invoices WHERE id=p_invoice_id;
 
   -- ═══ (#8) Referential Validation: تطابق عدد المركبات invoice ↔ COGS ═══
-  IF v_inv.cogs_posted = true THEN
+  IF EXISTS (SELECT 1 FROM public.journal_entries WHERE source_id=p_invoice_id AND source_type='sales_invoice_cogs' AND COALESCE(is_reversed,false)=false) THEN
     SELECT COUNT(DISTINCT il.vehicle_id) INTO v_inv_veh FROM public.invoice_lines il WHERE il.invoice_id=p_invoice_id AND il.vehicle_id IS NOT NULL;
     SELECT COUNT(DISTINCT jel.vehicle_id) INTO v_cogs_veh FROM public.journal_entry_lines jel
       JOIN public.journal_entries je ON je.id=jel.entry_id
@@ -133,11 +134,10 @@ BEGIN
   FROM public.journal_entry_lines WHERE entry_id=v_rev_je.id;
   UPDATE public.journal_entries SET is_reversed=true, reversed_at=now(), reversed_by=v_uid WHERE id=v_rev_je.id;
 
-  -- ═══ F5.3 COGS Reversal (Clone) ═══
-  IF v_inv.cogs_posted = true THEN
-    SELECT * INTO v_cogs_je FROM public.journal_entries
-      WHERE source_id=p_invoice_id AND source_type='sales_invoice_cogs' AND COALESCE(is_reversed,false)=false LIMIT 1;
-    IF FOUND THEN
+  -- ═══ F5.3 COGS Reversal (Clone) — يعتمد على وجود COGS JE فعلياً، لا cogs_posted ═══
+  SELECT * INTO v_cogs_je FROM public.journal_entries
+    WHERE source_id=p_invoice_id AND source_type='sales_invoice_cogs' AND COALESCE(is_reversed,false)=false LIMIT 1;
+  IF FOUND THEN
       SELECT COALESCE(MAX(CAST(SUBSTRING(entry_no FROM 'JE-'||v_yr||'-(\d+)') AS INT)),0)+1 INTO v_seq FROM public.journal_entries WHERE entry_no LIKE 'JE-'||v_yr||'-%';
       v_entry_no := 'JE-'||v_yr||'-'||LPAD(v_seq::TEXT,4,'0');
       INSERT INTO public.journal_entries (entry_no, entry_date, reference, description, is_posted, source_type, source_id, total_debit, total_credit, reverses_entry_id)
@@ -147,19 +147,28 @@ BEGIN
       SELECT v_new_cogs_je, account_id, credit, debit, 'عكس: '||COALESCE(description,''), 'credit_note_cogs', v_cn_id, v_cn_no, vehicle_id
       FROM public.journal_entry_lines WHERE entry_id=v_cogs_je.id;
       UPDATE public.journal_entries SET is_reversed=true, reversed_at=now(), reversed_by=v_uid WHERE id=v_cogs_je.id;
-    END IF;
   END IF;
 
-  -- ═══ F5.4 Inventory Reversal (#7 increment) ═══
+  -- ═══ F5.4 Inventory Reversal ═══
+  -- تمييز حسب نوع الصنف: المركبة Per-VIN (assignment، كمية محدّدة)، القطع تراكمية (increment).
+  -- المركبة الفيزيائية واحدة — النهاية qty=quantity سواء مرّت بـ F4 (sold,qty=0) أم لا (reserved,qty=1).
   FOR v_line IN
-    SELECT cnl.vehicle_id, cnl.quantity, ii.status FROM public.credit_note_lines cnl
+    SELECT cnl.vehicle_id, cnl.quantity, ii.status, ii.item_type FROM public.credit_note_lines cnl
     JOIN public.inventory_items ii ON ii.id=cnl.vehicle_id
     WHERE cnl.credit_note_id=v_cn_id AND cnl.vehicle_id IS NOT NULL
   LOOP
     IF v_line.status <> 'delivered' THEN
-      UPDATE public.inventory_items
-      SET status='active', qty_on_hand=COALESCE(qty_on_hand,0)+v_line.quantity, qty_reserved=0, sold_at=NULL
-      WHERE id=v_line.vehicle_id;
+      IF v_line.item_type = 'vehicle' THEN
+        -- مركبة: assignment (Per-VIN)
+        UPDATE public.inventory_items
+        SET status='active', qty_on_hand=v_line.quantity, qty_reserved=0, sold_at=NULL
+        WHERE id=v_line.vehicle_id;
+      ELSE
+        -- قطع/مستهلكات: increment (تراكمي)
+        UPDATE public.inventory_items
+        SET status='active', qty_on_hand=COALESCE(qty_on_hand,0)+v_line.quantity, qty_reserved=0, sold_at=NULL
+        WHERE id=v_line.vehicle_id;
+      END IF;
     END IF;
   END LOOP;
 
@@ -167,13 +176,13 @@ BEGIN
   INSERT INTO public.open_item_allocations (allocation_number, allocation_date, allocation_type, partner_id,
     source_document_type, source_document_id, target_document_type, target_document_id, allocated_amount,
     journal_entry_id, status, remarks, created_by, reverses_allocation_id)
-  SELECT 'REV-'||oia.allocation_number, CURRENT_DATE, 'reversal', oia.partner_id,
+  SELECT 'REV-'||oia.allocation_number, CURRENT_DATE, 'CREDIT_NOTE', oia.partner_id,
     oia.source_document_type, oia.source_document_id, oia.target_document_type, oia.target_document_id,
     oia.allocated_amount, v_new_rev_je, 'active', 'عكس تخصيص - '||v_cn_no, v_uid, oia.id
   FROM public.open_item_allocations oia
   WHERE ((oia.target_document_type='sales_invoice' AND oia.target_document_id=p_invoice_id)
       OR (oia.source_document_type='sales_invoice' AND oia.source_document_id=p_invoice_id))
-    AND oia.allocation_type <> 'reversal';
+    AND oia.reverses_allocation_id IS NULL;  -- لا نعكس تخصيصاً عاكساً (تمييز عبر reverses_allocation_id لا allocation_type)
 
   -- ═══ تحديث الفاتورة (#6 cancelled مؤقتاً) ═══
   UPDATE public.invoices SET credited_amount=COALESCE(credited_amount,0)+v_inv.total, status='cancelled' WHERE id=p_invoice_id;

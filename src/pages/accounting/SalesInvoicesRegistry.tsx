@@ -11,6 +11,7 @@ import { useErpSession } from "@/contexts/ErpSessionContext";
 import { canPerform } from "@/lib/erpPermissions";
 import { PaymentDialog, PaymentSubmitPayload, PaymentInvoiceContext } from "@/components/erp/PaymentDialog";
 import { creditNotesService } from "@/services/erp/creditNotes";
+import { cancellationMessage } from "@/services/erp/cancellationMessages";
 import { salesVehicleStatus } from "@/services/erp/salesVehicleStatus";
 import { Search, Receipt, RefreshCw, Banknote, FileMinus, ExternalLink, Layers, ArrowLeftRight } from "lucide-react";
 import { toast } from "sonner";
@@ -153,14 +154,18 @@ export default function SalesInvoicesRegistry() {
   };
 
   const issueCreditNote = async (r: any) => {
-    if (!confirm(`إصدار إشعار دائن يعكس المتبقي من الفاتورة ${r.invoice_no}؟`)) return;
+    const check = await creditNotesService.canCancel(r.id);
+    if (!check.can_cancel) {
+      toast.error(cancellationMessage(check.reason));
+      return;
+    }
+    if (!confirm(`إلغاء الفاتورة ${r.invoice_no} وعكس قيودها بالكامل؟`)) return;
     try {
-      const cnId = await creditNotesService.issueFullReversal(r.id, "accounting_adjustment", `إشعار دائن من المحاسبة للفاتورة ${r.invoice_no}`);
-      if (!cnId) { toast.info("الفاتورة معكوسة بالكامل مسبقاً"); return; }
-      toast.success("تم إصدار الإشعار الدائن وتحديث رصيد العميل");
+      const res = await creditNotesService.issueFullReversal(r.id, "accounting_adjustment");
+      toast.success(`تم الإلغاء — إشعار دائن ${res.cn_no}`);
       load();
     } catch (e: any) {
-      toast.error(e.message ?? "فشل إصدار الإشعار الدائن");
+      toast.error(cancellationMessage(e?.reason) ?? e?.message ?? "فشل إلغاء الفاتورة");
     }
   };
 

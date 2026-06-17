@@ -1,203 +1,70 @@
 import { supabase } from "@/integrations/supabase/client";
-import { salesVehicleStatus } from "@/services/erp/salesVehicleStatus";
+import { CancellationBlockedError } from "@/services/erp/cancellationMessages";
 
 /**
- * Credit Notes service — formal reversal documents for posted sales invoices.
+ * Credit Notes service — Orchestrator فوق محرّك العكس المالي (F5).
  *
- * On post, in addition to inserting the CN header + lines, the service:
- *   1. Calls the `post_credit_note_journal` RPC to create an authoritative
- *      journal entry (debit returns/output VAT, credit AR) so customer
- *      balances are sourced from the GL rather than derived.
- *   2. Calls `salesVehicleStatus.releaseForCreditNote` to revert reserved/sold
- *      vehicles back to `available` (delivered units require a separate
- *      goods-return workflow and are NOT silently re-entered into stock).
+ * مصدر الحقيقة الوحيد: cancel_sales_invoice RPC (معاملة ذرّية تعكس
+ * الإيراد + COGS + المخزون + Open Items + الحوكمة). الواجهة لا تكتب
+ * مباشرة للجداول — كل شيء عبر الـ RPC.
+ *
+ * الفحص المسبق عبر can_cancel_sales_invoice (يمنع قبل المحاولة + يعطي السبب).
+ *
+ * الإشعار الدائن الجزئي (issueFromLines) مؤجّل إلى F5.2 (Partial Credit Note Engine).
  */
 
 export type CnType = "cancellation" | "return" | "price_adjustment" | "discount";
 
-type CnLineInput = {
-  description: string;
-  quantity: number;
-  unit_price: number;
-  vat_pct: number;
-  vehicle_id?: string | null;
+export type CancelResult = {
+  success: boolean;
+  credit_note_id?: string;
+  cn_no?: string;
+  revenue_reversal_je?: string;
+  cogs_reversal_je?: string;
+  reason?: string;
 };
 
-async function finalizeCreditNote(cnId: string) {
-  const { data: _cn } = await supabase.from("credit_notes").select("invoice_id, total").eq("id", cnId).single();
-  if (_cn?.invoice_id) {
-    const { data: _inv } = await supabase.from("invoices").select("credited_amount").eq("id", _cn.invoice_id).single();
-    await supabase.from("invoices").update({ credited_amount: Number(_inv?.credited_amount ?? 0) + Number(_cn.total ?? 0) }).eq("id", _cn.invoice_id);
-  }
-  let journalEntryId: string | null = null;
-  try {
-    const { data, error } = await supabase.rpc("post_credit_note_journal" as any, { p_cn_id: cnId });
-    if (!error) journalEntryId = (data as string) ?? null;
-  } catch (e) {
-    // Re-throw so the caller can surface the failure; CN exists but JE failed
-    throw new Error(
-      `تم إنشاء الإشعار الدائن لكنّ ترحيل القيد فشل: ${(e as any)?.message ?? e}`,
-    );
-  }
-
-  const inventory = await salesVehicleStatus.releaseForCreditNote(cnId).catch(() => ({
-    released: [] as string[],
-    blockedDelivered: [] as string[],
-  }));
-
-  return { journalEntryId, inventory };
-}
+export type CanCancelResult = {
+  can_cancel: boolean;
+  reason?: string;
+  [k: string]: any;
+};
 
 export const creditNotesService = {
-  /**
-   * Issue a credit note that fully reverses the remaining exposure of an invoice.
-   * Returns the created credit note id, or null if invoice is already fully credited.
-   */
-  async issueFullReversal(
-    invoiceId: string,
-    reason = "invoice_cancellation",
-    notes?: string,
-    cnType: CnType = "cancellation",
-  ) {
-    const { data: inv, error: invErr } = await supabase
-      .from("invoices")
-      .select("id, customer_id, total, vat_amount, subtotal, credited_amount, status, invoice_no, sales_order_id")
-      .eq("id", invoiceId)
-      .single();
-    if (invErr) throw invErr;
-    if (!inv) throw new Error("الفاتورة غير موجودة");
-
-    const total = Number(inv.total);
-    const credited = Number(inv.credited_amount ?? 0);
-    const remaining = Number((total - credited).toFixed(2));
-    if (remaining <= 0) return null;
-
-    const ratio = total > 0 ? remaining / total : 1;
-    const cnSubtotal = Number((Number(inv.subtotal) * ratio).toFixed(2));
-    const cnVat = Number((Number(inv.vat_amount) * ratio).toFixed(2));
-
-    const userId = (await supabase.auth.getUser()).data.user?.id ?? null;
-    const cnNo = "CN-" + Date.now().toString().slice(-10);
-
-    const { data: cn, error } = await supabase
-      .from("credit_notes")
-      .insert({
-        credit_note_no: cnNo,
-        invoice_id: invoiceId,
-        customer_id: inv.customer_id,
-        reason,
-        cn_type: cnType,
-        notes: notes ?? `إلغاء الفاتورة ${inv.invoice_no}`,
-        subtotal: cnSubtotal,
-        vat_amount: cnVat,
-        total: remaining,
-        status: "posted",
-        created_by: userId,
-      } as any)
-      .select()
-      .single();
-    if (error) throw error;
-
-    // Pull vehicle ids from the originating SO so each credited "line" can carry one.
-    let soVehicles: Array<{ vehicle_id: string | null }> = [];
-    if (inv.sales_order_id) {
-      const { data } = await supabase
-        .from("sales_order_lines")
-        .select("vehicle_id, line_no")
-        .eq("order_id", inv.sales_order_id)
-        .order("line_no");
-      soVehicles = data ?? [];
-    }
-
-    if (soVehicles.length > 0) {
-      await supabase.from("credit_note_lines").insert(
-        soVehicles.map((sv, i) => ({
-          credit_note_id: cn.id,
-          line_no: i + 1,
-          description: `عكس قيمة الفاتورة ${inv.invoice_no} — مركبة`,
-          quantity: 1,
-          unit_price: Number((cnSubtotal / soVehicles.length).toFixed(2)),
-          vat_pct: 15,
-          line_total: Number((remaining / soVehicles.length).toFixed(2)),
-          vehicle_id: sv.vehicle_id,
-        })),
-      );
-    } else {
-      await supabase.from("credit_note_lines").insert({
-        credit_note_id: cn.id,
-        line_no: 1,
-        description: `عكس قيمة الفاتورة ${inv.invoice_no}`,
-        quantity: 1,
-        unit_price: cnSubtotal,
-        vat_pct: 15,
-        line_total: remaining,
-      });
-    }
-
-    await finalizeCreditNote(cn.id);
-    return cn.id as string;
+  /** فحص مسبق: هل يمكن إلغاء الفاتورة؟ (للواجهة قبل عرض/تأكيد الإلغاء) */
+  async canCancel(invoiceId: string): Promise<CanCancelResult> {
+    const { data, error } = await supabase.rpc("can_cancel_sales_invoice" as any, { p_invoice_id: invoiceId });
+    if (error) return { can_cancel: false, reason: "UNKNOWN" };
+    return (data as CanCancelResult) ?? { can_cancel: false, reason: "UNKNOWN" };
   },
 
   /**
-   * Create a credit note from caller-provided lines (custom reason / partial / line-level CN).
-   * Lines accept an optional `vehicle_id` for inventory release.
+   * إلغاء كامل للفاتورة عبر محرّك العكس المالي (F5).
+   * يفحص أولاً (can_cancel)، ثم ينفّذ الإلغاء الذرّي.
+   * يرمي CancellationBlockedError إن مُنع (الواجهة تترجم reason).
    */
-  async issueFromLines(args: {
-    invoiceId: string;
-    customerId: string;
-    reason: string;
-    cnType?: CnType;
-    notes?: string;
-    lines: CnLineInput[];
-  }) {
-    const subtotal = args.lines.reduce((s, l) => s + l.quantity * l.unit_price, 0);
-    const vat = args.lines.reduce(
-      (s, l) => s + l.quantity * l.unit_price * (l.vat_pct / 100),
-      0,
-    );
-    const total = Number((subtotal + vat).toFixed(2));
-    if (total <= 0) throw new Error("إجمالي الإشعار الدائن يجب أن يكون أكبر من صفر");
-
-    const userId = (await supabase.auth.getUser()).data.user?.id ?? null;
-    const cnNo = "CN-" + Date.now().toString().slice(-10);
-    const { data: cn, error } = await supabase
-      .from("credit_notes")
-      .insert({
-        credit_note_no: cnNo,
-        invoice_id: args.invoiceId,
-        customer_id: args.customerId,
-        reason: args.reason,
-        cn_type: args.cnType ?? "cancellation",
-        notes: args.notes ?? null,
-        subtotal: Number(subtotal.toFixed(2)),
-        vat_amount: Number(vat.toFixed(2)),
-        total,
-        status: "posted",
-        created_by: userId,
-      } as any)
-      .select()
-      .single();
+  async issueFullReversal(invoiceId: string, reason = "invoice_cancellation"): Promise<CancelResult> {
+    // 1. الفحص المسبق
+    const check = await this.canCancel(invoiceId);
+    if (!check.can_cancel) {
+      throw new CancellationBlockedError(check.reason ?? "UNKNOWN", check);
+    }
+    // 2. التنفيذ الذرّي (مصدر الحقيقة الوحيد)
+    const { data, error } = await supabase.rpc("cancel_sales_invoice" as any, { p_invoice_id: invoiceId, p_reason: reason });
     if (error) throw error;
+    const res = data as CancelResult;
+    if (!res?.success) {
+      throw new CancellationBlockedError(res?.reason ?? "UNKNOWN", res);
+    }
+    return res;
+  },
 
-    await supabase.from("credit_note_lines").insert(
-      args.lines.map((l, i) => ({
-        credit_note_id: cn.id,
-        line_no: i + 1,
-        description: l.description,
-        quantity: l.quantity,
-        unit_price: l.unit_price,
-        vat_pct: l.vat_pct,
-        line_total: Number((l.quantity * l.unit_price * (1 + l.vat_pct / 100)).toFixed(2)),
-        vehicle_id: l.vehicle_id ?? null,
-      })),
-    );
-
-    const finalize = await finalizeCreditNote(cn.id);
-    return {
-      cnId: cn.id as string,
-      journalEntryId: finalize.journalEntryId,
-      inventory: finalize.inventory,
-    };
+  /**
+   * الإشعار الدائن الجزئي (بنود مخصّصة) — مؤجّل إلى F5.2.
+   * المحرّك الحالي يدعم الإلغاء الكامل فقط (cancel_sales_invoice).
+   */
+  async issueFromLines(_args: unknown): Promise<never> {
+    throw new Error("الإشعار الدائن الجزئي غير متاح بعد (F5.2). استخدم الإلغاء الكامل للفاتورة.");
   },
 
   async listForInvoice(invoiceId: string) {

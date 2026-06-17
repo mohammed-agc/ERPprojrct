@@ -8,6 +8,7 @@ import { ArrowRight, FileMinus, Printer } from "lucide-react";
 import { CreditNoteDialog } from "@/components/erp/CreditNoteDialog";
 import { CreditGateBanner } from "@/components/erp/CreditGateBanner";
 import { AllocationInquiry } from "@/components/erp/AllocationInquiry";
+import { useErpSession } from "@/contexts/ErpSessionContext";
 
 const fmt = (n: number) => Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtDate = (s?: string) => s ? new Date(s).toLocaleDateString("ar-SA") : "—";
@@ -22,6 +23,8 @@ const statusMap: Record<string, { label: string; variant: any }> = {
 };
 
 export default function InvoiceDetail() {
+  const { role } = useErpSession();
+  const isAccounting = role === "accountant" || role === "admin" || role === "general_manager";
   const { id } = useParams();
   const nav = useNavigate();
   const [inv, setInv] = useState<any>(null);
@@ -201,15 +204,17 @@ export default function InvoiceDetail() {
             <Button size="sm" variant="outline" onClick={printInvoice}>
               <Printer className="h-4 w-4 ml-1" /> طباعة / PDF
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setDlgOpen(true)}
-              disabled={fullyCredited || inv.status === "draft"}
-              title={inv.status === "draft" ? "لا يمكن إصدار إشعار دائن على فاتورة مسودة" : fullyCredited ? "تم عكس قيمة الفاتورة بالكامل" : "إنشاء إشعار دائن"}
-            >
-              <FileMinus className="h-4 w-4 ml-1" /> إنشاء إشعار دائن
-            </Button>
+{isAccounting && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setDlgOpen(true)}
+                disabled={fullyCredited || inv.status === "draft"}
+                title={inv.status === "draft" ? "لا يمكن إصدار إشعار دائن على فاتورة مسودة" : fullyCredited ? "تم عكس قيمة الفاتورة بالكامل" : "إنشاء إشعار دائن"}
+              >
+                <FileMinus className="h-4 w-4 ml-1" /> إنشاء إشعار دائن
+              </Button>
+            )}
           </div>
         }
       />

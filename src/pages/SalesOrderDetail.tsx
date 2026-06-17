@@ -26,6 +26,7 @@ import { useSalesActions } from "@/hooks/erp/useSalesActions";
 import { Banknote, Truck, XCircle, Printer, FileMinus } from "lucide-react";
 import { salesVehicleStatus } from "@/services/erp/salesVehicleStatus";
 import { creditNotesService } from "@/services/erp/creditNotes";
+import { cancellationMessage } from "@/services/erp/cancellationMessages";
 import { CreditGateBanner } from "@/components/erp/CreditGateBanner";
 
 interface Line {
@@ -465,15 +466,21 @@ export default function SalesOrderDetail() {
 
   const setStatus = async (next: SalesOrderState, msg: string) => {
     if (next === "cancelled") {
-      const { data: invs } = await supabase.from("invoices").select("id, status").eq("sales_order_id", id);
-      const reversible = (invs ?? []).filter(i => ["posted", "partially_paid", "paid"].includes(i.status as string));
+      // F5.1: تصحيح الفلتر issued (كان posted) + can_cancel أولاً + RPC
+      const { data: invs } = await supabase.from("invoices")
+        .select("id, invoice_no, status").eq("sales_order_id", id).eq("status", "issued");
       try {
-        for (const inv of reversible) {
-          const cnId = await creditNotesService.issueFullReversal(inv.id, "sales_order_cancellation");
-          if (cnId) toast.success("تم إصدار إشعار دائن لعكس قيمة الفاتورة");
+        for (const inv of invs ?? []) {
+          const check = await creditNotesService.canCancel(inv.id);
+          if (!check.can_cancel) {
+            toast.error(cancellationMessage(check.reason));
+            return;
+          }
+          const res = await creditNotesService.issueFullReversal(inv.id, "sales_order_cancellation");
+          toast.success(`تم إلغاء ${inv.invoice_no} — إشعار دائن ${res.cn_no}`);
         }
       } catch (e: any) {
-        toast.error(e.message ?? "فشل إصدار إشعار الدائن");
+        toast.error(cancellationMessage(e?.reason) ?? e?.message ?? "فشل إلغاء الفاتورة");
         return;
       }
     }
