@@ -128,7 +128,7 @@ BEGIN
           INSERT INTO public.governance_log (event_type, module, document_type, document_id, document_code, reason, details)
           VALUES ('COGS_BLOCKED_MISSING_COST', 'accounting', 'sales_invoice', NEW.id, NEW.invoice_no,
                   'landed_cost <= 0',
-                  jsonb_build_object('event','COGS_BLOCKED_MISSING_COST','invoice_id',NEW.id,'invoice_no',NEW.invoice_no,'total_cogs',v_total_cogs));
+                  jsonb_build_object('event','COGS_BLOCKED_MISSING_COST','invoice_id',NEW.id,'invoice_no',NEW.invoice_no,'total_cogs',v_total_cogs)::text);
         ELSE
           -- ترقيم قيد COGS
           v_cogs_yr := TO_CHAR(NEW.invoice_date, 'YYYY');
@@ -157,7 +157,7 @@ BEGIN
               INSERT INTO public.governance_log (event_type, module, document_type, document_id, document_code, reason, details)
               VALUES ('COGS_BLOCKED_MISSING_COST', 'accounting', 'sales_invoice', NEW.id, NEW.invoice_no,
                       'landed_cost <= 0 (line)',
-                      jsonb_build_object('event','COGS_BLOCKED_MISSING_COST','invoice_id',NEW.id,'vehicle_id',v_line.vehicle_id,'landed_cost',COALESCE(v_landed,0)));
+                      jsonb_build_object('event','COGS_BLOCKED_MISSING_COST','invoice_id',NEW.id,'vehicle_id',v_line.vehicle_id,'landed_cost',COALESCE(v_landed,0))::text);
               CONTINUE;
             END IF;
 
