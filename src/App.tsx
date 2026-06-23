@@ -148,6 +148,7 @@ const AdminSettingsWarehouses = lazy(() => import("./pages/admin/settings/Wareho
 const AdminSettingsTax = lazy(() => import("./pages/admin/settings/Tax"));
 const AdminSettingsSequences = lazy(() => import("./pages/admin/settings/Sequences"));
 const AdminSettingsTemplates = lazy(() => import("./pages/admin/settings/Templates"));
+const AdminSettingsZatcaOnboarding = lazy(() => import("./pages/admin/settings/ZatcaOnboarding"));
 
 import { ErpAuthError } from "@/services/erp";
 
@@ -320,6 +321,7 @@ const App = () => (
                 <Route path="audit" element={<AdminAuditLog />} />
                 <Route path="settings/company" element={<AdminSettingsCompany />} />
                 <Route path="settings/branches" element={<AdminSettingsBranches />} />
+                <Route path="settings/zatca-onboarding" element={<AdminSettingsZatcaOnboarding />} />
                 <Route path="settings/account-determination" element={<AdminSettingsAccountDetermination />} />
                 <Route path="settings/account-groups" element={<AdminSettingsAccountGroups />} />
                 <Route path="settings/communications" element={<AdminSettingsCommunications />} />
