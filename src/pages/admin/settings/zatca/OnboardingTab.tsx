@@ -1,16 +1,8 @@
 // ============================================================
-// OnboardingWizard.tsx — S1.4.2
+// OnboardingTab.tsx — S1.4.2 (نسخة مدمجة في ZatcaSettings)
 // ============================================================
-// معالج إعداد الربط مع هيئة الزكاة والضريبة والجمارك (ZATCA)
-// خمس خطوات متسلسلة، تعكس onboarding_status (ZATCA4) مباشرة.
-//
-// الاعتماديات المفترضة في مشروعك (عدّل المسارات حسب بنيتك الفعلية):
-//   - shadcn/ui: Card, Button, Input, Label, Badge, Alert
-//   - sonner أو toast الموجود لديك بالفعل (لاحظنا استخدام toast.success/error)
-//   - ZatcaApi من "@/lib/zatca/zatcaApi" (ملف الـ Mock المُسلَّم سابقاً)
-//
-// عند جاهزية الـ Service Layer الحقيقي (S2-S5): لا حاجة لتعديل هذا الملف،
-// فقط استبدال محتوى ZatcaApi نفسه بنداءات fetch() حقيقية (نفس التوقيعات).
+// نفس محتوى الـ Wizard، لكن بدون شريط البيئة وسجل الجلسات،
+// لأنهما يُعرَضان في الصفحة الأم ZatcaSettings.tsx بين كل التبويبات.
 // ============================================================
 
 import { useState, useEffect } from "react";
@@ -21,9 +13,7 @@ import {
   type ZatcaErrorShape,
   type ComplianceTestType,
   type ComplianceTestResult,
-  type ZatcaEnvironment,
   type CsrSubStatus,
-  type ZatcaOnboardingSessionSummary,
 } from "@/lib/zatca/zatcaApi";
 
 // ---------- خريطة الخطوات إلى onboarding_status ----------
@@ -74,34 +64,6 @@ function statusToStep(status: OnboardingStatus): WizardStep {
     default:
       return 1;
   }
-}
-
-// ---------- شريط البيئة (Sandbox / Simulation / Production) ----------
-
-const ENV_LABELS: Record<ZatcaEnvironment, string> = {
-  sandbox: "بيئة تجريبية (Sandbox)",
-  simulation: "بيئة محاكاة (Simulation)",
-  production: "بيئة الإنتاج (Production)",
-};
-
-const ENV_COLORS: Record<ZatcaEnvironment, string> = {
-  sandbox: "bg-blue-50 text-blue-700 border-blue-200",
-  simulation: "bg-amber-50 text-amber-700 border-amber-200",
-  production: "bg-emerald-50 text-emerald-700 border-emerald-200",
-};
-
-function EnvironmentBanner({ environment }: { environment: ZatcaEnvironment }) {
-  return (
-    <div
-      className={[
-        "mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium",
-        ENV_COLORS[environment],
-      ].join(" ")}
-    >
-      <span className="h-1.5 w-1.5 rounded-full bg-current" />
-      {ENV_LABELS[environment]}
-    </div>
-  );
 }
 
 // ---------- مكوّن عرض الخطأ (موحّد لكل الخطوات) ----------
@@ -189,15 +151,12 @@ function StepperHeader({
 // المكوّن الرئيسي
 // ============================================================
 
-export default function OnboardingWizard() {
+export default function OnboardingTab() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [step, setStep] = useState<WizardStep>(1);
   const [maxReachedStep, setMaxReachedStep] = useState<WizardStep>(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ZatcaErrorShape | null>(null);
-  const [environment, setEnvironment] = useState<ZatcaEnvironment>("sandbox");
-  const [sessions, setSessions] = useState<ZatcaOnboardingSessionSummary[]>([]);
-  const [showSessionHistory, setShowSessionHistory] = useState(false);
 
   function goToStep(target: WizardStep) {
     setStep(target);
@@ -231,16 +190,10 @@ export default function OnboardingWizard() {
   >({});
   const [runningTest, setRunningTest] = useState<ComplianceTestType | null>(null);
 
-  // عند تحميل الصفحة: تحقق إن كانت هناك جلسة قائمة فعلاً + البيئة + السجل
+  // عند تحميل التبويب: تحقق إن كانت هناك جلسة قائمة فعلاً (الأم تتولى البيئة والسجل)
   useEffect(() => {
     (async () => {
-      const [status, env, hist] = await Promise.all([
-        ZatcaApi.getOnboardingStatus(),
-        ZatcaApi.getCompanyEnvironment(),
-        ZatcaApi.getOnboardingSessions(),
-      ]);
-      setEnvironment(env);
-      setSessions(hist);
+      const status = await ZatcaApi.getOnboardingStatus();
       if (status.session_id) {
         setSessionId(status.session_id);
         const resumedStep = statusToStep(status.onboarding_status);
@@ -263,9 +216,8 @@ export default function OnboardingWizard() {
       return;
     }
     setSessionId(result.session_id);
-    setEnvironment(form.environment);
-    const hist = await ZatcaApi.getOnboardingSessions();
-    setSessions(hist);
+    // إعلام الأم لتُحدِّث البيئة + سجل الجلسات إن كانت تعرضهما
+    window.dispatchEvent(new CustomEvent("zatca:session-created"));
     toast.success("تم بدء إعداد الربط مع هيئة الزكاة والضريبة والجمارك");
     goToStep(2);
   }
@@ -422,37 +374,7 @@ export default function OnboardingWizard() {
   // ============================================================
 
   return (
-    <div className="mx-auto max-w-2xl p-6" dir="rtl">
-      <div className="mb-1 text-2xl font-bold text-gray-900">
-        إعداد الربط مع هيئة الزكاة والضريبة والجمارك
-      </div>
-      <p className="mb-3 text-sm text-gray-500">
-        أكمل الخطوات التالية بالترتيب لتفعيل الفوترة الإلكترونية (ZATCA).
-      </p>
-
-      <div className="mb-2 flex items-center justify-between">
-        <EnvironmentBanner environment={environment} />
-        {sessions.length > 0 && (
-          <button
-            className="text-xs text-gray-400 hover:text-gray-600 hover:underline"
-            onClick={() => setShowSessionHistory((v) => !v)}
-          >
-            {showSessionHistory ? "إخفاء سجل الجلسات" : `عرض سجل الجلسات (${sessions.length})`}
-          </button>
-        )}
-      </div>
-
-      {showSessionHistory && (
-        <div className="mb-6 space-y-1 rounded-md border border-gray-100 bg-gray-50 p-3">
-          {sessions.map((s) => (
-            <div key={s.session_id} className="flex items-center justify-between text-xs text-gray-500">
-              <span>{ENV_LABELS[s.environment]} — {s.common_name || "—"}</span>
-              <span className="font-mono">{s.onboarding_status}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
+    <div className="mx-auto max-w-2xl" dir="rtl">
       <StepperHeader current={step} maxReached={maxReachedStep} />
 
       <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">

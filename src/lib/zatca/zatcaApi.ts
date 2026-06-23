@@ -88,17 +88,27 @@ export interface ComplianceTestResult {
   error?: ZatcaErrorShape;
 }
 
+// ZatcaCredential — العقد النهائي للحقول، مطابق لأسماء الأعمدة في
+// zatca_credentials (ZATCA3/ZATCA4) ليكون استبدال الـ Mock بـ Service Layer
+// شبه مباشر بلا تحويل أسماء.
+export type ZatcaCredentialStatus = "pending" | "active" | "rotating" | "revoked" | "expired";
+
 export interface ZatcaCredential {
-  credential_id: string;
+  id: string;                         // كان credential_id — موحَّد مع PK في DB
   credential_type: "CCSID" | "PCSID";
   environment: ZatcaEnvironment;
-  status: "pending" | "active" | "rotating" | "revoked" | "expired";
+  status: ZatcaCredentialStatus;
+  serial_number: string;              // EGS Serial Number أو رقم الشهادة من ZATCA
+  credential_fingerprint: string;     // مطابق fp:* في DB، يُعرض مقتصراً مع زر نسخ
+  issued_at: string;                  // تاريخ الإصدار من ZATCA
   certificate_expiry_at: string;
+  last_used_at?: string;              // آخر مرة استُخدمت في توقيع (للحالة active فقط)
   last_rotated_at?: string;
+  is_active: boolean;                 // مرآة منطقية لـ status=active (موجودة في DB)
 }
 
 export interface ExpiringCredentialRow {
-  credential_id: string;
+  id: string;
   credential_type: "CCSID" | "PCSID";
   days_until_expiry: number;
   status: string;
@@ -133,6 +143,17 @@ function nowIso() {
 
 function makeId(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+// مولِّد بصمة وهمية بصيغة "AB:CD:EF:..." (40 رمز سداسي، 20 زوجاً)
+// في الواقع تأتي البصمة من SHA-1/SHA-256 للشهادة الفعلية في Service Layer
+function makeFingerprint(): string {
+  const hex = "0123456789ABCDEF";
+  const pairs: string[] = [];
+  for (let i = 0; i < 20; i++) {
+    pairs.push(hex[Math.floor(Math.random() * 16)] + hex[Math.floor(Math.random() * 16)]);
+  }
+  return pairs.join(":");
 }
 
 // ============================================================
@@ -442,14 +463,20 @@ export class ZatcaApi {
     currentSession.onboarding_status = "ccsid_received";
     currentSession.csr_sub_status = "ccsid_received";
     currentSession.ccsid_received_at = ccsid_received_at;
-    currentSession.egs_serial_number = makeId("EGS");
+    const egs_serial = makeId("EGS");
+    currentSession.egs_serial_number = egs_serial;
 
     mockCredentials.push({
-      credential_id: makeId("cred"),
+      id: makeId("cred"),
       credential_type: "CCSID",
       environment: currentSession.environment,
       status: "active",
+      serial_number: egs_serial,
+      credential_fingerprint: makeFingerprint(),
+      issued_at: ccsid_received_at,
       certificate_expiry_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+      last_used_at: undefined, // لم تُستخدم بعد
+      is_active: true,
     });
 
     return { ccsid_received_at };
@@ -546,7 +573,7 @@ export class ZatcaApi {
   // ----- الخطوة 5: الترقية للإنتاج (PCSID) -----
   static async activateProduction(
     session_id: string
-  ): Promise<ApiResult<{ credential_id: string }>> {
+  ): Promise<ApiResult<{ id: string }>> {
     await randomDelay(1500, 3000);
 
     if (!currentSession || currentSession.session_id !== session_id) {
@@ -568,24 +595,28 @@ export class ZatcaApi {
     const failure = maybeFail("server_unavailable");
     if (failure) return { error: failure };
 
+    const pcsid_received_at = nowIso();
     currentSession.onboarding_status = "pcsid_received";
-    currentSession.pcsid_received_at = nowIso();
+    currentSession.pcsid_received_at = pcsid_received_at;
 
-    const credential_id = makeId("cred");
+    const id = makeId("cred");
     mockCredentials.push({
-      credential_id,
+      id,
       credential_type: "PCSID",
       environment: "production",
-      certificate_expiry_at: new Date(
-        Date.now() + 365 * 24 * 60 * 60 * 1000
-      ).toISOString(),
       status: "active",
+      serial_number: makeId("EGS-PROD"),
+      credential_fingerprint: makeFingerprint(),
+      issued_at: pcsid_received_at,
+      certificate_expiry_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      last_used_at: undefined,
+      is_active: true,
     });
 
     // اكتمال الرحلة بالكامل
     currentSession.onboarding_status = "completed";
 
-    return { credential_id };
+    return { id };
   }
 
   // ----- حالة الجلسة الحالية -----
@@ -622,32 +653,44 @@ export class ZatcaApi {
   // ===== Credentials Tab =====
   static async listCredentials(): Promise<ZatcaCredential[]> {
     await randomDelay(300, 800);
-    return [...mockCredentials];
+    // ترتيب: active أولاً، ثم rotating، pending، expired، revoked
+    const order: Record<ZatcaCredentialStatus, number> = {
+      active: 0, rotating: 1, pending: 2, expired: 3, revoked: 4,
+    };
+    return [...mockCredentials].sort((a, b) => order[a.status] - order[b.status]);
+  }
+
+  static async getCredentialDetails(id: string): Promise<ZatcaCredential | null> {
+    await delay(200);
+    return mockCredentials.find((c) => c.id === id) ?? null;
   }
 
   static async rotateCredential(
-    credential_id: string
+    id: string
   ): Promise<ApiResult<{ new_session_id: string }>> {
     await randomDelay();
-    const cred = mockCredentials.find((c) => c.credential_id === credential_id);
+    const cred = mockCredentials.find((c) => c.id === id);
     if (!cred) {
       return { error: MOCK_ERRORS.server_unavailable };
     }
+    // ZATCA4 الخيار A: active → rotating (is_active يبقى true حتى تفعيل البديلة)
     cred.status = "rotating";
+    cred.last_rotated_at = nowIso();
     const new_session_id = makeId("session");
     return { new_session_id };
   }
 
   static async revokeCredential(
-    credential_id: string,
+    id: string,
     _reason: string
   ): Promise<ApiResult<{ success: true }>> {
     await randomDelay();
-    const cred = mockCredentials.find((c) => c.credential_id === credential_id);
+    const cred = mockCredentials.find((c) => c.id === id);
     if (!cred) {
       return { error: MOCK_ERRORS.server_unavailable };
     }
     cred.status = "revoked";
+    cred.is_active = false; // ZATCA4: revoked/expired/pending/rotating لا تكون is_active=true
     return { success: true };
   }
 
@@ -658,7 +701,7 @@ export class ZatcaApi {
     return mockCredentials
       .filter((c) => c.status === "active" || c.status === "rotating")
       .map((c) => ({
-        credential_id: c.credential_id,
+        id: c.id,
         credential_type: c.credential_type,
         days_until_expiry: Math.ceil(
           (new Date(c.certificate_expiry_at).getTime() - now) / (1000 * 60 * 60 * 24)
