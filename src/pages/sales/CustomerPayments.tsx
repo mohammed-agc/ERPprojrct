@@ -12,7 +12,7 @@ import { EmptyState } from "@/components/erp/EmptyState";
 import { DocPrintActions } from "@/components/erp/DocPrintActions";
 import { PrintableReceiptDoc } from "@/components/erp/PrintableReceiptDoc";
 import { supabase } from "@/integrations/supabase/client";
-import { adminSettings } from "@/services/erp/adminSettings";
+import { useCompany, displayCompanyName, displayFullAddress } from "@/lib/company/useCompany";
 import { fmtSAR } from "@/lib/erpFormat";
 import { Banknote, FileText, BookOpen, User, Download, Receipt as ReceiptIcon } from "lucide-react";
 
@@ -45,7 +45,7 @@ export default function CustomerPayments() {
   const [method, setMethod] = useState<string>("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const company = adminSettings.get().company;
+  const { company } = useCompany();
 
   useEffect(() => {
     setLoading(true);
@@ -163,11 +163,11 @@ export default function CustomerPayments() {
     return (
       <PrintableReceiptDoc
         company={{
-          name: company.name_ar,
-          cr_number: company.cr_number,
-          vat_number: company.vat_number,
-          address: company.address,
-          contact: company.phone,
+          name: displayCompanyName(company),
+          cr_number: company?.commercial_registration ?? "",
+          vat_number: company?.vat_number ?? "",
+          address: displayFullAddress(company),
+          contact: "",
         }}
         receipt={{
           no: r.payment_no, date: r.payment_date, amount: Number(r.amount || 0),

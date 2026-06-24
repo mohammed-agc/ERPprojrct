@@ -11,6 +11,12 @@ import { canPerform } from "@/lib/erpPermissions";
 import { Banknote, FileMinus, Printer, Search } from "lucide-react";
 import { toast } from "sonner";
 import { PaymentDialog, PaymentSubmitPayload, PaymentInvoiceContext } from "@/components/erp/PaymentDialog";
+import {
+  useCompany,
+  displayCompanyName,
+  displayVatNumber,
+  displayPrintFooter,
+} from "@/lib/company/useCompany";
 
 import { salesVehicleStatus } from "@/services/erp/salesVehicleStatus";
 
@@ -36,6 +42,7 @@ export default function Invoices() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeInvoice, setActiveInvoice] = useState<PaymentInvoiceContext | null>(null);
   const [submitting, setSubmitting] = useState(false);
+    const { company } = useCompany();
 
   const load = async () => {
     const { data: invs } = await supabase
@@ -238,16 +245,16 @@ export default function Invoices() {
 </style></head><body>
   <div class="topbar">
     <div>
-      <div class="seller-ar">أرض المبارك للسيارات</div>
-      <div class="meta">المملكة العربية السعودية — جدة</div>
+      <div class="seller-ar">${esc(displayCompanyName(company))}</div>
+      <div class="meta">${esc(company?.country === "SA" ? "المملكة العربية السعودية" : (company?.country ?? ""))} — ${esc(company?.city ?? "")}</div>
     </div>
     <div class="ttl">
       <div class="ar">فاتورة ضريبية — مركبات</div>
       <div class="en">TAX INVOICE — VEHICLES</div>
     </div>
     <div class="meta">
-      <div><b>الرقم الضريبي / VAT No.:</b> 300000000000003</div>
-      <div><b>السجل التجاري / CR:</b> 1010000000</div>
+      <div><b>الرقم الضريبي / VAT No.:</b> ${esc(displayVatNumber(company))}</div>
+      <div><b>السجل التجاري / CR:</b> ${esc(company?.commercial_registration ?? "—")}</div>
       <div><b>تاريخ الطباعة:</b> ${new Date().toLocaleString("ar-SA")}</div>
     </div>
   </div>
@@ -255,9 +262,9 @@ export default function Invoices() {
   <div class="parties">
     <div class="box">
       <div class="lbl">بيانات البائع / Seller</div>
-      <div class="row"><span>اسم الشركة / Company</span><b>أرض المبارك للسيارات</b></div>
-      <div class="row"><span>الرقم الضريبي / VAT</span><b dir="ltr">300000000000003</b></div>
-      <div class="row"><span>الفرع / Branch</span><b>${esc(r.branch || "جدة")}</b></div>
+      <div class="row"><span>اسم الشركة / Company</span><b>${esc(displayCompanyName(company))}</b></div>
+      <div class="row"><span>الرقم الضريبي / VAT</span><b dir="ltr">${esc(displayVatNumber(company))}</b></div>
+      <div class="row"><span>الفرع / Branch</span><b>${esc(r.branch || company?.city || "—")}</b></div>
       <div class="row"><span>التواصل / Contact</span><b dir="ltr">+966 12 000 0000</b></div>
     </div>
     <div class="box">
@@ -308,7 +315,7 @@ export default function Invoices() {
     <div class="s"><div class="line"></div>مدير المبيعات</div>
   </div>
 
-  <div class="foot">أرض المبارك للسيارات · جدة · المملكة العربية السعودية</div>
+  <div class="foot">${esc(displayPrintFooter(company))}</div>
 </body></html>`;
 
     const w = window.open("", "_blank", "width=1100,height=750");

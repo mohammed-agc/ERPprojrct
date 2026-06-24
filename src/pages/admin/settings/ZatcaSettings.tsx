@@ -1,11 +1,12 @@
 // ============================================================
-// ZatcaSettings.tsx — S1.4.3 (الصفحة الأم)
+// ZatcaSettings.tsx — S1.4.1 (الصفحة الأم — مع تبويب معلومات الشركة)
 // ============================================================
-// إعدادات هيئة الزكاة والضريبة والجمارك — تجمع 4 تبويبات في صفحة واحدة:
-//   1. الإعداد الأولي (Onboarding)        — S1.4.2 ✓
-//   2. الشهادات (Credentials)             — S1.4.3 ✓ (هذا الإصدار)
-//   3. اختبارات الامتثال (Compliance)     — S1.4.4 (placeholder حالياً)
-//   4. حالة الشهادات (Certificate Status) — S1.4.5 (placeholder حالياً)
+// إعدادات هيئة الزكاة والضريبة والجمارك — تجمع 5 تبويبات في صفحة واحدة:
+//   1. معلومات الشركة (Company Info)      — S1.4.1 ✓ (هذا الإصدار)
+//   2. الإعداد الأولي (Onboarding)        — S1.4.2 ✓
+//   3. الشهادات (Credentials)             — S1.4.3 ✓
+//   4. اختبارات الامتثال (Compliance)     — S1.4.4 ✓
+//   5. حالة الشهادات (Certificate Status) — S1.4.5 ✓
 //
 // شريط البيئة وسجل الجلسات مشتركان فوق كل التبويبات.
 // ============================================================
@@ -20,10 +21,12 @@ import OnboardingTab from "./zatca/OnboardingTab";
 import CredentialsTab from "./zatca/CredentialsTab";
 import CertificateStatusTab from "./zatca/CertificateStatusTab";
 import ComplianceTab from "./zatca/ComplianceTab";
+import CompanyInfoTab from "./zatca/CompanyInfoTab";
 
-type ZatcaTab = "onboarding" | "credentials" | "compliance" | "certificate-status";
+type ZatcaTab = "company-info" | "onboarding" | "credentials" | "compliance" | "certificate-status";
 
 const TAB_LABELS: Record<ZatcaTab, string> = {
+  "company-info": "معلومات الشركة",
   onboarding: "الإعداد الأولي",
   credentials: "الشهادات",
   compliance: "اختبارات الامتثال",
@@ -31,6 +34,7 @@ const TAB_LABELS: Record<ZatcaTab, string> = {
 };
 
 const TAB_GROUPS: { label: string; tabs: ZatcaTab[] }[] = [
+  { label: "البيانات الأساسية", tabs: ["company-info"] },
   { label: "الإعداد", tabs: ["onboarding"] },
   { label: "التشغيل", tabs: ["credentials"] },
   { label: "الاختبارات", tabs: ["compliance"] },
@@ -100,7 +104,7 @@ export default function ZatcaSettings() {
         إعداد الربط مع هيئة الزكاة والضريبة والجمارك
       </div>
       <p className="mb-4 text-sm text-gray-500">
-        إدارة الإعداد الأولي والشهادات والامتثال للفوترة الإلكترونية (ZATCA).
+        إدارة بيانات الشركة، الإعداد الأولي، الشهادات، والامتثال للفوترة الإلكترونية (ZATCA).
       </p>
 
       {/* شريط البيئة + سجل الجلسات */}
@@ -165,6 +169,7 @@ export default function ZatcaSettings() {
 
       {/* محتوى التبويب */}
       <div className="rounded-lg bg-white p-6 shadow-sm">
+        {activeTab === "company-info" && <CompanyInfoTab />}
         {activeTab === "onboarding" && <OnboardingTab />}
         {activeTab === "credentials" && <CredentialsTab />}
         {activeTab === "compliance" && <ComplianceTab />}
@@ -173,5 +178,3 @@ export default function ZatcaSettings() {
     </div>
   );
 }
-
-// ---------- لم يعد هناك placeholders — كل التبويبات الأربعة منفّذة فعلياً ----------

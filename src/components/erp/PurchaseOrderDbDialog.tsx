@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { createPurchaseOrder, listActiveSuppliers, type POLineInput } from "@/services/erp/purchasingDb";
+import { useBranches } from "@/lib/company/useBranches";
 
 interface Brand { id: string; name: string; }
 interface VehicleModel { id: string; name: string; brand_id: string; }
@@ -103,6 +104,7 @@ export function PurchaseOrderDbDialog({ open, onOpenChange, onCreated }: Props) 
   const [expected,    setExpected]    = useState("");
   const [paymentTerm, setPaymentTerm] = useState("net_30");
   const [branch,      setBranch]      = useState("");
+  const { branches } = useBranches();
   const [agreementType, setAgreementType] = useState("framework");
   const [notes,       setNotes]       = useState("");
   const [lines,       setLines]       = useState<POLine[]>([emptyLine()]);
@@ -209,10 +211,11 @@ export function PurchaseOrderDbDialog({ open, onOpenChange, onCreated }: Props) 
             <Select value={branch} onValueChange={setBranch}>
               <SelectTrigger className="h-9"><SelectValue placeholder="اختر الفرع" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="الرياض الرئيسي">الرياض — المستودع الرئيسي</SelectItem>
-                <SelectItem value="جدة">جدة — المستودع الرئيسي</SelectItem>
-                <SelectItem value="الدمام">الدمام — الفرع</SelectItem>
-                <SelectItem value="مستودع الفحص">مستودع الفحص</SelectItem>
+                {branches.length === 0 ? (
+                  <SelectItem value="__none__" disabled>لا توجد فروع. أنشئ فرعاً من الإعدادات.</SelectItem>
+                ) : (
+                  branches.map(b => <SelectItem key={b.id} value={b.code}>{b.name_ar}{b.city ? ` / ${b.city}` : ""}</SelectItem>)
+                )}
               </SelectContent>
             </Select>
           </div>

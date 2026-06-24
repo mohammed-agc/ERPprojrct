@@ -2,12 +2,20 @@
 import { exportPageToPDF } from "@/utils/pdfExport";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  useCompany,
+  displayCompanyName,
+  displayVatNumber,
+  displayShortAddress,
+  displayPrintFooter,
+} from "@/lib/company/useCompany";
 
 const fmtSAR = (n: number) => Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2 });
 const fmtDate = (s?: string) => s ? new Date(s).toLocaleDateString("ar-SA") : "—";
 
 export default function InvoicePrint() {
   const { id } = useParams<{ id: string }>();
+  const { company } = useCompany();
   const [inv, setInv] = useState<any>(null);
   const [lines, setLines] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
@@ -81,9 +89,9 @@ export default function InvoicePrint() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
           <div style={{ background: "#f0fdfa", padding: "16px", borderRadius: "8px", border: "1px solid #99f6e4" }}>
             <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "8px", fontWeight: "600", textTransform: "uppercase" }}>من / From</div>
-            <div style={{ fontWeight: "bold", fontSize: "16px" }}>أرض المبارك للسيارات</div>
-            <div style={{ fontSize: "13px", color: "#374151", marginTop: "4px" }}>الرقم الضريبي: 300000000000003</div>
-            <div style={{ fontSize: "13px", color: "#374151" }}>جدة، المملكة العربية السعودية</div>
+            <div style={{ fontWeight: "bold", fontSize: "16px" }}>{displayCompanyName(company)}</div>
+            <div style={{ fontSize: "13px", color: "#374151", marginTop: "4px" }}>الرقم الضريبي: {displayVatNumber(company)}</div>
+            <div style={{ fontSize: "13px", color: "#374151" }}>{displayShortAddress(company)}</div>
             <div style={{ fontSize: "13px", color: "#374151" }}>info@ard-almbarak.com</div>
           </div>
           <div style={{ background: "#f9fafb", padding: "16px", borderRadius: "8px", border: "1px solid #e5e7eb" }}>
@@ -198,7 +206,7 @@ export default function InvoicePrint() {
 
         {/* Footer */}
         <div style={{ borderTop: "2px solid #e5e7eb", paddingTop: "16px", textAlign: "center", color: "#9ca3af", fontSize: "12px" }}>
-          <p>شكراً لتعاملكم معنا · أرض المبارك للسيارات · جدة · المملكة العربية السعودية</p>
+          <p>شكراً لتعاملكم معنا · {displayPrintFooter(company)}</p>
         </div>
 
         {/* Print Button */}

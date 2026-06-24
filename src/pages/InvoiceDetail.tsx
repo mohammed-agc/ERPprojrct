@@ -9,6 +9,13 @@ import { CreditNoteDialog } from "@/components/erp/CreditNoteDialog";
 import { CreditGateBanner } from "@/components/erp/CreditGateBanner";
 import { AllocationInquiry } from "@/components/erp/AllocationInquiry";
 import { useErpSession } from "@/contexts/ErpSessionContext";
+import {
+  useCompany,
+  displayCompanyName,
+  displayVatNumber,
+  displayShortAddress,
+  displayPrintFooter,
+} from "@/lib/company/useCompany";
 
 const fmt = (n: number) => Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtDate = (s?: string) => s ? new Date(s).toLocaleDateString("ar-SA") : "—";
@@ -24,6 +31,7 @@ const statusMap: Record<string, { label: string; variant: any }> = {
 
 export default function InvoiceDetail() {
   const { role } = useErpSession();
+  const { company } = useCompany();
   const isAccounting = role === "accountant" || role === "admin" || role === "general_manager";
   const { id } = useParams();
   const nav = useNavigate();
@@ -141,9 +149,9 @@ export default function InvoiceDetail() {
   <div class="parties">
     <div class="box" style="background:#f0fdfa;border:1px solid #99f6e4">
       <div style="font-size:10px;color:#6b7280;font-weight:700;margin-bottom:8px">البائع / SELLER</div>
-      <div style="font-weight:bold;font-size:15px">أرض المبارك للسيارات</div>
-      <div style="font-size:12px;color:#374151;margin-top:5px">الرقم الضريبي: 300000000000003</div>
-      <div style="font-size:12px;color:#374151">جدة، المملكة العربية السعودية</div>
+      <div style="font-weight:bold;font-size:15px">${esc(displayCompanyName(company))}</div>
+      <div style="font-size:12px;color:#374151;margin-top:5px">الرقم الضريبي: ${esc(displayVatNumber(company))}</div>
+      <div style="font-size:12px;color:#374151">${esc(displayShortAddress(company))}</div>
     </div>
     <div class="box" style="background:#f9fafb;border:1px solid #e5e7eb">
       <div style="font-size:10px;color:#6b7280;font-weight:700;margin-bottom:8px">المشتري / BUYER</div>
@@ -175,7 +183,7 @@ export default function InvoiceDetail() {
   </div>
   ${inv.qr_code ? `<div style="margin-top:20px;text-align:center"><div style="font-size:11px;color:#6b7280;margin-bottom:6px">رمز الاستجابة السريعة (ZATCA)</div><div style="font-family:monospace;font-size:9px;word-break:break-all;max-width:300px;margin:0 auto;color:#9ca3af">${esc(inv.qr_code)}</div></div>` : ""}
   <div style="border-top:2px solid #e5e7eb;padding-top:14px;text-align:center;color:#9ca3af;font-size:11px;margin-top:24px">
-    أرض المبارك للسيارات · جدة · المملكة العربية السعودية · فاتورة متوافقة مع هيئة الزكاة والضريبة والجمارك
+    ${esc(displayPrintFooter(company))} · فاتورة متوافقة مع هيئة الزكاة والضريبة والجمارك
   </div>
 </body></html>`;
 

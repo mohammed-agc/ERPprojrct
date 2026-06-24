@@ -90,8 +90,8 @@ export interface AdminSettings {
 
 const DEFAULTS: AdminSettings = {
   company: {
-    name_ar: "مؤسسة أرض المبارك للسيارات",
-    name_en: "Ard Al-Mubarak Motors",
+    name_ar: "",
+    name_en: "",
     logo_url: "",
     vat_number: "",
     cr_number: "",
@@ -112,7 +112,7 @@ const DEFAULTS: AdminSettings = {
     address: "",
   },
   branches: [
-    { id: "br-main", code: "BR-01", name_ar: "الفرع الرئيسي", city: "جدة", phone: "", is_active: true },
+    { id: "br-main", code: "BR-01", name_ar: "الفرع الرئيسي", city: "", phone: "", is_active: true },
   ],
   warehouses: [
     { id: "wh-vehicles", code: "WH-VEH", name_ar: "مستودع المركبات", branch_id: "br-main", type: "vehicles", is_active: true },

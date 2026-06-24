@@ -28,6 +28,13 @@ import { salesVehicleStatus } from "@/services/erp/salesVehicleStatus";
 import { creditNotesService } from "@/services/erp/creditNotes";
 import { cancellationMessage } from "@/services/erp/cancellationMessages";
 import { CreditGateBanner } from "@/components/erp/CreditGateBanner";
+import {
+  useCompany,
+  displayCompanyName,
+  displayVatNumber,
+  displayShortAddress,
+  displayPrintFooter,
+} from "@/lib/company/useCompany";
 
 interface Line {
   id?: string;
@@ -97,6 +104,7 @@ function buildVehicleDescription(v: any): string {
 export default function SalesOrderDetail() {
   const { id } = useParams();
   const nav = useNavigate();
+  const { company } = useCompany();
   const [order, setOrder] = useState<any>(null);
   const [customers, setCustomers] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -310,8 +318,12 @@ export default function SalesOrderDetail() {
       toast.error("Each vehicle line must be linked to a vehicle. Invoice rejected.");
       return;
     }
-    const sellerName = "أرض المبارك للسيارات";
-    const vatNum = "300000000000003";
+    const sellerName = company?.name ?? "";
+    const vatNum = company?.vat_number ?? "";
+    if (!sellerName || !vatNum) {
+      toast.error("بيانات الشركة غير مكتملة. يرجى إكمال الإعدادات قبل إنشاء فاتورة.");
+      return;
+    }
     const tlv = (tag: number, val: string) => {
       const v = new TextEncoder().encode(val);
       return new Uint8Array([tag, v.length, ...v]);
@@ -411,9 +423,9 @@ export default function SalesOrderDetail() {
   <div class="parties">
     <div class="box" style="background:#f0fdfa;border:1px solid #99f6e4">
       <div style="font-size:10px;color:#6b7280;font-weight:700;margin-bottom:8px">من / FROM</div>
-      <div style="font-weight:bold;font-size:15px">أرض المبارك للسيارات</div>
-      <div style="font-size:12px;color:#374151;margin-top:5px">الرقم الضريبي: 300000000000003</div>
-      <div style="font-size:12px;color:#374151">جدة، المملكة العربية السعودية</div>
+      <div style="font-weight:bold;font-size:15px">${esc(displayCompanyName(company))}</div>
+      <div style="font-size:12px;color:#374151;margin-top:5px">الرقم الضريبي: ${esc(displayVatNumber(company))}</div>
+      <div style="font-size:12px;color:#374151">${esc(displayShortAddress(company))}</div>
     </div>
     <div class="box" style="background:#f9fafb;border:1px solid #e5e7eb">
       <div style="font-size:10px;color:#6b7280;font-weight:700;margin-bottom:8px">إلى / TO</div>
@@ -447,7 +459,7 @@ export default function SalesOrderDetail() {
     <div style="text-align:center"><div style="border-top:1px solid #9ca3af;padding-top:8px;margin-top:44px;font-size:12px;color:#6b7280">توقيع العميل</div></div>
   </div>
   <div style="border-top:2px solid #e5e7eb;padding-top:14px;text-align:center;color:#9ca3af;font-size:11px;margin-top:22px">
-    أرض المبارك للسيارات · جدة · المملكة العربية السعودية
+    ${esc(displayPrintFooter(company))}
   </div>
 </body></html>`;
 

@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ErpSessionProvider } from "@/contexts/ErpSessionContext";
+import { CompanyProvider } from "@/lib/company/useCompany";
 import AppLayout from "@/components/layout/AppLayout";
 import { ErrorBoundary } from "@/components/erp/ErrorBoundary";
 import Auth from "./pages/Auth";
@@ -188,6 +189,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <ErpSessionProvider>
+          <CompanyProvider>
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/print/quotations/:id" element={<QuotationPrint />} />
@@ -335,6 +337,7 @@ const App = () => (
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </CompanyProvider>
           </ErpSessionProvider>
         </AuthProvider>
       </BrowserRouter>

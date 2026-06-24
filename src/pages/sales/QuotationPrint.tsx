@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  useCompany,
+  displayCompanyName,
+  displayVatNumber,
+  displayShortAddress,
+  displayPrintFooter,
+} from "@/lib/company/useCompany";
 
 const fmtSAR = (n: number) => Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2 });
 const fmtDate = (s?: string) => s ? new Date(s).toLocaleDateString("ar-SA") : "—";
@@ -8,6 +15,7 @@ const esc = (s: any) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;",
 
 export default function QuotationPrint() {
   const { id } = useParams<{ id: string }>();
+  const { company } = useCompany();
   const [quote, setQuote] = useState<any>(null);
   const [lines, setLines] = useState<any[]>([]);
 
@@ -97,9 +105,9 @@ export default function QuotationPrint() {
   <div class="parties">
     <div class="box" style="background:#f0fdfa;border:1px solid #99f6e4">
       <div style="font-size:10px;color:#6b7280;font-weight:700;margin-bottom:8px">من / FROM</div>
-      <div style="font-weight:bold;font-size:15px">أرض المبارك للسيارات</div>
-      <div style="font-size:12px;color:#374151;margin-top:5px">الرقم الضريبي: 300000000000003</div>
-      <div style="font-size:12px;color:#374151">جدة، المملكة العربية السعودية</div>
+      <div style="font-weight:bold;font-size:15px">${esc(displayCompanyName(company))}</div>
+      <div style="font-size:12px;color:#374151;margin-top:5px">الرقم الضريبي: ${esc(displayVatNumber(company))}</div>
+      <div style="font-size:12px;color:#374151">${esc(displayShortAddress(company))}</div>
       <div style="font-size:12px;color:#374151">info@ard-almbarak.com</div>
     </div>
     <div class="box" style="background:#f9fafb;border:1px solid #e5e7eb">
@@ -147,7 +155,7 @@ export default function QuotationPrint() {
 
   <div class="footer">
     <p style="margin:0 0 4px">هذا العرض صالح حتى تاريخ ${fmtDate(quote.valid_until)} · شكراً لتعاملكم معنا</p>
-    <p style="margin:0">أرض المبارك للسيارات · جدة · المملكة العربية السعودية</p>
+    <p style="margin:0">${esc(displayPrintFooter(company))}</p>
   </div>
 </body>
 </html>`;
@@ -209,9 +217,9 @@ export default function QuotationPrint() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "22px" }}>
           <div style={{ background: "#f0fdfa", padding: "14px", borderRadius: "8px", border: "1px solid #99f6e4" }}>
             <div style={{ fontSize: "10px", color: "#6b7280", fontWeight: 700, marginBottom: "8px" }}>من / FROM</div>
-            <div style={{ fontWeight: "bold", fontSize: "15px" }}>أرض المبارك للسيارات</div>
-            <div style={{ fontSize: "12px", color: "#374151", marginTop: "5px" }}>الرقم الضريبي: 300000000000003</div>
-            <div style={{ fontSize: "12px", color: "#374151" }}>جدة، المملكة العربية السعودية</div>
+            <div style={{ fontWeight: "bold", fontSize: "15px" }}>{displayCompanyName(company)}</div>
+            <div style={{ fontSize: "12px", color: "#374151", marginTop: "5px" }}>الرقم الضريبي: {displayVatNumber(company)}</div>
+            <div style={{ fontSize: "12px", color: "#374151" }}>{displayShortAddress(company)}</div>
           </div>
           <div style={{ background: "#f9fafb", padding: "14px", borderRadius: "8px", border: "1px solid #e5e7eb" }}>
             <div style={{ fontSize: "10px", color: "#6b7280", fontWeight: 700, marginBottom: "8px" }}>إلى / TO</div>

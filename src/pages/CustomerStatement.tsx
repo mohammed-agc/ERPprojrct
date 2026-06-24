@@ -14,7 +14,7 @@ import {
 } from "@/services/erp/customerSettlement";
 import { DocPrintActions } from "@/components/erp/DocPrintActions";
 import { PrintableCustomerStatementDoc } from "@/components/erp/PrintableCustomerStatementDoc";
-import { adminSettings } from "@/services/erp/adminSettings";
+import { useCompany, displayCompanyName, displayFullAddress } from "@/lib/company/useCompany";
 
 const fmt = (n: number) => Number(n || 0).toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -41,17 +41,17 @@ export default function CustomerStatement() {
     }).finally(() => setLoading(false));
   }, [id, from, to]);
 
-  const company = adminSettings.get().company;
+  const { company } = useCompany();
   const printDoc = useMemo(() => {
     if (!snapshot?.customer) return null;
     return (
       <PrintableCustomerStatementDoc
         company={{
-          name: company.name_ar,
-          cr_number: company.cr_number,
-          vat_number: company.vat_number,
-          address: company.address,
-          contact: company.phone,
+          name: displayCompanyName(company),
+          cr_number: company?.commercial_registration ?? "",
+          vat_number: company?.vat_number ?? "",
+          address: displayFullAddress(company),
+          contact: "",
         }}
         customer={snapshot.customer}
         rows={snapshot.rows}

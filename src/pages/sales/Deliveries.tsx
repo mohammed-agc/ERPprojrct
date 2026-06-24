@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCompany, displayPrintFooter } from "@/lib/company/useCompany";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,6 +87,7 @@ function SignaturePad({ onChange }: { onChange: (dataUrl: string | null) => void
 }
 
 export default function Deliveries() {
+  const { company } = useCompany();
   const { role } = useErpSession();
   const [ready, setReady] = useState<any[]>([]);
   const [log, setLog] = useState<any[]>([]);
@@ -257,7 +259,7 @@ export default function Deliveries() {
     </div>
   </div>
   <div style="border-top:2px solid #e5e7eb;padding-top:12px;text-align:center;color:#9ca3af;font-size:11px;margin-top:24px">
-    أرض المبارك للسيارات · جدة · المملكة العربية السعودية · أقرّ باستلام المركبة بحالتها الموضّحة أعلاه
+    ${displayPrintFooter(company)} · أقرّ باستلام المركبة بحالتها الموضّحة أعلاه
   </div>
 </body></html>`;
     const w = window.open("", "_blank", "width=900,height=700");

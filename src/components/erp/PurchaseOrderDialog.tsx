@@ -12,6 +12,7 @@ import { purchasingService, type PaymentTerm, fmtSAR } from "@/services/erp/purc
 import { supabase } from "@/integrations/supabase/client";
 import { parseContactMeta } from "@/lib/contactMeta";
 import { LinesEditor, emptyLine, type LineDraft } from "@/components/erp/LinesEditor";
+import { useBranches } from "@/lib/company/useBranches";
 
 interface Props {
   open: boolean;
@@ -19,7 +20,7 @@ interface Props {
   onCreated?: () => void;
 }
 
-const BRANCHES = ["الرياض الرئيسي", "جدة", "الدمام", "مكة", "المدينة"];
+
 
 type ContactVendor = {
   id: string; contactId: string; code: string; name: string; country: string;
@@ -30,7 +31,8 @@ export function PurchaseOrderDialog({ open, onOpenChange, onCreated }: Props) {
   const suppliers = useMemo(() => purchasingService.listSuppliers(), [open]);
   const [contactVendors, setContactVendors] = useState<ContactVendor[]>([]);
   const [supplierId, setSupplierId] = useState(suppliers[0]?.id ?? "");
-  const [branch, setBranch] = useState(BRANCHES[0]);
+  const { branches } = useBranches();
+  const [branch, setBranch] = useState<string>("");
   const [eta, setEta] = useState(() => {
     const d = new Date(); d.setDate(d.getDate() + 14); return d.toISOString().slice(0, 10);
   });
@@ -83,7 +85,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, onCreated }: Props) {
 
   const reset = () => {
     setSupplierId(suppliers[0]?.id ?? contactVendors[0]?.id ?? "");
-    setBranch(BRANCHES[0]); setPaymentTerm("net_30"); setAgreementType("framework");
+    setBranch(""); setPaymentTerm("net_30"); setAgreementType("framework");
     setItems([emptyLine()]);
   };
 
@@ -152,7 +154,7 @@ export function PurchaseOrderDialog({ open, onOpenChange, onCreated }: Props) {
             <Label className="text-xs">الفرع الوجهة</Label>
             <Select value={branch} onValueChange={setBranch}>
               <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>{BRANCHES.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+              <SelectContent>{branches.length === 0 ? <SelectItem value="__none__" disabled>لا توجد فروع. أنشئ فرعاً من الإعدادات.</SelectItem> : branches.map(b => <SelectItem key={b.id} value={b.code}>{b.name_ar}{b.city ? ` / ${b.city}` : ""}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">

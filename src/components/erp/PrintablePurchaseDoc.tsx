@@ -1,6 +1,7 @@
 import { PrintLayout } from "@/components/erp/PrintLayout";
 import type { LineItem } from "@/services/erp/purchasing";
 import { fmtSAR } from "@/services/erp/purchasing";
+import { useCompany, displayCompanyName, displayVatNumber } from "@/lib/company/useCompany";
 
 interface Props {
   title: string;
@@ -28,12 +29,13 @@ const HEAD: Record<Props["docType"], string> = {
 };
 
 export function PrintablePurchaseDoc(p: Props) {
+  const { company } = useCompany();
   return (
     <PrintLayout
       title={`${HEAD[p.docType]} — ${p.title}`}
-      subtitle="مستند رسمي — ساراط ERP"
-      orgName="ساراط للسيارات"
-      vatNumber="300000000000003"
+      subtitle="مستند رسمي"
+      orgName={displayCompanyName(company)}
+      vatNumber={displayVatNumber(company)}
       documentNo={p.documentNo}
       documentDate={p.documentDate}
       watermark={p.watermark}

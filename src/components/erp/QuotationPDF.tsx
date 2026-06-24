@@ -82,9 +82,9 @@ export function QuotationPDFDoc({ quote, lines }: { quote: any; lines: any[] }) 
         <View style={styles.parties}>
           <View style={[styles.partyBox, styles.partyBoxFrom]}>
             <Text style={styles.partyLabel}>من / From</Text>
-            <Text style={styles.partyName}>أرض المبارك للسيارات</Text>
-            <Text style={styles.partyDetail}>الرقم الضريبي: 300000000000003</Text>
-            <Text style={styles.partyDetail}>جدة، المملكة العربية السعودية</Text>
+            <Text style={styles.partyName}></Text>
+            <Text style={styles.partyDetail}>الرقم الضريبي: </Text>
+            <Text style={styles.partyDetail}></Text>
             <Text style={styles.partyDetail}>info@ard-almbarak.com</Text>
           </View>
           <View style={[styles.partyBox, styles.partyBoxTo]}>
@@ -160,7 +160,7 @@ export function QuotationPDFDoc({ quote, lines }: { quote: any; lines: any[] }) 
             هذا العرض صالح حتى تاريخ {fmtDate(quote.valid_until)} · شكراً لتعاملكم معنا
           </Text>
           <Text style={[styles.footerText, { marginTop: 3 }]}>
-            أرض المبارك للسيارات · جدة · المملكة العربية السعودية
+            
           </Text>
         </View>
       </Page>
