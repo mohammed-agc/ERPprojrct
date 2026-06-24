@@ -88,6 +88,45 @@ export interface ComplianceTestResult {
   error?: ZatcaErrorShape;
 }
 
+// ============================================================
+// S1.4.4 — Compliance Diagnostic Tool
+// ============================================================
+
+// Health Check: 5 مؤشرات سريعة لحالة الربط مع ZATCA
+export interface ZatcaHealthCheck {
+  active_credential: {
+    present: boolean;
+    credential_type?: "CCSID" | "PCSID";
+    environment?: ZatcaEnvironment;
+  };
+  certificate_expiry: {
+    days_remaining: number | null; // null إذا لم توجد شهادة نشطة
+    category: ExpiryCategory | null;
+  };
+  service_connection: {
+    connected: boolean;
+    last_check_at?: string;
+    latency_ms?: number;
+  };
+  last_successful_submission: {
+    occurred_at?: string;
+    document_type?: string;
+  };
+  last_error: {
+    occurred_at?: string;
+    error?: ZatcaErrorShape;
+  };
+}
+
+// نتيجة اختبار تشخيصي مع تاريخ آخر تشغيل (يحاكي zatca_compliance_test_log)
+export interface DiagnosticTestRow {
+  test_type: ComplianceTestType;
+  status: "not_run" | "passed" | "failed";
+  last_executed_at?: string;
+  response_time_ms?: number;
+  error?: ZatcaErrorShape;
+}
+
 // ZatcaCredential — العقد النهائي للحقول، مطابق لأسماء الأعمدة في
 // zatca_credentials (ZATCA3/ZATCA4) ليكون استبدال الـ Mock بـ Service Layer
 // شبه مباشر بلا تحويل أسماء.
@@ -348,6 +387,13 @@ let mockCredentials: ZatcaCredential[] = [
 ];
 
 let complianceResults: Partial<Record<ComplianceTestType, ComplianceTestResult>> = {};
+
+// ===== S1.4.4 Diagnostic state =====
+// مستقل عن complianceResults (الذي للـ Wizard فقط)
+let diagnosticResults: Partial<Record<ComplianceTestType, DiagnosticTestRow>> = {};
+let lastSuccessfulSubmissionAt: string | undefined;
+let lastErrorAt: string | undefined;
+let lastErrorShape: ZatcaErrorShape | undefined;
 
 // نمط الرقم الضريبي السعودي: 15 رقماً، يبدأ وينتهي بـ 3
 function isValidSaudiVat(vat: string): boolean {
@@ -735,12 +781,177 @@ export class ZatcaApi {
       });
   }
 
+  // ============================================================
+  // ===== S1.4.4 Compliance Diagnostic Tool =====
+  // ============================================================
+  // مستقل عن خطوة 4 في Wizard. يُستخدم بعد اكتمال Onboarding للتشخيص.
+
+  // ----- Health Check: 5 مؤشرات سريعة -----
+  static async getZatcaHealthCheck(): Promise<ZatcaHealthCheck> {
+    await randomDelay(400, 900);
+
+    // 1. الشهادة النشطة (الأفضلية: PCSID قبل CCSID؛ active قبل rotating)
+    const activeCred =
+      mockCredentials.find((c) => c.is_active && c.credential_type === "PCSID") ??
+      mockCredentials.find((c) => c.is_active && c.credential_type === "CCSID");
+
+    // 2. صلاحية الشهادة وفئتها
+    let daysRemaining: number | null = null;
+    let expiryCategory: ExpiryCategory | null = null;
+    if (activeCred) {
+      daysRemaining = Math.ceil(
+        (new Date(activeCred.certificate_expiry_at).getTime() - Date.now()) /
+          (1000 * 60 * 60 * 24)
+      );
+      if (daysRemaining <= 0) expiryCategory = "expired";
+      else if (daysRemaining <= 7) expiryCategory = "expires_7_days";
+      else if (daysRemaining <= 15) expiryCategory = "expires_15_days";
+      else if (daysRemaining <= 30) expiryCategory = "expires_30_days";
+      else expiryCategory = "valid";
+    }
+
+    // 3. اتصال الخدمة (في Mock: نجاح ما لم تُفعَّل محاكاة فشل عشوائية)
+    const connectionFailed = SIMULATE_RANDOM_FAILURES && Math.random() < 0.2;
+    const latency = Math.round(80 + Math.random() * 320);
+
+    return {
+      active_credential: activeCred
+        ? {
+            present: true,
+            credential_type: activeCred.credential_type,
+            environment: activeCred.environment,
+          }
+        : { present: false },
+      certificate_expiry: {
+        days_remaining: daysRemaining,
+        category: expiryCategory,
+      },
+      service_connection: {
+        connected: !connectionFailed && !!activeCred,
+        last_check_at: nowIso(),
+        latency_ms: !connectionFailed && !!activeCred ? latency : undefined,
+      },
+      last_successful_submission: lastSuccessfulSubmissionAt
+        ? { occurred_at: lastSuccessfulSubmissionAt, document_type: "standard_invoice" }
+        : {},
+      last_error: lastErrorAt
+        ? { occurred_at: lastErrorAt, error: lastErrorShape }
+        : {},
+    };
+  }
+
+  // ----- قراءة آخر نتائج التشخيص (للعرض عند فتح التبويب) -----
+  static async getDiagnosticResults(): Promise<DiagnosticTestRow[]> {
+    await delay(250);
+    const allTypes: ComplianceTestType[] = [
+      "standard_invoice",
+      "standard_credit_note",
+      "standard_debit_note",
+      "simplified_invoice",
+      "simplified_credit_note",
+      "simplified_debit_note",
+    ];
+    return allTypes.map(
+      (t) => diagnosticResults[t] ?? { test_type: t, status: "not_run" }
+    );
+  }
+
+  // ----- تشغيل اختبار تشخيصي واحد -----
+  // يختلف عن runComplianceTest (الـ Wizard) في:
+  //   - لا يربط بـ currentSession (يعمل بعد اكتمال Onboarding)
+  //   - يقيس response_time_ms
+  //   - يكتب في diagnosticResults (سجل تشخيصي مستقل)
+  //   - يحدّث lastSuccessfulSubmissionAt / lastErrorAt للـ Health Check
+  static async runDiagnosticTest(
+    test_type: ComplianceTestType
+  ): Promise<DiagnosticTestRow> {
+    // التحقق من وجود شهادة نشطة (شرط أساسي للتشخيص)
+    const activeCred = mockCredentials.find((c) => c.is_active);
+    if (!activeCred) {
+      const row: DiagnosticTestRow = {
+        test_type,
+        status: "failed",
+        last_executed_at: nowIso(),
+        error: {
+          code: "authentication-expired-csid",
+          category: "authentication",
+          severity: "error",
+          retryable: false,
+          arabic_message: "لا توجد شهادة نشطة. أكمل الإعداد الأولي أولاً.",
+        },
+      };
+      diagnosticResults[test_type] = row;
+      return row;
+    }
+
+    const startTime = Date.now();
+    await randomDelay(800, 2200);
+    const responseTime = Date.now() - startTime;
+
+    const failure = maybeFailValidation() ?? maybeFail("compliance_failed");
+    const executedAt = nowIso();
+
+    if (failure) {
+      lastErrorAt = executedAt;
+      lastErrorShape = failure;
+      const row: DiagnosticTestRow = {
+        test_type,
+        status: "failed",
+        last_executed_at: executedAt,
+        response_time_ms: responseTime,
+        error: failure,
+      };
+      diagnosticResults[test_type] = row;
+      return row;
+    }
+
+    // تحديث Last Successful Submission على Health Check
+    lastSuccessfulSubmissionAt = executedAt;
+    // تحديث last_used_at على الشهادة المُستخدمة
+    activeCred.last_used_at = executedAt;
+
+    const row: DiagnosticTestRow = {
+      test_type,
+      status: "passed",
+      last_executed_at: executedAt,
+      response_time_ms: responseTime,
+    };
+    diagnosticResults[test_type] = row;
+    return row;
+  }
+
+  // ----- تشغيل جميع الاختبارات التشخيصية مع progress -----
+  static async runAllDiagnosticTests(
+    onProgress?: (progress: number, completedTest: ComplianceTestType) => void
+  ): Promise<{ results: DiagnosticTestRow[] }> {
+    const allTypes: ComplianceTestType[] = [
+      "standard_invoice",
+      "standard_credit_note",
+      "standard_debit_note",
+      "simplified_invoice",
+      "simplified_credit_note",
+      "simplified_debit_note",
+    ];
+    const results: DiagnosticTestRow[] = [];
+    for (let i = 0; i < allTypes.length; i++) {
+      const r = await ZatcaApi.runDiagnosticTest(allTypes[i]);
+      results.push(r);
+      const progress = Math.round(((i + 1) / allTypes.length) * 100);
+      onProgress?.(progress, allTypes[i]);
+    }
+    return { results };
+  }
+
   // ----- أداة مساعدة للاختبار: إعادة ضبط كامل الحالة -----
   static __resetMockState() {
     currentSession = null;
     sessionHistory = [];
     mockCredentials = [];
     complianceResults = {};
+    diagnosticResults = {};
+    lastSuccessfulSubmissionAt = undefined;
+    lastErrorAt = undefined;
+    lastErrorShape = undefined;
     companyZatcaEnvironment = "sandbox";
   }
 }

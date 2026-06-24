@@ -19,6 +19,7 @@ import {
 import OnboardingTab from "./zatca/OnboardingTab";
 import CredentialsTab from "./zatca/CredentialsTab";
 import CertificateStatusTab from "./zatca/CertificateStatusTab";
+import ComplianceTab from "./zatca/ComplianceTab";
 
 type ZatcaTab = "onboarding" | "credentials" | "compliance" | "certificate-status";
 
@@ -166,23 +167,11 @@ export default function ZatcaSettings() {
       <div className="rounded-lg bg-white p-6 shadow-sm">
         {activeTab === "onboarding" && <OnboardingTab />}
         {activeTab === "credentials" && <CredentialsTab />}
-        {activeTab === "compliance" && <ComplianceTabPlaceholder />}
+        {activeTab === "compliance" && <ComplianceTab />}
         {activeTab === "certificate-status" && <CertificateStatusTab />}
       </div>
     </div>
   );
 }
 
-// ---------- Placeholders للتبويبين المتبقيين (S1.4.4 و S1.4.5) ----------
-
-function ComplianceTabPlaceholder() {
-  return (
-    <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-10 text-center">
-      <div className="mb-2 text-base font-semibold text-gray-700">اختبارات الامتثال</div>
-      <p className="text-sm text-gray-500">
-        هذا التبويب قيد التطوير ضمن S1.4.4. حالياً يمكن تشغيل اختبارات الامتثال من ضمن تبويب{" "}
-        <span className="font-medium">الإعداد الأولي</span> في الخطوة 4.
-      </p>
-    </div>
-  );
-}
+// ---------- لم يعد هناك placeholders — كل التبويبات الأربعة منفّذة فعلياً ----------
