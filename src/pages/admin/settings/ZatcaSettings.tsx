@@ -18,6 +18,7 @@ import {
 } from "@/lib/zatca/zatcaApi";
 import OnboardingTab from "./zatca/OnboardingTab";
 import CredentialsTab from "./zatca/CredentialsTab";
+import CertificateStatusTab from "./zatca/CertificateStatusTab";
 
 type ZatcaTab = "onboarding" | "credentials" | "compliance" | "certificate-status";
 
@@ -166,7 +167,7 @@ export default function ZatcaSettings() {
         {activeTab === "onboarding" && <OnboardingTab />}
         {activeTab === "credentials" && <CredentialsTab />}
         {activeTab === "compliance" && <ComplianceTabPlaceholder />}
-        {activeTab === "certificate-status" && <CertificateStatusTabPlaceholder />}
+        {activeTab === "certificate-status" && <CertificateStatusTab />}
       </div>
     </div>
   );
@@ -181,17 +182,6 @@ function ComplianceTabPlaceholder() {
       <p className="text-sm text-gray-500">
         هذا التبويب قيد التطوير ضمن S1.4.4. حالياً يمكن تشغيل اختبارات الامتثال من ضمن تبويب{" "}
         <span className="font-medium">الإعداد الأولي</span> في الخطوة 4.
-      </p>
-    </div>
-  );
-}
-
-function CertificateStatusTabPlaceholder() {
-  return (
-    <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-10 text-center">
-      <div className="mb-2 text-base font-semibold text-gray-700">حالة الشهادات</div>
-      <p className="text-sm text-gray-500">
-        لوحة مراقبة الشهادات المنتهية والتنبيهات قيد التطوير ضمن S1.4.5.
       </p>
     </div>
   );

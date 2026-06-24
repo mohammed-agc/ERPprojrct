@@ -107,11 +107,23 @@ export interface ZatcaCredential {
   is_active: boolean;                 // مرآة منطقية لـ status=active (موجودة في DB)
 }
 
+// مطابق لـ vw_zatca_expiring_credentials في DB (ZATCA4)
+// expiry_category يُحسب على مستوى الـ view من days_until_expiry
+export type ExpiryCategory =
+  | "expired"        // <= 0 يوم
+  | "expires_7_days" // 1-7
+  | "expires_15_days"// 8-15
+  | "expires_30_days"// 16-30
+  | "valid";         // > 30
+
 export interface ExpiringCredentialRow {
   id: string;
   credential_type: "CCSID" | "PCSID";
-  days_until_expiry: number;
+  environment: ZatcaEnvironment;
   status: string;
+  certificate_expiry_at: string;
+  days_until_expiry: number;
+  expiry_category: ExpiryCategory;
 }
 
 export interface StartOnboardingInput {
@@ -700,14 +712,27 @@ export class ZatcaApi {
     const now = Date.now();
     return mockCredentials
       .filter((c) => c.status === "active" || c.status === "rotating")
-      .map((c) => ({
-        id: c.id,
-        credential_type: c.credential_type,
-        days_until_expiry: Math.ceil(
+      .map((c) => {
+        const days = Math.ceil(
           (new Date(c.certificate_expiry_at).getTime() - now) / (1000 * 60 * 60 * 24)
-        ),
-        status: c.status,
-      }));
+        );
+        let category: ExpiryCategory;
+        if (days <= 0) category = "expired";
+        else if (days <= 7) category = "expires_7_days";
+        else if (days <= 15) category = "expires_15_days";
+        else if (days <= 30) category = "expires_30_days";
+        else category = "valid";
+
+        return {
+          id: c.id,
+          credential_type: c.credential_type,
+          environment: c.environment,
+          status: c.status,
+          certificate_expiry_at: c.certificate_expiry_at,
+          days_until_expiry: days,
+          expiry_category: category,
+        };
+      });
   }
 
   // ----- أداة مساعدة للاختبار: إعادة ضبط كامل الحالة -----
