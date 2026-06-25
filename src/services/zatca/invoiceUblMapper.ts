@@ -1,5 +1,5 @@
 // ============================================================
-// invoiceUblMapper.ts — S2.1
+// invoiceUblMapper.ts — S2.2
 // ============================================================
 // التحويل من InvoiceData (شكل DB) إلى UblInvoice (شكل UBL تقني).
 // نقي: لا I/O، لا async، لا side-effects.
@@ -7,18 +7,25 @@
 // خرائط التحويل الحاسمة (الميثاق - بند 2: DB → UBL، لا العكس):
 //
 //   DB invoice_type           →  ZATCA TypeName (name="" attribute)
-//   ───────────────────         ─────────────────────────────────
+//   ───────────────────         ──────────────────────────────────
 //   "standard"     (B2B)      →  "0100000"
 //   "simplified"   (B2C)      →  "0200000"
 //
 //   DB invoice_category       →  ZATCA TypeCode (element value)
-//   ───────────────────         ─────────────────────────────────
+//   ───────────────────         ──────────────────────────────────
 //   "tax_invoice"             →  "388"
 //   "credit_note"   [S2.2]    →  "381"
-//   "debit_note"    [S2.2]    →  "383"
+//   "debit_note"    [S2.3]    →  "383"
 //
 //   line.vat_pct = 15         →  taxCategoryId = "S" (standard rate)
 //   line.vat_pct = 0          →  taxCategoryId = "Z" (zero rated)
+//
+// S2.2 إضافات:
+//   - تمرير billingReference من InvoiceData إلى UblInvoice
+//   - تمرير documentNote (سبب KSA-10) إلى UblInvoice
+//   - تعيين paymentMeansInstructionNote للسندات
+//   - دمج warnings من Loader (وراثة طبقية)
+//   - تحويل warnings الـ string القديمة إلى BuildWarning structured
 // ============================================================
 
 import {
@@ -38,33 +45,37 @@ import {
   type ContactRow,
   type InvoiceLineRow,
   type InvoiceRow,
+  type BuildWarning,
 } from "./xmlBuilder.types";
+import { extractLoaderWarnings } from "./creditNoteDataLoader";
 
 interface MapResult {
   ubl: UblInvoice;
-  warnings: string[];
+  warnings: BuildWarning[];
 }
 
 // ─────────────────────────────────────────────────────────────
 // خرائط التحويل (DB → ZATCA UBL)
 // ─────────────────────────────────────────────────────────────
 
-/**
- * يحوّل invoice_type (DB) → ZATCA TypeName (name attribute).
- */
 const TYPE_NAME_MAP: Record<DbInvoiceType, ZatcaInvoiceTypeName> = {
   standard: "0100000",
   simplified: "0200000",
 };
 
-/**
- * يحوّل invoice_category (DB) → ZATCA TypeCode (element value).
- */
 const TYPE_CODE_MAP: Record<DbInvoiceCategory, ZatcaInvoiceTypeCode> = {
   tax_invoice: "388",
   credit_note: "381",
   debit_note: "383",
 };
+
+// payment means code per document type
+const PAYMENT_MEANS_CODE_TAX_INVOICE = "30" as const; // Credit Transfer
+const PAYMENT_MEANS_CODE_NOTE = "10" as const; // Cash (للـ credit/debit notes - عُرف ZATCA)
+
+// instruction notes للسندات (الميثاق - No Silent Assumptions)
+const INSTRUCTION_NOTE_CREDIT = "Returns"; // عرف ZATCA samples
+const INSTRUCTION_NOTE_DEBIT = "Addition";
 
 // ─────────────────────────────────────────────────────────────
 // نقطة الدخول
@@ -75,7 +86,11 @@ const TYPE_CODE_MAP: Record<DbInvoiceCategory, ZatcaInvoiceTypeCode> = {
  * نقي: نفس المدخل يُنتج نفس المخرج (deterministic).
  */
 export function mapInvoiceToUbl(data: InvoiceData): MapResult {
-  const warnings: string[] = [];
+  const warnings: BuildWarning[] = [];
+
+  // وراثة warnings من Loader (مثل اشتقاق VAT% في credit_note_lines)
+  warnings.push(...extractLoaderWarnings(data));
+
   const { invoice, lines, company, customer } = data;
 
   // 1) ZATCA codes (محسوبة من DB types)
@@ -100,6 +115,18 @@ export function mapInvoiceToUbl(data: InvoiceData): MapResult {
   const issueTime = extractTimeFromTimestamp(invoice.issue_timestamp);
   const deliveryDate = invoice.supply_date ?? invoice.invoice_date;
 
+  // 6) S2.2 — Payment means + reason (للسندات)
+  const isCreditNote = invoice.invoice_category === "credit_note";
+  const isDebitNote = invoice.invoice_category === "debit_note";
+  const isNote = isCreditNote || isDebitNote;
+
+  const paymentMeansCode = isNote ? PAYMENT_MEANS_CODE_NOTE : PAYMENT_MEANS_CODE_TAX_INVOICE;
+  const paymentMeansInstructionNote = isCreditNote
+    ? INSTRUCTION_NOTE_CREDIT
+    : isDebitNote
+    ? INSTRUCTION_NOTE_DEBIT
+    : undefined;
+
   const ubl: UblInvoice = {
     profileId: "reporting:1.0",
     invoiceNo: invoice.invoice_no,
@@ -111,6 +138,10 @@ export function mapInvoiceToUbl(data: InvoiceData): MapResult {
     documentCurrencyCode: company.currency_code || "SAR",
     taxCurrencyCode: "SAR",
 
+    // S2.2: ملاحظات السند
+    documentNote: data.documentNote,
+    billingReference: data.billingReference,
+
     icv: invoice.icv,
     pih: invoice.pih,
 
@@ -118,7 +149,8 @@ export function mapInvoiceToUbl(data: InvoiceData): MapResult {
     buyer,
 
     deliveryDate,
-    paymentMeansCode: "30",
+    paymentMeansCode,
+    paymentMeansInstructionNote,
 
     lines: ublLines,
     totals,
@@ -133,9 +165,6 @@ export function mapInvoiceToUbl(data: InvoiceData): MapResult {
 // التحويلات الفرعية (مُصدَّرة للاختبار)
 // ─────────────────────────────────────────────────────────────
 
-/**
- * يُحوّل invoice_type (DB) إلى ZATCA TypeName (الـ 7 خانات).
- */
 export function mapZatcaTypeName(dbType: DbInvoiceType): ZatcaInvoiceTypeName {
   const mapped = TYPE_NAME_MAP[dbType];
   if (!mapped) {
@@ -148,9 +177,6 @@ export function mapZatcaTypeName(dbType: DbInvoiceType): ZatcaInvoiceTypeName {
   return mapped;
 }
 
-/**
- * يُحوّل invoice_category (DB) إلى ZATCA TypeCode (388/381/383).
- */
 export function mapZatcaTypeCode(dbCategory: DbInvoiceCategory): ZatcaInvoiceTypeCode {
   const mapped = TYPE_CODE_MAP[dbCategory];
   if (!mapped) {
@@ -163,12 +189,9 @@ export function mapZatcaTypeCode(dbCategory: DbInvoiceCategory): ZatcaInvoiceTyp
   return mapped;
 }
 
-/**
- * يُحوّل نسبة VAT إلى TaxCategoryId (UN/ECE 5305).
- */
 export function mapTaxCategoryId(vatPct: number): TaxCategoryId {
-  if (vatPct === 15) return "S";   // Standard rate (السعودية)
-  if (vatPct === 0) return "Z";    // Zero rated
+  if (vatPct === 15) return "S"; // Standard rate (السعودية)
+  if (vatPct === 0) return "Z"; // Zero rated
   if (vatPct < 0) {
     throw new XmlBuilderError("MAPPING_FAILED", `نسبة VAT سالبة غير مدعومة: ${vatPct}`);
   }
@@ -197,8 +220,8 @@ function mapSeller(c: CompanyRow): UblParty {
 function mapBuyer(
   c: ContactRow,
   dbType: DbInvoiceType
-): { party: UblParty; warnings: string[] } {
-  const warnings: string[] = [];
+): { party: UblParty; warnings: BuildWarning[] } {
+  const warnings: BuildWarning[] = [];
 
   let identifier: UblParty["identifier"] = null;
   if (c.cr_number) {
@@ -206,15 +229,20 @@ function mapBuyer(
   } else if (c.national_id) {
     identifier = { schemeId: "NAT", value: c.national_id };
   } else if (dbType === "standard" && !c.vat_number) {
-    warnings.push(
-      "Standard (B2B) Invoice بدون CRN ولا National ID للعميل — قد يُرفض من ZATCA إن لزم تعريف العميل."
-    );
+    warnings.push({
+      code: "BUYER_ID_MISSING_B2B",
+      message:
+        "Standard (B2B) Invoice بدون CRN ولا National ID للعميل — قد يُرفض من ZATCA إن لزم تعريف العميل.",
+      context: { customerId: c.id, dbType },
+    });
   }
 
   if (dbType === "standard" && !c.vat_number) {
-    warnings.push(
-      "Standard (B2B) Invoice بدون VAT للعميل — يُسمح لكن قد يُرفض إن كان B2B حقيقياً."
-    );
+    warnings.push({
+      code: "BUYER_VAT_MISSING_B2B",
+      message: "Standard (B2B) Invoice بدون VAT للعميل — يُسمح لكن قد يُرفض إن كان B2B حقيقياً.",
+      context: { customerId: c.id, dbType },
+    });
   }
 
   const party: UblParty = {

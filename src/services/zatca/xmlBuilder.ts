@@ -1,17 +1,32 @@
 // ============================================================
-// xmlBuilder.ts — S2.1 ZATCA XML Builder
+// xmlBuilder.ts — S2.2 ZATCA XML Builder
 // ============================================================
 // الطبقة الأخيرة من السلسلة:
-//   Loader → Validator → Mapper → Builder
+//   DocumentDataLoader → Loader → Validator → Mapper → Builder
 //
 // المسؤولية:
-//   - استقبال UblInvoice (نموذج جاهز)
+//   - استقبال XmlBuildInput { documentType, documentId }
+//   - تنسيق الـ Pipeline الكامل
 //   - بناء string UBL 2.1 XML بترتيب صحيح حسب ZATCA Phase 2
 //
 // الضابط الثالث من S2:
 //   "عدم استخدام بيانات ZATCA المستقبلية الآن"
 //   → لا ds:Signature، لا xades:SignedProperties
 //   → فقط Unsigned UBL XML (الإطار جاهز للتوقيع في S3)
+//
+// S2.2 إضافات:
+//   - DocumentDataLoader dispatcher (يدعم tax_invoice + credit_note)
+//   - <cbc:Note> للسبب (KSA-10) بعد InvoiceTypeCode
+//   - <cac:BillingReference> بعد TaxCurrencyCode (BR-KSA-56)
+//   - <cac:PaymentMeans><cbc:InstructionNote> للسندات
+//   - إصلاح bug في totalsValid (كان مفقود "<=")
+//
+// ترتيب UBL 2.1 الصارم (ZATCA spec):
+//   ProfileID → ID → UUID → IssueDate → IssueTime
+//   → InvoiceTypeCode → Note → DocumentCurrencyCode → TaxCurrencyCode
+//   → BillingReference → AdditionalDocumentReference (ICV/PIH/QR)
+//   → Signature → AccountingSupplierParty → AccountingCustomerParty
+//   → Delivery → PaymentMeans → TaxTotal → LegalMonetaryTotal → InvoiceLine[]
 // ============================================================
 
 import {
@@ -20,10 +35,11 @@ import {
   type UblParty,
   type UblTaxSubtotal,
   type UblTotals,
+  type BillingReference,
   type XmlBuildInput,
   type XmlBuildOutput,
 } from "./xmlBuilder.types";
-import { loadInvoiceData } from "./invoiceDataLoader";
+import { loadDocumentData } from "./documentDataLoader";
 import { validateInvoiceData } from "./invoiceUblValidator";
 import { mapInvoiceToUbl } from "./invoiceUblMapper";
 
@@ -32,19 +48,19 @@ import { mapInvoiceToUbl } from "./invoiceUblMapper";
 // ─────────────────────────────────────────────────────────────
 
 /**
- * يبني UBL 2.1 XML لفاتورة محدّدة بـ ID.
+ * يبني UBL 2.1 XML لمستند محدّد (tax_invoice أو credit_note).
  *
  * السلسلة الكاملة:
- *   1. loadInvoiceData()      — قراءة DB
- *   2. validateInvoiceData()  — تحقق صارم
- *   3. mapInvoiceToUbl()      — تحويل لـ UBL domain
- *   4. buildXmlFromUbl()      — string XML
+ *   1. loadDocumentData()      — Dispatcher يختار Loader المناسب
+ *   2. validateInvoiceData()   — تحقق صارم
+ *   3. mapInvoiceToUbl()       — تحويل لـ UBL domain
+ *   4. buildXmlFromUbl()       — string XML
  *
  * @throws XmlBuilderError بأكواد واضحة
  */
 export async function buildInvoiceXml(input: XmlBuildInput): Promise<XmlBuildOutput> {
-  // 1) تحميل
-  const data = await loadInvoiceData(input.invoiceId);
+  // 1) تحميل من المصدر الصحيح (الـ Dispatcher يقرر)
+  const data = await loadDocumentData(input.documentType, input.documentId);
 
   // 2) تحقق
   validateInvoiceData(data);
@@ -55,15 +71,17 @@ export async function buildInvoiceXml(input: XmlBuildInput): Promise<XmlBuildOut
   // 4) بناء
   const xml = buildXmlFromUbl(ubl);
 
-  // التحقق من التطابق النهائي
-  const totalsValid =
-    Math.abs(ubl.totals.taxInclusiveAmount - (ubl.totals.taxExclusiveAmount + ubl.totalTaxAmount)) 
-    0.02;
+  // التحقق من التطابق النهائي (إصلاح bug في S2.1)
+  const totalsCalc = Math.abs(
+    ubl.totals.taxInclusiveAmount - (ubl.totals.taxExclusiveAmount + ubl.totalTaxAmount)
+  );
+  const totalsValid = totalsCalc <= 0.02;
 
   return {
     xml,
     warnings,
     metadata: {
+      documentType: input.documentType,
       invoiceNo: ubl.invoiceNo,
       uuid: ubl.uuid,
       icv: ubl.icv,
@@ -73,6 +91,8 @@ export async function buildInvoiceXml(input: XmlBuildInput): Promise<XmlBuildOut
       zatcaTypeName: ubl.zatcaTypeName,
       lineCount: ubl.lines.length,
       totalsValid,
+      hasBillingReference: !!ubl.billingReference,
+      reasonProvided: !!ubl.documentNote && ubl.documentNote.trim().length > 0,
       generatedAt: new Date().toISOString(),
     },
   };
@@ -91,9 +111,15 @@ export function buildXmlFromUbl(ubl: UblInvoice): string {
 
   parts.push(`<?xml version="1.0" encoding="UTF-8"?>`);
   parts.push(`<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"`);
-  parts.push(`         xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"`);
-  parts.push(`         xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"`);
-  parts.push(`         xmlns:ext="urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2">`);
+  parts.push(
+    `         xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"`
+  );
+  parts.push(
+    `         xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"`
+  );
+  parts.push(
+    `         xmlns:ext="urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2">`
+  );
 
   // UBL Extensions (placeholder للتوقيع في S3)
   parts.push(`  <ext:UBLExtensions>`);
@@ -109,16 +135,29 @@ export function buildXmlFromUbl(ubl: UblInvoice): string {
   parts.push(
     `  <cbc:InvoiceTypeCode name="${ubl.zatcaTypeName}">${ubl.zatcaTypeCode}</cbc:InvoiceTypeCode>`
   );
+
+  // S2.2: Note (سبب الإصدار KSA-10) — بعد InvoiceTypeCode وقبل DocumentCurrencyCode
+  if (ubl.documentNote && ubl.documentNote.trim().length > 0) {
+    parts.push(`  <cbc:Note languageID="ar">${escapeXml(ubl.documentNote.trim())}</cbc:Note>`);
+  }
+
   parts.push(`  <cbc:DocumentCurrencyCode>${ubl.documentCurrencyCode}</cbc:DocumentCurrencyCode>`);
   parts.push(`  <cbc:TaxCurrencyCode>${ubl.taxCurrencyCode}</cbc:TaxCurrencyCode>`);
 
-  // Additional Document References
+  // S2.2: BillingReference (BR-KSA-56) — بعد TaxCurrencyCode وقبل AdditionalDocumentReference
+  if (ubl.billingReference) {
+    parts.push(buildBillingReference(ubl.billingReference));
+  }
+
+  // Additional Document References (ICV / PIH / QR placeholder)
   parts.push(buildAdditionalRefs(ubl));
 
   // Signature placeholder (يُملأ في S3)
   parts.push(`  <cac:Signature>`);
   parts.push(`    <cbc:ID>urn:oasis:names:specification:ubl:signature:Invoice</cbc:ID>`);
-  parts.push(`    <cbc:SignatureMethod>urn:oasis:names:specification:ubl:dsig:enveloped:xades</cbc:SignatureMethod>`);
+  parts.push(
+    `    <cbc:SignatureMethod>urn:oasis:names:specification:ubl:dsig:enveloped:xades</cbc:SignatureMethod>`
+  );
   parts.push(`  </cac:Signature>`);
 
   // Seller
@@ -132,9 +171,14 @@ export function buildXmlFromUbl(ubl: UblInvoice): string {
   parts.push(`    <cbc:ActualDeliveryDate>${ubl.deliveryDate}</cbc:ActualDeliveryDate>`);
   parts.push(`  </cac:Delivery>`);
 
-  // Payment Means
+  // Payment Means (مع InstructionNote للسندات)
   parts.push(`  <cac:PaymentMeans>`);
   parts.push(`    <cbc:PaymentMeansCode>${ubl.paymentMeansCode}</cbc:PaymentMeansCode>`);
+  if (ubl.paymentMeansInstructionNote) {
+    parts.push(
+      `    <cbc:InstructionNote>${escapeXml(ubl.paymentMeansInstructionNote)}</cbc:InstructionNote>`
+    );
+  }
   parts.push(`  </cac:PaymentMeans>`);
 
   // Tax Total (مكرّر مرتين)
@@ -156,6 +200,29 @@ export function buildXmlFromUbl(ubl: UblInvoice): string {
 // ─────────────────────────────────────────────────────────────
 // Section Builders
 // ─────────────────────────────────────────────────────────────
+
+/**
+ * S2.2: يبني section cac:BillingReference للسندات.
+ * BR-KSA-56 يستوجب وجود invoiceId على الأقل.
+ */
+function buildBillingReference(ref: BillingReference): string {
+  const lines: string[] = [];
+  lines.push(`  <cac:BillingReference>`);
+  lines.push(`    <cac:InvoiceDocumentReference>`);
+  lines.push(`      <cbc:ID>${escapeXml(ref.invoiceId)}</cbc:ID>`);
+
+  // UUID و IssueDate اختياريان (BR-KSA-F-01 يجعلهما NA لسندات بسيطة)
+  if (ref.invoiceUuid) {
+    lines.push(`      <cbc:UUID>${escapeXml(ref.invoiceUuid)}</cbc:UUID>`);
+  }
+  if (ref.issueDate) {
+    lines.push(`      <cbc:IssueDate>${ref.issueDate}</cbc:IssueDate>`);
+  }
+
+  lines.push(`    </cac:InvoiceDocumentReference>`);
+  lines.push(`  </cac:BillingReference>`);
+  return lines.join("\n");
+}
 
 function buildAdditionalRefs(ubl: UblInvoice): string {
   const lines: string[] = [];
@@ -236,7 +303,9 @@ function buildParty(wrapperName: string, p: UblParty): string {
     lines.push(`        <cbc:PostalZone>${escapeXml(p.postalZone)}</cbc:PostalZone>`);
   }
   lines.push(`        <cac:Country>`);
-  lines.push(`          <cbc:IdentificationCode>${escapeXml(p.countryCode)}</cbc:IdentificationCode>`);
+  lines.push(
+    `          <cbc:IdentificationCode>${escapeXml(p.countryCode)}</cbc:IdentificationCode>`
+  );
   lines.push(`        </cac:Country>`);
   lines.push(`      </cac:PostalAddress>`);
 
@@ -252,7 +321,9 @@ function buildParty(wrapperName: string, p: UblParty): string {
 
   // Party Legal Entity (الاسم القانوني)
   lines.push(`      <cac:PartyLegalEntity>`);
-  lines.push(`        <cbc:RegistrationName>${escapeXml(p.registrationName)}</cbc:RegistrationName>`);
+  lines.push(
+    `        <cbc:RegistrationName>${escapeXml(p.registrationName)}</cbc:RegistrationName>`
+  );
   lines.push(`      </cac:PartyLegalEntity>`);
 
   lines.push(`    </cac:Party>`);
@@ -273,7 +344,9 @@ function buildTaxTotals(totalTax: number, taxSummary: UblTaxSubtotal[]): string 
   lines.push(`    <cbc:TaxAmount currencyID="SAR">${fmt(totalTax)}</cbc:TaxAmount>`);
   for (const t of taxSummary) {
     lines.push(`    <cac:TaxSubtotal>`);
-    lines.push(`      <cbc:TaxableAmount currencyID="SAR">${fmt(t.taxableAmount)}</cbc:TaxableAmount>`);
+    lines.push(
+      `      <cbc:TaxableAmount currencyID="SAR">${fmt(t.taxableAmount)}</cbc:TaxableAmount>`
+    );
     lines.push(`      <cbc:TaxAmount currencyID="SAR">${fmt(t.taxAmount)}</cbc:TaxAmount>`);
     lines.push(`      <cac:TaxCategory>`);
     lines.push(`        <cbc:ID schemeID="UN/ECE 5305">${t.taxCategoryId}</cbc:ID>`);
@@ -313,7 +386,9 @@ function buildInvoiceLine(line: UblLine): string {
   const lines: string[] = [];
   lines.push(`  <cac:InvoiceLine>`);
   lines.push(`    <cbc:ID>${line.id}</cbc:ID>`);
-  lines.push(`    <cbc:InvoicedQuantity unitCode="${line.unitCode}">${line.quantity}</cbc:InvoicedQuantity>`);
+  lines.push(
+    `    <cbc:InvoicedQuantity unitCode="${line.unitCode}">${line.quantity}</cbc:InvoicedQuantity>`
+  );
   lines.push(
     `    <cbc:LineExtensionAmount currencyID="SAR">${fmt(line.lineExtensionAmount)}</cbc:LineExtensionAmount>`
   );

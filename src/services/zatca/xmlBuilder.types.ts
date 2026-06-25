@@ -1,8 +1,12 @@
 // ============================================================
-// xmlBuilder.types.ts — S2.1 ZATCA XML Builder Service
+// xmlBuilder.types.ts — S2.2 ZATCA XML Builder Service
 // ============================================================
-// عقد TypeScript يربط ثلاث طبقات XmlBuilder:
+// عقد TypeScript يربط أربع طبقات XmlBuilder:
+//   DocumentDataLoader  — Registry/Dispatcher يختار Loader حسب نوع المستند
+//   ├── invoiceDataLoader     — للـ tax_invoice (388)
+//   └── creditNoteDataLoader  — للـ credit_note (381)  [S2.2]
 //   Loader   — يجلب من DB ويبني InvoiceData (دون أي تحويل)
+//   Validator — تحقق صارم قبل البناء (No Silent Assumptions)
 //   Mapper   — يحوّل InvoiceData إلى UblInvoice (مفاهيم UBL تقنية)
 //   Builder  — يحوّل UblInvoice إلى string XML نظيف
 //
@@ -12,27 +16,50 @@
 //   - لا migration للبيانات — Schema هو المرجع
 //
 // الفصل المعماري الحاسم:
-//   ┌────────────────────────────┬─────────────────────────────┐
-//   │ Database (DB)              │ ZATCA UBL                   │
-//   ├────────────────────────────┼─────────────────────────────┤
-//   │ invoice_type:              │ InvoiceTypeCode name attr:  │
-//   │   "standard"               │   "0100000" (B2B)           │
-//   │   "simplified"             │   "0200000" (B2C)           │
-//   │                            │                             │
-//   │ invoice_category:          │ InvoiceTypeCode element:    │
-//   │   "tax_invoice"            │   "388"                     │
-//   │   "credit_note"  [S2.2]    │   "381"                     │
-//   │   "debit_note"   [S2.2]    │   "383"                     │
-//   └────────────────────────────┴─────────────────────────────┘
+//   ┌──────────────────────────┬───────────────────────────┐
+//   │ Database (DB)            │ ZATCA UBL                 │
+//   ├──────────────────────────┼───────────────────────────┤
+//   │ invoice_type:            │ InvoiceTypeCode name attr:│
+//   │   "standard"             │   "0100000" (B2B)         │
+//   │   "simplified"           │   "0200000" (B2C)         │
+//   │                          │                           │
+//   │ invoice_category:        │ InvoiceTypeCode element:  │
+//   │   "tax_invoice"          │   "388"                   │
+//   │   "credit_note"  [S2.2]  │   "381"                   │
+//   │   "debit_note"   [S2.3]  │   "383"                   │
+//   └──────────────────────────┴───────────────────────────┘
+//
+// S2.2 إضافات:
+//   - DocumentType (نوع المستند للـ Dispatcher: tax_invoice | credit_note)
+//   - BillingReference (الفاتورة الأصلية للسند)
+//   - InvoiceData.billingReference و InvoiceData.documentNote
+//   - BuildWarning structured (code + message)
+//   - أكواد خطأ جديدة لـ BR-KSA-17 و BR-KSA-56
 // ============================================================
 
 // ─────────────────────────────────────────────────────────────
 // واجهة الاستخدام العامة (Public API)
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * نوع المستند الذي يبنيه XmlBuilder.
+ * Dispatcher يختار Loader المناسب بناءً عليه.
+ *
+ * S2.1: tax_invoice فقط
+ * S2.2: credit_note مُضاف
+ * S2.3: debit_note (لاحقاً)
+ */
+export type DocumentType = "tax_invoice" | "credit_note";
+
 export interface XmlBuildInput {
-  /** UUID الفاتورة في جدول invoices */
-  invoiceId: string;
+  /** نوع المستند (يحدد أي Loader يُستخدم) */
+  documentType: DocumentType;
+  /**
+   * UUID المستند في جدوله الأصلي:
+   *   - tax_invoice → invoices.id
+   *   - credit_note → credit_notes.id
+   */
+  documentId: string;
 }
 
 export interface XmlBuildOutput {
@@ -42,22 +69,36 @@ export interface XmlBuildOutput {
   /** بيانات تشخيصية للتدقيق والاختبار */
   metadata: XmlBuildMetadata;
 
-  /** تنبيهات غير قاتلة (مثلاً: حقل اختياري ناقص) */
-  warnings: string[];
+  /** تنبيهات غير قاتلة منظمة (code + message) */
+  warnings: BuildWarning[];
+}
+
+/**
+ * تنبيه منظم (No Silent Assumptions).
+ * كل افتراض غير صريح يجب أن يُسجّل بكود واضح.
+ */
+export interface BuildWarning {
+  code: string;
+  message: string;
+  context?: Record<string, any>;
 }
 
 export interface XmlBuildMetadata {
+  documentType: DocumentType;
   invoiceNo: string;
   uuid: string;
   icv: number;
   // قيم DB الأصلية (للتدقيق)
   dbInvoiceType: DbInvoiceType;
   dbInvoiceCategory: DbInvoiceCategory;
-  // قيم ZATCA المُحوَّلة (تظهر في XML)
+  // قيم ZATCA المحوَّلة (تظهر في XML)
   zatcaTypeCode: ZatcaInvoiceTypeCode;
   zatcaTypeName: ZatcaInvoiceTypeName;
   lineCount: number;
   totalsValid: boolean;
+  // S2.2: ميتاداتا للسندات
+  hasBillingReference: boolean;
+  reasonProvided: boolean;
   generatedAt: string; // ISO timestamp
 }
 
@@ -75,12 +116,12 @@ export interface XmlBuildMetadata {
 export type DbInvoiceType = "standard" | "simplified";
 
 /**
- * قيمة في DB في حقل invoices.invoice_category.
+ * قيمة في DB في حقل invoices.invoice_category و credit_notes.invoice_category.
  * مطابقة CHECK constraint: invoices_category_check
  *   CHECK (invoice_category IN ('tax_invoice', 'credit_note', 'debit_note'))
  *
  * المعنى: نوع المستند (Document Type)
- * S2.1 يدعم "tax_invoice" فقط. credit_note/debit_note في S2.2.
+ * S2.2 يدعم "tax_invoice" + "credit_note". debit_note في S2.3.
  */
 export type DbInvoiceCategory = "tax_invoice" | "credit_note" | "debit_note";
 
@@ -90,7 +131,7 @@ export type DbInvoiceCategory = "tax_invoice" | "credit_note" | "debit_note";
 
 /**
  * قيمة عنصر <cbc:InvoiceTypeCode> في UBL.
- * S2.1 يدعم 388 فقط. 381/383 في S2.2.
+ * 388 = Tax Invoice, 381 = Credit Note, 383 = Debit Note
  */
 export type ZatcaInvoiceTypeCode = "388" | "381" | "383";
 
@@ -98,9 +139,8 @@ export type ZatcaInvoiceTypeCode = "388" | "381" | "383";
  * قيمة سمة name في <cbc:InvoiceTypeCode name="...">
  * 7 خانات حسب ZATCA Phase 2.
  *
- * S2.1 يدعم الصورة الأساسية:
- *   "0100000" — Standard B2B Tax Invoice
- *   "0200000" — Simplified B2C Tax Invoice
+ *   "0100000" — Standard B2B
+ *   "0200000" — Simplified B2C
  */
 export type ZatcaInvoiceTypeName = "0100000" | "0200000";
 
@@ -120,6 +160,24 @@ export interface InvoiceData {
   lines: InvoiceLineRow[];
   company: CompanyRow;
   customer: ContactRow;
+  // S2.2: حقول اختيارية للسندات (credit_note/debit_note)
+  /** مرجع للفاتورة الأصلية — إلزامي للـ credit/debit notes (BR-KSA-56) */
+  billingReference?: BillingReference;
+  /** سبب إصدار السند (KSA-10) — إلزامي للـ credit/debit notes (BR-KSA-17) */
+  documentNote?: string;
+}
+
+/**
+ * مرجع الفاتورة الأصلية في سند الإشعار.
+ * مطابق لـ cac:BillingReference/cac:InvoiceDocumentReference
+ */
+export interface BillingReference {
+  /** رقم الفاتورة الأصلية (invoice_no) — إلزامي (BR-KSA-56) */
+  invoiceId: string;
+  /** UUID الفاتورة الأصلية (اختياري) */
+  invoiceUuid?: string;
+  /** تاريخ إصدار الفاتورة الأصلية (اختياري) */
+  issueDate?: string;
 }
 
 /** صورة مبسّطة من جدول invoices — الحقول التي يحتاجها UBL */
@@ -186,7 +244,7 @@ export interface ContactRow {
   country: string | null;
   city: string | null;
   district: string | null;
-  address: string | null;       // ملاحظة: contacts يحوي حقلاً واحداً للعنوان
+  address: string | null;
   postal_code: string | null;
   building_no: string | null;
 }
@@ -209,6 +267,12 @@ export interface UblInvoice {
   documentCurrencyCode: string;  // عادةً SAR
   taxCurrencyCode: "SAR";        // ثابت بـ ZATCA
 
+  // S2.2: سبب الإصدار (KSA-10) - يُكتب في <cbc:Note>
+  documentNote?: string;
+
+  // S2.2: مرجع للفاتورة الأصلية (للـ credit/debit notes)
+  billingReference?: BillingReference;
+
   // Additional References (ICV / PIH / QR placeholder)
   icv: number;
   pih: string;             // base64 SHA-256
@@ -221,7 +285,9 @@ export interface UblInvoice {
   deliveryDate: string;    // YYYY-MM-DD
 
   // Payment
-  paymentMeansCode: "30";  // Credit Transfer (افتراضي)
+  paymentMeansCode: "10" | "30";  // 10 = Cash (Credit/Debit Notes), 30 = Credit Transfer (Tax Invoice)
+  /** ملاحظة على PaymentMeans — تُستخدم للسبب في credit/debit notes */
+  paymentMeansInstructionNote?: string;
 
   // Lines (محسوبة من InvoiceLineRow)
   lines: UblLine[];
@@ -237,45 +303,38 @@ export interface UblInvoice {
 }
 
 export interface UblParty {
-  // معرّف (اختياري للمشتري في Simplified)
   identifier: { schemeId: string; value: string } | null;
-
-  // العنوان
   streetName: string | null;
   buildingNumber: string | null;
   plotIdentification: string | null;
   citySubdivisionName: string | null;
   cityName: string | null;
   postalZone: string | null;
-  countryCode: string;       // SA
-
-  // VAT
-  vatNumber: string | null;  // إلزامي للبائع، اختياري للمشتري في Simplified
-
-  // Legal name (RegistrationName)
+  countryCode: string;
+  vatNumber: string | null;
   registrationName: string;
 }
 
 export interface UblLine {
-  id: number;                    // line_no
+  id: number;
   quantity: number;
-  unitCode: "PCE";               // Piece (افتراضي للمركبات)
-  lineExtensionAmount: number;   // (qty × unit_price) - discount
-  itemName: string;              // description + brand/model
+  unitCode: "PCE";
+  lineExtensionAmount: number;
+  itemName: string;
   vatPct: number;
-  vatAmount: number;             // محسوب: lineExtension × vatPct/100
-  roundingAmount: number;        // lineExtension + vatAmount
+  vatAmount: number;
+  roundingAmount: number;
   unitPrice: number;
   discount: number;
   taxCategoryId: TaxCategoryId;
 }
 
 export interface UblTotals {
-  lineExtensionAmount: number;    // مجموع line extensions = subtotal
-  taxExclusiveAmount: number;     // subtotal
-  taxInclusiveAmount: number;     // total
-  allowanceTotalAmount: number;   // مجموع الخصومات
-  payableAmount: number;          // total - paid_amount
+  lineExtensionAmount: number;
+  taxExclusiveAmount: number;
+  taxInclusiveAmount: number;
+  allowanceTotalAmount: number;
+  payableAmount: number;
 }
 
 export interface UblTaxSubtotal {
@@ -290,11 +349,17 @@ export interface UblTaxSubtotal {
 // ─────────────────────────────────────────────────────────────
 
 export type XmlBuildErrorCode =
-  // طبقة Loader
+  // طبقة Loader (مشترك)
   | "INVOICE_NOT_FOUND"
   | "COMPANY_NOT_CONFIGURED"
   | "CUSTOMER_NOT_FOUND"
   | "DB_ERROR"
+  // S2.2 - طبقة Loader (credit_note)
+  | "CREDIT_NOTE_NOT_FOUND"
+  | "CREDIT_NOTE_HAS_NO_LINES"
+  | "ORIGINAL_INVOICE_NOT_FOUND"
+  // S2.2 - طبقة Dispatcher
+  | "DOCUMENT_TYPE_UNSUPPORTED"
   // طبقة Validator
   | "INVOICE_HAS_NO_LINES"
   | "COMPANY_NAME_MISSING"
@@ -303,11 +368,16 @@ export type XmlBuildErrorCode =
   | "CUSTOMER_NAME_MISSING"
   | "CHAIN_ICV_MISSING"
   | "CHAIN_PIH_MISSING"
-  | "INVOICE_TYPE_INVALID"          // invoice_type (DB) ليس standard/simplified
-  | "INVOICE_CATEGORY_INVALID"      // invoice_category (DB) ليس من القيم المعتمدة
-  | "INVOICE_CATEGORY_UNSUPPORTED"  // S2.1 لا يدعم credit_note/debit_note
+  | "INVOICE_TYPE_INVALID"
+  | "INVOICE_CATEGORY_INVALID"
+  | "INVOICE_CATEGORY_UNSUPPORTED"
   | "TOTALS_MISMATCH"
   | "ISSUE_DATE_MISSING"
+  // S2.2 - فحوصات Credit/Debit Note الإلزامية
+  | "BILLING_REFERENCE_MISSING"           // BR-KSA-56
+  | "BILLING_REFERENCE_ID_INVALID"        // BR-KSA-F-06-C22 (1-5000 char)
+  | "REASON_MISSING"                      // BR-KSA-17
+  | "REASON_TOO_LONG"                     // BR-KSA-F-06-C13 (1-1000 char)
   // طبقة Mapper/Builder
   | "MAPPING_FAILED"
   | "UNSUPPORTED_FEATURE";
@@ -322,7 +392,6 @@ export class XmlBuilderError extends Error {
     this.code = code;
     this.details = details;
 
-    // الحفاظ على stack trace في V8
     if (typeof (Error as any).captureStackTrace === "function") {
       (Error as any).captureStackTrace(this, XmlBuilderError);
     }
@@ -331,4 +400,16 @@ export class XmlBuilderError extends Error {
   toJSON() {
     return { name: this.name, code: this.code, message: this.message, details: this.details };
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+// واجهة Loader موحّدة (Loader Registry Pattern)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * عقد موحّد لكل DocumentLoader.
+ * يسمح بإضافة Loaders جديدة (debitNoteDataLoader) بدون تعديل XmlBuilder.
+ */
+export interface DocumentLoader {
+  load(documentId: string): Promise<InvoiceData>;
 }
