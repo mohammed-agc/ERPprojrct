@@ -1,0 +1,46 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number:
+            11:00:00:38:03:c5:f7:40:23:b3:fc:5c:5f:00:01:00:00:38:03
+        Signature Algorithm: ecdsa-with-SHA256
+        Issuer: DC = local, DC = gov, DC = extgazt, CN = PRZEINVOICESCA4-CA
+        Validity
+            Not Before: Jan 11 09:19:30 2024 GMT
+            Not After : Jan  9 09:19:30 2029 GMT
+        Subject: C = SA, O = Maximum Speed Tech Supply LTD, OU = Riyadh Branch, CN = TST-886431145-399999999900003
+        Subject Public Key Info:
+            Public Key Algorithm: id-ecPublicKey
+                Public-Key: (256 bit)
+                pub:
+                    04:a1:60:8a:6b:44:9a:f4:52:04:ad:33:af:d2:e0:
+                    24:0b:55:48:29:7c:54:f6:73:e9:c7:6b:e5:7f:8c:
+                    a1:31:e8:f2:f1:cd:36:5c:96:e5:0e:ae:ed:3f:27:
+                    68:f2:6a:b4:6a:13:8c:98:da:3c:83:09:e2:ed:7b:
+                    75:29:3f:54:78
+                ASN1 OID: secp256k1
+        X509v3 extensions:
+            X509v3 Subject Alternative Name: 
+                DirName:/SN=1-TST|2-TST|3-ed22f1d8-e6a2-1118-9b58-d9a8f11e445f/UID=399999999900003/title=1100/registeredAddress=RRRD2929/businessCategory=Supply activities
+            X509v3 Subject Key Identifier: 
+                45:FE:62:F9:A6:B6:76:28:0D:FF:41:19:B2:A8:EE:87:13:29:82:B5
+            X509v3 Authority Key Identifier: 
+                9B:CA:AA:A2:ED:9A:AC:2C:90:81:73:56:FA:4F:D8:FC:53:FB:D3:67
+            Authority Information Access: 
+                CA Issuers - URI:http://aia4.zatca.gov.sa/CertEnroll/PRZEInvoiceSCA4.extgazt.gov.local_PRZEINVOICESCA4-CA(1).crt
+            X509v3 Key Usage: critical
+                Digital Signature
+            1.3.6.1.4.1.311.21.7: 
+                0-.%+.....7.............$......Uf...e...>..d...
+            X509v3 Extended Key Usage: 
+                Code Signing, TLS Web Client Authentication
+            1.3.6.1.4.1.311.21.10: 
+                0.0
+..+.......0
+..+.......
+    Signature Algorithm: ecdsa-with-SHA256
+    Signature Value:
+        30:45:02:21:00:b1:3f:89:c8:66:9d:65:c2:50:a5:1b:71:ad:
+        f2:72:2f:28:ab:06:8b:bc:57:47:56:34:2b:bd:e2:3d:ba:a0:
+        1b:02:20:3d:84:2e:0c:f2:38:0c:04:00:cf:4b:39:9d:da:e8:
+        8f:24:0e:a0:29:1d:cb:13:4d:d4:ef:97:aa:6c:2f:eb:5c
