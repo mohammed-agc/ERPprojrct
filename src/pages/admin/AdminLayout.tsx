@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import {
   ShieldCheck, LayoutDashboard, Users, KeyRound, ClipboardList, Building2,
   Warehouse, Receipt, ListOrdered, Printer, Database, FlaskConical, History,
-  MonitorSmartphone, FileSearch, Percent,
+  MonitorSmartphone, FileSearch, Percent, FileText,
 } from "lucide-react";
 
 interface NavItem { to: string; label: string; icon: any; }
@@ -41,6 +41,7 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
       { to: "/admin/settings/branches", label: "الفروع", icon: Building2 },
       { to: "/admin/settings/warehouses", label: "المستودعات", icon: Warehouse },
       { to: "/admin/settings/tax", label: "إعدادات الضريبة", icon: Percent },
+      { to: "/admin/settings/zatca", label: "إعدادات الزكاة والضريبة (ZATCA)", icon: FileText },
       { to: "/admin/settings/sequences", label: "تسلسل المستندات", icon: ListOrdered },
       { to: "/admin/settings/templates", label: "قوالب الطباعة", icon: Printer },
     ],
