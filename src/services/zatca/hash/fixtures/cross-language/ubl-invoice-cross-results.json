@@ -1,0 +1,28 @@
+{
+  "input_file": "cross-language/ubl-invoice-input.txt",
+  "input_description": "Canonical UBL Invoice XML (192 bytes)",
+  "results": [
+    {
+      "tool": "OpenSSL 3.0.13",
+      "command": "openssl dgst -sha256 -hex",
+      "sha256_hex": "6f2e3ce413e792d561d66f160dcf809ad530cbc02ceba48726ffddb6c1c28627",
+      "command_b64": "openssl dgst -sha256 -binary | base64 -w 0",
+      "raw_digest_b64": "by485BPnktVh1m8WDc+AmtUwy8As66SHJv/dtsHChic="
+    },
+    {
+      "tool": "Node v22.22.2 crypto",
+      "command": "crypto.createHash('sha256').update(data).digest('hex')",
+      "sha256_hex": "6f2e3ce413e792d561d66f160dcf809ad530cbc02ceba48726ffddb6c1c28627",
+      "command_b64": "crypto.createHash('sha256').update(data).digest('base64')",
+      "raw_digest_b64": "by485BPnktVh1m8WDc+AmtUwy8As66SHJv/dtsHChic="
+    },
+    {
+      "tool": "Python 3.12.3 hashlib",
+      "command": "hashlib.sha256(data).hexdigest()",
+      "sha256_hex": "6f2e3ce413e792d561d66f160dcf809ad530cbc02ceba48726ffddb6c1c28627",
+      "command_b64": "base64.b64encode(hashlib.sha256(data).digest()).decode()",
+      "raw_digest_b64": "by485BPnktVh1m8WDc+AmtUwy8As66SHJv/dtsHChic="
+    }
+  ],
+  "verdict": "ALL 3 INDEPENDENT TOOLS PRODUCE IDENTICAL HASHES. SHA-256 is universally correct."
+}

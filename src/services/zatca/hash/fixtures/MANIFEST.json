@@ -1,0 +1,162 @@
+{
+  "format_version": "1.0",
+  "description": "ZATCA Hash Module Golden Test Vectors. Per AD-006A v2 Golden Reference Governance + AD-009 v2 Hash Encoding Asymmetry.",
+  "asymmetry_critical_note": "ZATCA uses TWO encodings: (1) RawDigestB64 = base64 of SHA-256 raw bytes (44 chars, for InvoiceHash + QR Tag 6); (2) HexDigestB64 = base64 of hex string of SHA-256 (88 chars, for SignedProperties Hash + Certificate Hash).",
+  "generation": {
+    "date": "2026-06-26T07:43:56.444Z",
+    "sources": [
+      {
+        "tool": "OpenSSL",
+        "version": "OpenSSL 3.0.13 30 Jan 2024"
+      },
+      {
+        "tool": "Node crypto",
+        "version": "v22.22.2"
+      },
+      {
+        "tool": "Python hashlib",
+        "version": "Python 3.12.3"
+      }
+    ],
+    "cross_verified": true,
+    "note": "All three sources produce IDENTICAL hashes for IDENTICAL inputs. Any divergence is a critical bug."
+  },
+  "positive": [
+    {
+      "name": "arabic-utf8",
+      "input_file": "positive/arabic-utf8.txt",
+      "input_size_bytes": 38,
+      "sha256_hex": "9c365ae392a0f5aab34dd31a9e85d1e9e22a850c717fedac8a5814c8aae2f63e",
+      "raw_digest_b64": "nDZa45Kg9aqzTdManoXR6eIqhQxxf+2silgUyKri9j4=",
+      "hex_digest_b64": "OWMzNjVhZTM5MmEwZjVhYWIzNGRkMzFhOWU4NWQxZTllMjJhODUwYzcxN2ZlZGFjOGE1ODE0YzhhYWUyZjYzZQ==",
+      "raw_digest_b64_length": 44,
+      "hex_digest_b64_length": 88,
+      "used_for": {
+        "RawDigestB64": "Invoice Hash (XML signature + QR Tag 6) per AD-009 v2",
+        "HexDigestB64": "SignedProperties Hash + Certificate Hash per AD-009 v2"
+      }
+    },
+    {
+      "name": "empty-input",
+      "input_file": "positive/empty-input.txt",
+      "input_size_bytes": 0,
+      "sha256_hex": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "raw_digest_b64": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=",
+      "hex_digest_b64": "ZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NQ==",
+      "raw_digest_b64_length": 44,
+      "hex_digest_b64_length": 88,
+      "used_for": {
+        "RawDigestB64": "Invoice Hash (XML signature + QR Tag 6) per AD-009 v2",
+        "HexDigestB64": "SignedProperties Hash + Certificate Hash per AD-009 v2"
+      }
+    },
+    {
+      "name": "hello-world",
+      "input_file": "positive/hello-world.txt",
+      "input_size_bytes": 13,
+      "sha256_hex": "dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f",
+      "raw_digest_b64": "3/1gIbsr1bCvZ2KQgJ7DpTGR3YHH9wpLKGiKNiGCmG8=",
+      "hex_digest_b64": "ZGZmZDYwMjFiYjJiZDViMGFmNjc2MjkwODA5ZWMzYTUzMTkxZGQ4MWM3ZjcwYTRiMjg2ODhhMzYyMTgyOTg2Zg==",
+      "raw_digest_b64_length": 44,
+      "hex_digest_b64_length": 88,
+      "used_for": {
+        "RawDigestB64": "Invoice Hash (XML signature + QR Tag 6) per AD-009 v2",
+        "HexDigestB64": "SignedProperties Hash + Certificate Hash per AD-009 v2"
+      }
+    },
+    {
+      "name": "multi-line-crlf",
+      "input_file": "positive/multi-line-crlf.txt",
+      "input_size_bytes": 21,
+      "sha256_hex": "96e4d66c5a42d171e8aa107059eacaf52d3c2c095cbba1316b590a7392497718",
+      "raw_digest_b64": "luTWbFpC0XHoqhBwWerK9S08LAlcu6Exa1kKc5JJdxg=",
+      "hex_digest_b64": "OTZlNGQ2NmM1YTQyZDE3MWU4YWExMDcwNTllYWNhZjUyZDNjMmMwOTVjYmJhMTMxNmI1OTBhNzM5MjQ5NzcxOA==",
+      "raw_digest_b64_length": 44,
+      "hex_digest_b64_length": 88,
+      "used_for": {
+        "RawDigestB64": "Invoice Hash (XML signature + QR Tag 6) per AD-009 v2",
+        "HexDigestB64": "SignedProperties Hash + Certificate Hash per AD-009 v2"
+      }
+    },
+    {
+      "name": "multi-line-lf",
+      "input_file": "positive/multi-line-lf.txt",
+      "input_size_bytes": 18,
+      "sha256_hex": "66663af9c7aa341431a8ee2ff27b72abd06c9218f517bb6fef948e4803c19e03",
+      "raw_digest_b64": "ZmY6+ceqNBQxqO4v8ntyq9Bskhj1F7tv75SOSAPBngM=",
+      "hex_digest_b64": "NjY2NjNhZjljN2FhMzQxNDMxYThlZTJmZjI3YjcyYWJkMDZjOTIxOGY1MTdiYjZmZWY5NDhlNDgwM2MxOWUwMw==",
+      "raw_digest_b64_length": 44,
+      "hex_digest_b64_length": 88,
+      "used_for": {
+        "RawDigestB64": "Invoice Hash (XML signature + QR Tag 6) per AD-009 v2",
+        "HexDigestB64": "SignedProperties Hash + Certificate Hash per AD-009 v2"
+      }
+    },
+    {
+      "name": "ubl-invoice-canonical",
+      "input_file": "positive/ubl-invoice-canonical.txt",
+      "input_size_bytes": 192,
+      "sha256_hex": "6f2e3ce413e792d561d66f160dcf809ad530cbc02ceba48726ffddb6c1c28627",
+      "raw_digest_b64": "by485BPnktVh1m8WDc+AmtUwy8As66SHJv/dtsHChic=",
+      "hex_digest_b64": "NmYyZTNjZTQxM2U3OTJkNTYxZDY2ZjE2MGRjZjgwOWFkNTMwY2JjMDJjZWJhNDg3MjZmZmRkYjZjMWMyODYyNw==",
+      "raw_digest_b64_length": 44,
+      "hex_digest_b64_length": 88,
+      "used_for": {
+        "RawDigestB64": "Invoice Hash (XML signature + QR Tag 6) per AD-009 v2",
+        "HexDigestB64": "SignedProperties Hash + Certificate Hash per AD-009 v2"
+      }
+    }
+  ],
+  "negative": [
+    {
+      "name": "invalid-base64",
+      "file": "negative/invalid-base64.txt",
+      "input_content": "NotValidBase64!@#$",
+      "should_be_rejected_as": "invalid_base64",
+      "reason": "Contains characters not in base64 alphabet"
+    },
+    {
+      "name": "too-short-raw-b64",
+      "file": "negative/too-short-raw-b64.txt",
+      "input_content": "TooShort==",
+      "should_be_rejected_as": "invalid_raw_digest_length",
+      "reason": "RawDigestB64 must be exactly 44 characters (32 raw bytes encoded)"
+    },
+    {
+      "name": "too-long-raw-b64",
+      "file": "negative/too-long-raw-b64.txt",
+      "input_content": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+      "should_be_rejected_as": "invalid_raw_digest_length",
+      "reason": "RawDigestB64 must be exactly 44 characters"
+    },
+    {
+      "name": "invalid-hex",
+      "file": "negative/invalid-hex.txt",
+      "input_content": "zzzz_not_hex_zzz",
+      "should_be_rejected_as": "invalid_hex",
+      "reason": "Hex strings must contain only 0-9, a-f, A-F"
+    },
+    {
+      "name": "too-short-hex",
+      "file": "negative/too-short-hex.txt",
+      "input_content": "ab12",
+      "should_be_rejected_as": "invalid_hex_length",
+      "reason": "SHA-256 hex must be exactly 64 characters"
+    }
+  ],
+  "cross_language": [
+    {
+      "name": "ubl-invoice-cross-verified",
+      "input_file": "cross-language/ubl-invoice-input.txt",
+      "results_file": "cross-language/ubl-invoice-cross-results.json",
+      "description": "Same input hashed by 3 independent tools — all produce identical output",
+      "sha256_hex_consensus": "6f2e3ce413e792d561d66f160dcf809ad530cbc02ceba48726ffddb6c1c28627",
+      "raw_digest_b64_consensus": "by485BPnktVh1m8WDc+AmtUwy8As66SHJv/dtsHChic=",
+      "tools_agreed": [
+        "OpenSSL 3.0.13",
+        "Node v22.22.2 crypto",
+        "Python 3.12.3 hashlib"
+      ]
+    }
+  ]
+}
