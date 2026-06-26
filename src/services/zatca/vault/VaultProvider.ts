@@ -1,15 +1,28 @@
 /**
  * VaultProvider — Abstraction over secret storage for cryptographic material.
  *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * PHASE 2 REFACTORING (per AI-001):
+ *   This interface is now CURVE-AGNOSTIC. Policy decisions (which curves are
+ *   acceptable for ZATCA, which key sizes, etc.) live in CertificatePolicyValidator,
+ *   NOT here. The Vault only stores and uses keys — it does not judge them.
+ *
+ *   Before:  if (curve !== 'prime256v1') throw          ← policy in storage
+ *   After:   Vault signs whatever it has; Policy Validator validates before use.
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
  * Architectural references:
  * - AD-004 v2: Hybrid Vault Strategy (FS Vault + DB metadata + Provider abstraction)
  * - AD-005:    Credential Resolution Strategy
  * - AD-014 v2: Security Constitution (private keys never leave Vault unencrypted)
+ * - AI-001:    Curve Investigation (curve enforcement moved out of Vault)
  *
  * Contract:
  * - Vault stores raw cryptographic material (private keys, certificates).
  * - DB stores ONLY metadata (credentialId, status, expiry, paths/refs).
  * - Service Layer calls Vault to perform cryptographic operations.
+ * - Service Layer is responsible for calling CertificatePolicyValidator BEFORE
+ *   using a credential — Vault no longer rejects "wrong-curve" keys.
  * - Private keys MUST NOT be returned to callers; signing happens inside the Vault adapter.
  *
  * This file defines the interface. Implementations:
@@ -30,7 +43,10 @@ export type CredentialId = string & { readonly __brand: 'CredentialId' };
 export type CertificateB64 = string & { readonly __brand: 'CertificateB64' };
 
 /**
- * Base64-encoded raw signature value (ECDSA r||s, 64 bytes for P-256).
+ * Base64-encoded raw signature value (ECDSA r||s).
+ *
+ * For 256-bit curves (prime256v1, secp256k1, P-256), r||s is 64 bytes = 88 base64 chars.
+ * Callers should validate signature length matches their expected curve.
  */
 export type SignatureValueB64 = string & { readonly __brand: 'SignatureValueB64' };
 
@@ -42,9 +58,18 @@ export type DataToSign = Uint8Array;
 
 /**
  * Algorithm identifier for signing.
- * Per AD-008 v2: ZATCA uses ECDSA P-256 (secp256r1) with SHA-256.
+ *
+ * PHASE 2 REFACTORING NOTE (per AI-001):
+ *   This identifier specifies the HASH and SIGNATURE STYLE (ECDSA with SHA-256,
+ *   raw r||s encoding). It does NOT lock the curve — the curve is determined by
+ *   the key itself, and curve-acceptability is the policy validator's concern.
+ *
+ *   "ECDSA_SHA256" covers any ECDSA-with-SHA256 signature regardless of curve:
+ *     - prime256v1 / P-256 (NIST)
+ *     - secp256k1 (Bitcoin)
+ *     - any other curve supported by Node crypto
  */
-export type SigningAlgorithm = 'ECDSA_P256_SHA256';
+export type SigningAlgorithm = 'ECDSA_SHA256';
 
 /**
  * Errors raised by VaultProvider.
@@ -77,9 +102,15 @@ export type VaultErrorCode =
  * All implementations MUST:
  * 1. Never return private keys to callers — keys never leave the Vault.
  * 2. Sign opaquely: caller provides bytes-to-sign, Vault returns signature.
- * 3. Validate credential state before each operation.
+ * 3. Validate credential ACCESSIBILITY (exists, readable) before each operation.
  * 4. Be safe under concurrent access.
  * 5. Emit no sensitive data in error messages or logs.
+ *
+ * Implementations MUST NOT:
+ * - Enforce policy decisions (e.g., which curves are acceptable). That is the
+ *   responsibility of CertificatePolicyValidator.
+ * - Inspect or reject keys based on cryptographic parameters beyond what is
+ *   strictly necessary for the signing operation itself.
  */
 export interface VaultProvider {
   /**
@@ -87,12 +118,19 @@ export interface VaultProvider {
    *
    * @param credentialId - Identifier resolved by CredentialResolver (AD-005)
    * @param data         - Bytes to sign (typically canonical SignedInfo, per AD-001 Phase 4)
-   * @param algorithm    - Signing algorithm (currently only ECDSA_P256_SHA256)
-   * @returns Base64-encoded signature value (r||s for ECDSA P-256, 64 bytes raw = 88 chars b64)
+   * @param algorithm    - Signing algorithm (currently only ECDSA_SHA256)
+   * @returns Base64-encoded signature value (r||s for ECDSA, length depends on curve:
+   *          64 bytes raw = 88 chars b64 for 256-bit curves)
    *
-   * @throws VaultError if credential not found / revoked / signing fails
+   * @throws VaultError if credential not found / inaccessible / signing fails
    *
    * Important: This is the ONLY path to obtain a signature. Private key never exposed.
+   *
+   * PHASE 2 NOTE: This method does NOT verify that the key's curve matches any
+   * expected curve. If the caller cares about the curve, they must:
+   *   1. Get the certificate via getCertificate()
+   *   2. Pass it to CertificatePolicyValidator.validate(cert, policy)
+   *   3. Sign only if the policy result is valid
    */
   sign(
     credentialId: CredentialId,

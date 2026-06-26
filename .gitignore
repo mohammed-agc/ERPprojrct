@@ -28,3 +28,6 @@ dist-ssr
 
 # ZATCA research materials (external references, not source code)
 zatca-research/
+
+# Phase 2 refactoring local backups (not for repo)
+src/services/zatca/_backup_phase2_*/

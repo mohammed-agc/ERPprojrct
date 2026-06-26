@@ -1,15 +1,24 @@
 /**
  * FileSystemVaultProvider — Filesystem-backed implementation of VaultProvider.
  *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * PHASE 2 REFACTORING (per AI-001):
+ *   - Removed curve enforcement (lines 103-111 in v1.24)
+ *   - Removed P-256-specific signature length assertion
+ *   - SigningAlgorithm type widened from 'ECDSA_P256_SHA256' to 'ECDSA_SHA256'
+ *   - Policy decisions now live in CertificatePolicyValidator
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
  * Architectural references:
  * - AD-004 v2: Hybrid Vault Strategy (FS for keys, DB for metadata)
  * - AD-014 v2: Security Constitution (file permissions, no logging of sensitive data)
+ * - AI-001:    Curve Investigation (curve enforcement removed from this layer)
  *
  * Layout:
  *   <vaultRoot>/
  *     credentials/
  *       <credentialId>/
- *         private.pem     (PEM-encoded EC P-256 private key — 0400 permissions)
+ *         private.pem     (PEM-encoded EC private key — 0400 permissions)
  *         certificate.pem (PEM-encoded X.509 certificate — 0444 permissions)
  *
  * IMPORTANT:
@@ -74,20 +83,29 @@ export class FileSystemVaultProvider implements VaultProvider {
   }
 
   /**
-   * Sign data with ECDSA P-256 SHA-256.
+   * Sign data with ECDSA + SHA-256.
    *
    * Per AD-001 Phase 4f: this is the cryptographic core.
-   * Per AD-009 v2: signature is raw r||s (64 bytes), base64-encoded.
+   * Per AD-009 v2: signature is raw r||s, base64-encoded.
+   *
+   * PHASE 2 NOTE: This method does not enforce curve constraints. Any EC curve
+   * supported by Node crypto will work. Policy validation (curve acceptability)
+   * is the caller's responsibility via CertificatePolicyValidator.
+   *
+   * Output signature length depends on the curve:
+   *   - 256-bit curves (prime256v1, secp256k1): 64 bytes raw → 88 chars b64
+   *   - 384-bit curves: 96 bytes raw
+   *   - 521-bit curves: 132 bytes raw
    */
   async sign(
     credentialId: CredentialId,
     data: DataToSign,
     algorithm: SigningAlgorithm
   ): Promise<SignatureValueB64> {
-    if (algorithm !== 'ECDSA_P256_SHA256') {
+    if (algorithm !== 'ECDSA_SHA256') {
       throw new VaultError(
         'UNSUPPORTED_ALGORITHM',
-        'Only ECDSA_P256_SHA256 is currently supported',
+        'Only ECDSA_SHA256 is currently supported',
         { requested: algorithm }
       );
     }
@@ -100,37 +118,35 @@ export class FileSystemVaultProvider implements VaultProvider {
         format: 'pem',
       });
 
-      // Verify the key is P-256 (per AD-008 v2)
-      const keyDetails = (privateKey as unknown as { asymmetricKeyDetails?: { namedCurve?: string } })
-        .asymmetricKeyDetails;
-      if (keyDetails?.namedCurve && keyDetails.namedCurve !== 'prime256v1' && keyDetails.namedCurve !== 'P-256') {
-        throw new VaultError(
-          'INVALID_CREDENTIAL_FORMAT',
-          'Private key is not P-256 curve',
-          { credentialId, namedCurve: keyDetails.namedCurve }
-        );
-      }
+      // PHASE 2 REFACTORING: Curve check REMOVED.
+      // Previously here: if (namedCurve !== 'prime256v1') throw ...
+      // Reason: curve policy belongs in CertificatePolicyValidator, not the Vault.
+      // Callers should validate the certificate's curve via the policy validator
+      // BEFORE invoking sign(). See AI-001 Phase 2 architectural notes.
 
       // Sign — Node returns DER-encoded ECDSA signature by default.
-      // We need RAW (r||s, 64 bytes) per ZATCA spec (per AD-008 v2 / AD-009 v2).
+      // We request RAW (r||s) format per ZATCA spec (AD-008 v2 / AD-009 v2).
       const signer = createSign('sha256');
       signer.update(data);
       signer.end();
-      const derSignature = signer.sign({
+      const rawSignature = signer.sign({
         key: privateKey,
         dsaEncoding: 'ieee-p1363', // raw r||s format (matches ZATCA expectation)
       });
 
-      // Validate length: P-256 raw signature must be exactly 64 bytes.
-      if (derSignature.length !== 64) {
+      // PHASE 2 REFACTORING: Hardcoded "64 bytes for P-256" assertion REMOVED.
+      // Length depends on curve; validating that here would re-introduce policy
+      // into storage. Callers can verify length against their expected curve.
+      // We still ensure the signature is non-empty as a basic sanity check.
+      if (rawSignature.length === 0) {
         throw new VaultError(
           'SIGNING_FAILED',
-          'Signature length unexpected; expected 64 bytes for P-256 raw',
-          { actual: derSignature.length }
+          'Signing produced an empty signature',
+          { credentialId }
         );
       }
 
-      return derSignature.toString('base64') as SignatureValueB64;
+      return rawSignature.toString('base64') as SignatureValueB64;
     } catch (err) {
       if (err instanceof VaultError) throw err;
       throw new VaultError(
