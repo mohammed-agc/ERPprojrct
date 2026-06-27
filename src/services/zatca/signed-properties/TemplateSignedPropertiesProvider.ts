@@ -2,16 +2,11 @@ import {
   SignedPropertiesProvider,
   SignedPropertiesInput,
   SignedPropertiesResult,
-  SignedPropertiesHashB64,
 } from './SignedPropertiesProvider';
-
-/**
- * Minimal hash dependency. In the real codebase this is the S3.1.2 HashProvider;
- * computeHexDigest returns SHA-256 as base64-of-hex (88 chars).
- */
-export interface HashPort {
-  computeHexDigest(utf8: string): string;
-}
+import {
+  HashProvider,
+  asSignedPropertiesHash,
+} from '../hash/HashProvider';
 
 /**
  * Builds the ZATCA XAdES SignedProperties hash block from a fixed, verified template.
@@ -19,9 +14,12 @@ export interface HashPort {
  * The template, indentation, namespace placement and self-closing DigestMethod were all
  * reproduced byte-for-byte against the golden reference invoice (digest e930cd6a...).
  * Do not "tidy" the whitespace — every space and newline is part of the signed bytes.
+ *
+ * The digest is produced via HashProvider.computeHexDigest (base64-of-hex, 88 chars),
+ * per the Encoding Asymmetry (AD-009 v2). SignedProperties never uses the raw encoding.
  */
 export class TemplateSignedPropertiesProvider implements SignedPropertiesProvider {
-  constructor(private readonly hash: HashPort) {}
+  constructor(private readonly hash: HashProvider) {}
 
   build(input: SignedPropertiesInput): SignedPropertiesResult {
     this.assertNonEmpty('signingTime', input.signingTime);
@@ -30,7 +28,7 @@ export class TemplateSignedPropertiesProvider implements SignedPropertiesProvide
     this.assertNonEmpty('serialNumber', input.serialNumber);
 
     const hashVersionXml = this.render(input);
-    const digest = this.hash.computeHexDigest(hashVersionXml) as SignedPropertiesHashB64;
+    const digest = asSignedPropertiesHash(this.hash.computeHexDigest(hashVersionXml));
     return { hashVersionXml, digest };
   }
 
