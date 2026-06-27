@@ -21,7 +21,6 @@ import {
 import { NodeCryptoCertificatePolicyValidator } from '../NodeCryptoCertificatePolicyValidator';
 import {
   ZatcaPolicy_2023_05,
-  ZatcaPolicy_2023_05_PermissiveInvestigation,
 } from '../ZatcaPolicy_2023_05';
 import type { CertificatePolicy, PolicyId } from '../CertificatePolicy';
 
@@ -96,11 +95,12 @@ describe('NodeCryptoCertificatePolicyValidator', () => {
       expect(result.policy.authority).toBe('ZATCA');
       expect(result.policy.version).toBe('2023.05');
 
-      // The DISALLOWED_CURVE violation must NOT be present
+      // ADR-023: ZATCA mandates secp256k1, so prime256v1 MUST be rejected.
       const curveViolations = result.violations.filter(
         (v) => v.code === 'DISALLOWED_CURVE'
       );
-      expect(curveViolations).toHaveLength(0);
+      expect(curveViolations).toHaveLength(1);
+      expect(result.valid).toBe(false);
     });
 
     it('includes the policy identity in result for audit trail', () => {
@@ -118,16 +118,7 @@ describe('NodeCryptoCertificatePolicyValidator', () => {
       });
     });
 
-    it('PermissiveInvestigation policy returns its distinct policyId', () => {
-      const result = validator.validate(
-        { format: 'pem', pem: TEST_CERT_PRIME256V1_PEM },
-        ZatcaPolicy_2023_05_PermissiveInvestigation,
-        NOW
-      );
-      expect(result.policyId).toBe('zatca-2023-05-permissive');
-      // ensures audit trail distinguishes between strict and permissive policies
-      expect(result.policyId).not.toBe(ZatcaPolicy_2023_05.policyId);
-    });
+
 
     it('populates inspectedMetadata even when validation fails', () => {
       const strictPolicy: CertificatePolicy = {
@@ -181,12 +172,7 @@ describe('NodeCryptoCertificatePolicyValidator', () => {
       expect(curveViolations).toHaveLength(0);
     });
 
-    it('the PermissiveInvestigation policy accepts both prime256v1 and secp256k1', () => {
-      expect(ZatcaPolicy_2023_05_PermissiveInvestigation.allowedCurves).toEqual([
-        'prime256v1',
-        'secp256k1',
-      ]);
-    });
+
   });
 
   describe('validate() — key size', () => {
@@ -359,22 +345,15 @@ describe('NodeCryptoCertificatePolicyValidator', () => {
       expect(Object.isFrozen(ZatcaPolicy_2023_05)).toBe(true);
     });
 
-    it('ZatcaPolicy_2023_05 has the expected provisional shape', () => {
+    it('ZatcaPolicy_2023_05 has the expected shape (ADR-023: secp256k1)', () => {
       expect(ZatcaPolicy_2023_05.policyId).toBe('zatca-2023-05');
       expect(ZatcaPolicy_2023_05.authority).toBe('ZATCA');
       expect(ZatcaPolicy_2023_05.version).toBe('2023.05');
-      expect(ZatcaPolicy_2023_05.allowedCurves).toEqual(['prime256v1']);
+      expect(ZatcaPolicy_2023_05.allowedCurves).toEqual(['secp256k1']);
       expect(ZatcaPolicy_2023_05.minimumKeySize).toBe(256);
     });
 
-    it('PermissiveInvestigation has a distinct policyId from the strict policy', () => {
-      expect(ZatcaPolicy_2023_05_PermissiveInvestigation.policyId).toBe(
-        'zatca-2023-05-permissive'
-      );
-      expect(ZatcaPolicy_2023_05_PermissiveInvestigation.policyId).not.toBe(
-        ZatcaPolicy_2023_05.policyId
-      );
-    });
+
 
     it('A different policy version can coexist (versioning works)', () => {
       const futurePolicy: CertificatePolicy = {
