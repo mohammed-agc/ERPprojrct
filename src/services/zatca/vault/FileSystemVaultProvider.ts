@@ -100,7 +100,8 @@ export class FileSystemVaultProvider implements VaultProvider {
   async sign(
     credentialId: CredentialId,
     data: DataToSign,
-    algorithm: SigningAlgorithm
+    algorithm: SigningAlgorithm,
+    dsaEncoding: 'der' | 'ieee-p1363'
   ): Promise<SignatureValueB64> {
     if (algorithm !== 'ECDSA_SHA256') {
       throw new VaultError(
@@ -129,16 +130,16 @@ export class FileSystemVaultProvider implements VaultProvider {
       const signer = createSign('sha256');
       signer.update(data);
       signer.end();
-      const rawSignature = signer.sign({
+      const signature = signer.sign({
         key: privateKey,
-        dsaEncoding: 'ieee-p1363', // raw r||s format (matches ZATCA expectation)
+        dsaEncoding,
       });
 
       // PHASE 2 REFACTORING: Hardcoded "64 bytes for P-256" assertion REMOVED.
       // Length depends on curve; validating that here would re-introduce policy
       // into storage. Callers can verify length against their expected curve.
       // We still ensure the signature is non-empty as a basic sanity check.
-      if (rawSignature.length === 0) {
+      if (signature.length === 0) {
         throw new VaultError(
           'SIGNING_FAILED',
           'Signing produced an empty signature',
@@ -146,7 +147,7 @@ export class FileSystemVaultProvider implements VaultProvider {
         );
       }
 
-      return rawSignature.toString('base64') as SignatureValueB64;
+      return signature.toString('base64') as SignatureValueB64;
     } catch (err) {
       if (err instanceof VaultError) throw err;
       throw new VaultError(

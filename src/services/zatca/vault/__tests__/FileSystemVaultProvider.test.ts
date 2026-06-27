@@ -95,7 +95,8 @@ describe('FileSystemVaultProvider (Phase 2 Refactored)', () => {
       const signature = await provider.sign(
         credentialId,
         data,
-        'ECDSA_SHA256'
+        'ECDSA_SHA256',
+        'der'
       );
       expect(signature).toBeTruthy();
       expect(typeof signature).toBe('string');
@@ -106,7 +107,7 @@ describe('FileSystemVaultProvider (Phase 2 Refactored)', () => {
       // enforced curve. Post-refactor, it does not.
       const data = Buffer.from('phase 2 curve check removed');
       await expect(
-        provider.sign(credentialId, data, 'ECDSA_SHA256')
+        provider.sign(credentialId, data, 'ECDSA_SHA256', 'der')
       ).resolves.toBeTruthy();
     });
 
@@ -136,15 +137,17 @@ describe('FileSystemVaultProvider (Phase 2 Refactored)', () => {
       const signature = await provider.sign(
         secp256k1CredId,
         data,
-        'ECDSA_SHA256'
+        'ECDSA_SHA256',
+        'der'
       );
 
       // Sign succeeded (would have thrown in v1.24!)
       expect(signature).toBeTruthy();
 
-      // Decode to check signature length (256-bit curve raw = 64 bytes)
+      // DER-encoded ECDSA signature starts with SEQUENCE tag 0x30 (ADR-024);
+      // length is variable, so assert the tag not a fixed length.
       const sigBuf = Buffer.from(signature, 'base64');
-      expect(sigBuf.length).toBe(64);
+      expect(sigBuf[0]).toBe(0x30);
     });
 
     it('rejects an unsupported algorithm string', async () => {
@@ -180,7 +183,7 @@ describe('FileSystemVaultProvider (Phase 2 Refactored)', () => {
     it('sign throws CREDENTIAL_NOT_FOUND for missing credential', async () => {
       const data = Buffer.from('test');
       await expect(
-        provider.sign('nonexistent' as CredentialId, data, 'ECDSA_SHA256')
+        provider.sign('nonexistent' as CredentialId, data, 'ECDSA_SHA256', 'der')
       ).rejects.toMatchObject({
         code: 'CREDENTIAL_NOT_FOUND',
       });
@@ -197,7 +200,7 @@ describe('FileSystemVaultProvider (Phase 2 Refactored)', () => {
     it('rejects credentialId with path traversal characters', async () => {
       const data = Buffer.from('test');
       await expect(
-        provider.sign('../etc/passwd' as CredentialId, data, 'ECDSA_SHA256')
+        provider.sign('../etc/passwd' as CredentialId, data, 'ECDSA_SHA256', 'der')
       ).rejects.toMatchObject({
         code: 'CREDENTIAL_NOT_FOUND',
       });
@@ -205,16 +208,21 @@ describe('FileSystemVaultProvider (Phase 2 Refactored)', () => {
   });
 
   describe('signature properties (with prime256v1 fixture key)', () => {
-    it('produces a 64-byte raw signature for 256-bit curves', async () => {
+    it('produces a valid DER signature (SEQUENCE) for 256-bit curves', async () => {
       const data = Buffer.from('verify length');
       const signature = await provider.sign(
         credentialId,
         data,
-        'ECDSA_SHA256'
+        'ECDSA_SHA256',
+        'der'
       );
       const sigBuf = Buffer.from(signature, 'base64');
-      // For prime256v1 (256-bit), raw r||s = 64 bytes
-      expect(sigBuf.length).toBe(64);
+      // DER ECDSA = ASN.1 SEQUENCE → first byte 0x30; length is VARIABLE
+      // (~70–72 bytes for 256-bit curves) due to r/s leading-zero padding.
+      // Per ADR-024. Do NOT assert a fixed length.
+      expect(sigBuf[0]).toBe(0x30);
+      expect(sigBuf.length).toBeGreaterThanOrEqual(68);
+      expect(sigBuf.length).toBeLessThanOrEqual(72);
     });
 
     it('signature is verifiable with the corresponding public key', async () => {
@@ -231,14 +239,15 @@ describe('FileSystemVaultProvider (Phase 2 Refactored)', () => {
       const signature = await provider.sign(
         credentialId,
         data,
-        'ECDSA_SHA256'
+        'ECDSA_SHA256',
+        'der'
       );
 
       const verifier = createVerify('sha256');
       verifier.update(data);
       verifier.end();
       const verified = verifier.verify(
-        { key: publicKey, dsaEncoding: 'ieee-p1363' },
+        { key: publicKey, dsaEncoding: 'der' },
         Buffer.from(signature, 'base64')
       );
       expect(verified).toBe(true);
@@ -246,8 +255,8 @@ describe('FileSystemVaultProvider (Phase 2 Refactored)', () => {
 
     it('two signatures of the same data are different (ECDSA is non-deterministic)', async () => {
       const data = Buffer.from('repeated data');
-      const sig1 = await provider.sign(credentialId, data, 'ECDSA_SHA256');
-      const sig2 = await provider.sign(credentialId, data, 'ECDSA_SHA256');
+      const sig1 = await provider.sign(credentialId, data, 'ECDSA_SHA256', 'der');
+      const sig2 = await provider.sign(credentialId, data, 'ECDSA_SHA256', 'der');
       // ECDSA uses a random nonce by default; two signatures over the same data
       // will differ. (This is by design — RFC 6979 deterministic ECDSA is a
       // separate variant Node does not produce by default.)
