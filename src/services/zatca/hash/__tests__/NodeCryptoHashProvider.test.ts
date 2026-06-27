@@ -232,4 +232,51 @@ describe('NodeCryptoHashProvider', () => {
       expect(raw).toBe('ungWv48Bz+pBQUDeXa4iI7ADYaOWF3qctBD/YfIAFa0=');
     });
   });
+
+  describe('computeDigestBytes (canonical digest — ADR-026)', () => {
+    it('returns exactly 32 bytes (SHA-256 output size)', () => {
+      const inputs = ['', 'a', 'hello', 'أرض المبارك', Buffer.alloc(1000)];
+      for (const input of inputs) {
+        const digest = provider.computeDigestBytes(input);
+        expect(Buffer.isBuffer(digest)).toBe(true);
+        expect(digest.length).toBe(32);
+      }
+    });
+
+    it('matches SHA-256("abc") NIST vector byte-for-byte (FIPS 180-4 A.1)', () => {
+      const digest = provider.computeDigestBytes('abc');
+      expect(digest.toString('hex')).toBe(
+        'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'
+      );
+    });
+
+    it('matches SHA-256("") NIST vector byte-for-byte', () => {
+      const digest = provider.computeDigestBytes('');
+      expect(digest.toString('hex')).toBe(
+        'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+      );
+    });
+
+    it('is the canonical source: equals base64-decode of computeRawDigest', () => {
+      // ADR-026 invariant: RawDigestB64 is a derived VIEW of these bytes.
+      const inputs = ['Hello, World!', 'أرض المبارك للسيارات', Buffer.alloc(500, 7)];
+      for (const input of inputs) {
+        const bytes = provider.computeDigestBytes(input);
+        const fromB64 = Buffer.from(provider.computeRawDigest(input), 'base64');
+        expect(bytes.equals(fromB64)).toBe(true);
+      }
+    });
+
+    it('is deterministic across calls and instances', () => {
+      const input = 'deterministic digest';
+      const p2 = new NodeCryptoHashProvider();
+      expect(provider.computeDigestBytes(input).equals(p2.computeDigestBytes(input))).toBe(true);
+    });
+
+    it('treats string and Buffer identically (UTF-8)', () => {
+      const str = 'identical';
+      const buf = Buffer.from(str, 'utf-8');
+      expect(provider.computeDigestBytes(str).equals(provider.computeDigestBytes(buf))).toBe(true);
+    });
+  });
 });

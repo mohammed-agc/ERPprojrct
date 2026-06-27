@@ -46,6 +46,42 @@ const EXPECTED_HEX_DIGEST_LENGTH = 88;
 export class NodeCryptoHashProvider implements HashProvider {
   readonly algorithm: HashAlgorithm = 'SHA-256';
   readonly implementationName = 'node:crypto SHA-256';
+  /**
+   * Compute the raw 32-byte SHA-256 digest — the canonical internal representation.
+   *
+   * Per ADR-026: digest bytes are the source of truth; the *B64 methods are
+   * derived views. The XAdES signer (S3.3) consumes these bytes directly for
+   * ECDSA signing (ADR-025), avoiding any base64 round-trip in the sign path.
+   *
+   * NOTE (ADR-026, deferred tech-debt): this currently computes SHA-256
+   * independently. A future refactor MAY make computeRawDigest/computeHexDigest
+   * derive from this method, without changing public behavior.
+   */
+  computeDigestBytes(input: BytesToHash): Buffer {
+    const buffer = this.toBuffer(input);
+
+    try {
+      const digest = createHash('sha256').update(buffer).digest();
+
+      // Defensive invariant: SHA-256 output MUST be exactly 32 bytes.
+      if (digest.length !== 32) {
+        throw new HashError(
+          'HASH_COMPUTATION_FAILED',
+          `SHA-256 digest has unexpected length: ${digest.length} (expected 32)`,
+          { actualLength: digest.length, expectedLength: 32 }
+        );
+      }
+
+      return digest;
+    } catch (err) {
+      if (err instanceof HashError) throw err;
+      throw new HashError(
+        'HASH_COMPUTATION_FAILED',
+        'SHA-256 digest computation failed',
+        { cause: String(err) }
+      );
+    }
+  }
 
   /**
    * Compute base64 of raw SHA-256 bytes.

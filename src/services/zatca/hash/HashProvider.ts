@@ -141,6 +141,22 @@ export interface HashProvider {
    * Human-readable implementation name for diagnostics.
    */
   readonly implementationName: string;
+  /**
+   * Compute the raw 32-byte SHA-256 digest — the CANONICAL internal representation.
+   *
+   * Per ADR-026: the digest bytes are the source of truth; RawDigestB64 and
+   * HexDigestB64 are derived textual representations (views) of these bytes.
+   *
+   * Use for: anything that needs the digest as bytes rather than text — notably
+   * ECDSA signing (the XAdES signer passes these 32 bytes to Vault.sign, which
+   * applies SHA-256 then ECDSA, per ADR-025). Do NOT base64-decode a *B64 string
+   * to recover these bytes; obtain them here, from the hash authority.
+   *
+   * @param input - Bytes to hash (Uint8Array | Buffer | string-as-UTF-8)
+   * @returns Buffer of exactly 32 bytes (SHA-256 output)
+   * @throws HashError on failure
+   */
+  computeDigestBytes(input: BytesToHash): Buffer;
 
   /**
    * Compute base64 of raw SHA-256 bytes (44 chars).
