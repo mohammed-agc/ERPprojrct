@@ -21,6 +21,16 @@
  *   comment for CertificateHashB64 still says "DER bytes" — that comment is
  *   inaccurate; this loader deliberately hashes the base64 string per the
  *   golden reference.
+ *
+ * THE QR BYTE-FIELDS (loadQrFields, golden-verified — separate from load()):
+ *   publicKeyDer     = cert.publicKey.export({ format: 'der', type: 'spki' }),
+ *                      88 bytes (30 56 …) for the golden secp256k1 cert — QR Tag 8.
+ *   certSignatureDer = the content of the certificate's final BIT STRING minus
+ *                      the unused-bits byte: the raw DER ECDSA signature
+ *                      (30 45 02 21 …), 71 bytes for the golden cert — QR Tag 9.
+ *   Both verified byte-for-byte against the golden QR (Standard Tag 8 / Simplified
+ *   Tag 9). Lengths are curve-/signature-dependent and intentionally not asserted
+ *   here; the golden test locks the golden values.
  */
 
 import { X509Certificate } from 'node:crypto';
@@ -32,6 +42,7 @@ import {
 import {
   type CertificateLoader,
   type CertificateFields,
+  type QrCertificateFields,
   CertificateLoaderError,
 } from './CertificateLoader';
 
@@ -56,6 +67,18 @@ export class NodeCryptoCertificateLoader implements CertificateLoader {
       certificateDigest,
       issuerName,
       serialNumber,
+    };
+  }
+
+  loadQrFields(certificateB64: CertificateB64): QrCertificateFields {
+    const cert = this.parse(certificateB64);
+
+    const publicKeyDer = this.extractPublicKeyDer(cert);
+    const certSignatureDer = this.extractCertSignatureDer(cert);
+
+    return {
+      publicKeyDer,
+      certSignatureDer,
     };
   }
 
@@ -131,5 +154,109 @@ export class NodeCryptoCertificateLoader implements CertificateLoader {
         { hexSerial, cause: (err as Error).message }
       );
     }
+  }
+
+  /**
+   * Extract the SubjectPublicKeyInfo DER (QR Tag 8) via Node's KeyObject export.
+   * For the golden secp256k1 cert this is 88 bytes (30 56 …). Length is curve-
+   * dependent and intentionally NOT asserted here; the golden test locks it.
+   */
+  private extractPublicKeyDer(cert: X509Certificate): Buffer {
+    try {
+      return cert.publicKey.export({ format: 'der', type: 'spki' }) as Buffer;
+    } catch (err) {
+      throw new CertificateLoaderError(
+        'EXTRACTION_FAILED',
+        'Certificate public key (SPKI DER) could not be exported',
+        { cause: (err as Error).message }
+      );
+    }
+  }
+
+  /**
+   * Extract the raw certificate signature value (QR Tag 9) from the cert DER.
+   *
+   * An X.509 certificate is SEQUENCE { tbsCertificate, signatureAlgorithm,
+   * signatureValue BIT STRING }. We walk past the first two SEQUENCEs to the
+   * final BIT STRING and return its content minus the leading unused-bits byte.
+   * For an ECDSA cert that content is the DER signature (30 45 02 21 …), 70–72
+   * bytes; the golden cert yields 71. Length is NOT asserted here (it varies);
+   * the golden test locks the golden value.
+   */
+  private extractCertSignatureDer(cert: X509Certificate): Buffer {
+    try {
+      const der = cert.raw; // full certificate DER (Buffer)
+      let p = 0;
+
+      const seq = (what: string): { length: number; valueStart: number } => {
+        if (der[p] !== 0x30) {
+          throw new Error(
+            `expected ${what} SEQUENCE (0x30) at offset ${p}, got 0x${der[p]?.toString(16)}`
+          );
+        }
+        p += 1;
+        return this.readDerLength(der, p);
+      };
+
+      const outer = seq('outer');
+      p = outer.valueStart; // descend into the certificate's content
+
+      const tbs = seq('tbsCertificate');
+      p = tbs.valueStart + tbs.length; // skip the entire tbsCertificate
+
+      const alg = seq('signatureAlgorithm');
+      p = alg.valueStart + alg.length; // skip the entire signatureAlgorithm
+
+      if (der[p] !== 0x03) {
+        throw new Error(
+          `expected signatureValue BIT STRING (0x03) at offset ${p}, got 0x${der[p]?.toString(16)}`
+        );
+      }
+      p += 1;
+      const bits = this.readDerLength(der, p);
+      // First content byte is the unused-bits count (0 for byte-aligned signatures);
+      // the remainder is the raw DER ECDSA signature.
+      const sig = der.subarray(bits.valueStart + 1, bits.valueStart + bits.length);
+      return Buffer.from(sig);
+    } catch (err) {
+      throw new CertificateLoaderError(
+        'EXTRACTION_FAILED',
+        'Certificate signature value (DER) could not be extracted',
+        { cause: (err as Error).message }
+      );
+    }
+  }
+
+  /**
+   * Read a DER definite-length octet sequence at `pos`.
+   * Returns the decoded length and the offset where the value begins.
+   * Supports short form and long form up to 4 length-bytes.
+   */
+  private readDerLength(
+    buf: Buffer,
+    pos: number
+  ): { length: number; valueStart: number } {
+    const first = buf[pos++];
+    if (first === undefined) {
+      throw new Error(`DER length byte missing at offset ${pos - 1}`);
+    }
+    if (first < 0x80) {
+      return { length: first, valueStart: pos };
+    }
+    const numBytes = first & 0x7f;
+    if (numBytes === 0 || numBytes > 4) {
+      throw new Error(
+        `unsupported DER length form (${numBytes} length-bytes) at offset ${pos - 1}`
+      );
+    }
+    let len = 0;
+    for (let i = 0; i < numBytes; i++) {
+      const nb = buf[pos++];
+      if (nb === undefined) {
+        throw new Error(`truncated DER length at offset ${pos - 1}`);
+      }
+      len = (len << 8) | nb;
+    }
+    return { length: len, valueStart: pos };
   }
 }

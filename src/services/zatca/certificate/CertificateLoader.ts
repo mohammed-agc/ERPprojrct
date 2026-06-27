@@ -43,6 +43,20 @@
  *                       the value exceeds Number.MAX_SAFE_INTEGER). For the
  *                       golden cert: "379112742831380471835263969587287663520528387"
  *                       Used in <ds:X509SerialNumber>.
+ *
+ * Two additional RAW byte-fields are extracted for the QR TLV (ZATCA Phase 2),
+ * exposed SEPARATELY via loadQrFields() so the XAdES contract above stays intact
+ * (One Authority Per Concern — same parsed certificate, different consumer):
+ *
+ *   publicKeyDer      — SubjectPublicKeyInfo DER, 88 bytes (secp256k1). Obtained
+ *                       via publicKey.export({ format: 'der', type: 'spki' }).
+ *                       Used as QR Tag 8. Verified byte-for-byte == golden QR Tag 8.
+ *
+ *   certSignatureDer  — the certificate signature value, raw DER ECDSA, 71 bytes
+ *                       (30 45 02 21 …). The content of the final BIT STRING in
+ *                       the certificate DER, minus the unused-bits byte. Used as
+ *                       QR Tag 9 (SIMPLIFIED invoices only). Verified byte-for-byte
+ *                       == golden QR Tag 9.
  */
 
 import type { CertificateB64 } from '../vault/VaultProvider';
@@ -63,6 +77,26 @@ export interface CertificateFields {
 
   /** Certificate serial number as a decimal string (BigInt-derived). */
   readonly serialNumber: string;
+}
+
+/**
+ * Raw certificate byte-fields required for the QR TLV (ZATCA Phase 2).
+ *
+ * Separate from CertificateFields by contract: those four feed the XAdES
+ * signature; these two feed the QR code. Both come from the SAME parsed
+ * certificate — extraction is one concern (One Authority Per Concern).
+ *
+ * Verified byte-for-byte against the golden reference:
+ *   publicKeyDer     — SubjectPublicKeyInfo DER, 88 bytes (secp256k1) — QR Tag 8.
+ *   certSignatureDer — certificate signature value, raw DER ECDSA, 71 bytes
+ *                      (30 45 02 21 …) — QR Tag 9 (SIMPLIFIED invoices only).
+ */
+export interface QrCertificateFields {
+  /** SubjectPublicKeyInfo DER (88 bytes, secp256k1) — QR Tag 8. */
+  readonly publicKeyDer: Buffer;
+
+  /** Certificate signature value, raw DER ECDSA (71 bytes) — QR Tag 9. */
+  readonly certSignatureDer: Buffer;
 }
 
 /**
@@ -105,6 +139,18 @@ export interface CertificateLoader {
    * @throws CertificateLoaderError on parse failure or extraction failure.
    */
   load(certificateB64: CertificateB64): CertificateFields;
+
+  /**
+   * Extract the raw certificate byte-fields for the QR TLV (Tags 8 & 9).
+   * Reuses the same X.509 parse as load(); does not re-judge or re-hash.
+   * Tag 9 is extracted unconditionally; gating (simplified-only) is the QR
+   * provider's concern, not the loader's.
+   *
+   * @param certificateB64 - Certificate as base64 (DER, no PEM markers).
+   * @returns QrCertificateFields (publicKeyDer + certSignatureDer, golden-verified).
+   * @throws CertificateLoaderError on parse failure or extraction failure.
+   */
+  loadQrFields(certificateB64: CertificateB64): QrCertificateFields;
 }
 
 /**
