@@ -1,0 +1,2 @@
+# Byte-exact ZATCA artifacts — never convert line endings (breaks golden hashes).
+signatureTemplate.ts -text
