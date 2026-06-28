@@ -65,7 +65,7 @@ export class NodeXadesSigner implements XadesSigner {
     // 6. Sign — Vault does SHA-256 + ECDSA + DER + base64 (no crypto here).
     let signatureValueB64;
     try {
-      signatureValueB64 = await this.vault.sign(credentialId, invoiceHashBytes, 'ECDSA_SHA256');
+      signatureValueB64 = await this.vault.sign(credentialId, invoiceHashBytes, 'ECDSA_SHA256', 'der');
     } catch (err) {
       throw new XadesSignerError('SIGNING_FAILED', 'Vault signing failed', err);
     }
