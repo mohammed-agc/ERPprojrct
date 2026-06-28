@@ -62,9 +62,21 @@ export interface XmlBuildInput {
   documentId: string;
 }
 
+/**
+ * ناتج البناء الكامل: artifact مركّب، الـ xml أحد مكوّناته.
+ * UblInvoice هو الأصل (Invoice → mapInvoiceToUbl → UblInvoice) الذي يُبنى منه
+ * كلٌّ من xml و QR وأي مستهلك مستقبلي — لا يُعاد اشتقاقه من الـ xml (SSOT).
+ *   xml      → XadesSigner
+ *   ubl      → QrAssembler (Tags 1–5) وأي مستهلك يحتاج القيم المصدرية
+ *   metadata → S5 / التدقيق
+ *   warnings → الطبقة العليا
+ */
 export interface XmlBuildOutput {
   /** UBL 2.1 XML نهائي (UTF-8, unsigned). يُمرَّر لاحقاً لـ XadesSignerService */
   xml: string;
+
+  /** الكائن المصدري المُحوَّل — SSOT لقيم الفاتورة (مصدر xml و QR). */
+  ubl: UblInvoice;
 
   /** بيانات تشخيصية للتدقيق والاختبار */
   metadata: XmlBuildMetadata;

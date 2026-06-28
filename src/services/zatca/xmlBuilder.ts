@@ -79,6 +79,7 @@ export async function buildInvoiceXml(input: XmlBuildInput): Promise<XmlBuildOut
 
   return {
     xml,
+    ubl,
     warnings,
     metadata: {
       documentType: input.documentType,
