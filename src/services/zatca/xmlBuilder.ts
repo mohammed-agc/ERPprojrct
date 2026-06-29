@@ -38,6 +38,9 @@ import {
   type BillingReference,
   type XmlBuildInput,
   type XmlBuildOutput,
+  type InvoiceData,
+  type DocumentType,
+  type ChainSnapshot,
 } from "./xmlBuilder.types";
 import { loadDocumentData } from "./documentDataLoader";
 import { validateInvoiceData } from "./invoiceUblValidator";
@@ -59,19 +62,49 @@ import { mapInvoiceToUbl } from "./invoiceUblMapper";
  * @throws XmlBuilderError بأكواد واضحة
  */
 export async function buildInvoiceXml(input: XmlBuildInput): Promise<XmlBuildOutput> {
-  // 1) تحميل من المصدر الصحيح (الـ Dispatcher يقرر)
+  // المسار القديم (Legacy): يبني من الصفّ كما يُحمَّل (invoices.icv/pih). بلا تغيير.
   const data = await loadDocumentData(input.documentType, input.documentId);
+  return buildOutputFromData(data, input.documentType);
+}
 
-  // 2) تحقق
+/**
+ * المسار الجديد (Composer): الـ chainSnapshot هو المصدر الوحيد لـ icv/pih.
+ * يُحمّل البيانات ثم يستبدل (غير-مُطفِّر) icv/pih بقيم الـ snapshot قبل النواة:
+ *   nextIcv = currentIcv + 1   (الـ Builder يملك إسقاط current→next)
+ *   pih     = currentPih
+ * النواة لا تعرف المصدر — لا تفرّع. invoices.icv/pih لا تُقرأ للبناء هنا
+ * (إسقاطٌ بعد append، لا مصدر) — ADR-028.
+ */
+export async function buildInvoiceXmlWithChainSnapshot(
+  input: XmlBuildInput,
+  chainSnapshot: ChainSnapshot,
+): Promise<XmlBuildOutput> {
+  const data = await loadDocumentData(input.documentType, input.documentId);
+  const dataWithChain: InvoiceData = {
+    ...data,
+    invoice: {
+      ...data.invoice,
+      icv: chainSnapshot.currentIcv + 1,
+      pih: chainSnapshot.currentPih,
+    },
+  };
+  return buildOutputFromData(dataWithChain, input.documentType);
+}
+
+/**
+ * النواة النقيّة المشتركة: validate → map → build → metadata.
+ * تستهلك data.invoice.icv/pih كما هي، لا تعرف مصدرها (legacy أو snapshot).
+ */
+function buildOutputFromData(
+  data: InvoiceData,
+  documentType: DocumentType,
+): XmlBuildOutput {
   validateInvoiceData(data);
 
-  // 3) تحويل
   const { ubl, warnings } = mapInvoiceToUbl(data);
 
-  // 4) بناء
   const xml = buildXmlFromUbl(ubl);
 
-  // التحقق من التطابق النهائي (إصلاح bug في S2.1)
   const totalsCalc = Math.abs(
     ubl.totals.taxInclusiveAmount - (ubl.totals.taxExclusiveAmount + ubl.totalTaxAmount)
   );
@@ -82,7 +115,7 @@ export async function buildInvoiceXml(input: XmlBuildInput): Promise<XmlBuildOut
     ubl,
     warnings,
     metadata: {
-      documentType: input.documentType,
+      documentType,
       invoiceNo: ubl.invoiceNo,
       uuid: ubl.uuid,
       icv: ubl.icv,

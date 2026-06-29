@@ -63,6 +63,17 @@ export interface XmlBuildInput {
 }
 
 /**
+ * ChainSnapshot — لقطة لرأس السلسلة الحالي، المصدر الوحيد لـ icv/pih في مسار
+ * التوقيع (S5). يُعرَّف محلياً في S2 (لا اعتماد على ChainHead من S5). الـ Builder
+ * يشتقّ nextIcv = currentIcv + 1؛ وcurrentPih هو PIH المستند. invoices.icv/pih
+ * إسقاطٌ بعد append، لا مصدر البناء (ADR-028).
+ */
+export interface ChainSnapshot {
+  currentIcv: number;
+  currentPih: string;
+}
+
+/**
  * ناتج البناء الكامل: artifact مركّب، الـ xml أحد مكوّناته.
  * UblInvoice هو الأصل (Invoice → mapInvoiceToUbl → UblInvoice) الذي يُبنى منه
  * كلٌّ من xml و QR وأي مستهلك مستقبلي — لا يُعاد اشتقاقه من الـ xml (SSOT).
