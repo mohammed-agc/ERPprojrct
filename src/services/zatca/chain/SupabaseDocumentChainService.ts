@@ -72,11 +72,12 @@ export class SupabaseDocumentChainService implements DocumentChainService {
       p_document_type: request.documentType,
       p_document_id: request.documentId,
       p_uuid: request.uuid,
-      p_invoice_hash: request.invoiceHash,
+      p_artifact_id: request.artifactRef.artifactId,
+      p_artifact_hash: request.artifactRef.artifactHash,
       p_token: request.token,
     });
 
-    // Infra / precondition failure (e.g. INVALID_INVOICE_HASH,
+    // Infra / precondition failure (e.g. ARTIFACT_HASH_MISMATCH,
     // COMPANY_SCOPE_VIOLATION) is NOT an outcome — propagate.
     if (error) {
       throw new Error(`DocumentChainService.append failed: ${error.message}`);
@@ -89,14 +90,14 @@ export class SupabaseDocumentChainService implements DocumentChainService {
           outcome: 'SUCCESS',
           icv: d.icv as number,
           pih: d.pih as string,
-          invoiceHash: d.invoiceHash as string,
+          artifactHash: d.artifactHash as string,
         };
       case 'ALREADY_APPLIED':
         return {
           outcome: 'ALREADY_APPLIED',
           icv: d.icv as number,
           pih: d.pih as string,
-          invoiceHash: d.invoiceHash as string,
+          artifactHash: d.artifactHash as string,
           uuid: d.uuid as string,
         };
       case 'CONFLICT':

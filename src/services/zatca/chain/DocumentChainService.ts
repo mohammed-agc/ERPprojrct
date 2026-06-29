@@ -60,6 +60,16 @@ export interface ChainHead {
   readonly token: number;
 }
 
+/**
+ * A reference to a stored signed artifact: its identity + the link hash the
+ * chain verifies against. An inseparable pair — passed as ONE entity so an
+ * invalid {id, hash} combination is unrepresentable.
+ */
+export interface ArtifactReference {
+  readonly artifactId: string;
+  readonly artifactHash: string;
+}
+
 /** The artifact the caller built on a head snapshot, submitted for commit. */
 export interface AppendRequest {
   readonly companyId: string;
@@ -67,8 +77,8 @@ export interface AppendRequest {
   readonly documentType: DocumentType;
   readonly documentId: string;
   readonly uuid: string;
-  /** SHA-256 of the signed XML (44/64-char as produced by the signer). */
-  readonly invoiceHash: string;
+  /** Reference to the durable signed artifact (persisted BEFORE this append). */
+  readonly artifactRef: ArtifactReference;
   /** The token from the readHead snapshot this artifact was built upon. */
   readonly token: number;
 }
@@ -81,13 +91,13 @@ export type AppendOutcome =
       readonly outcome: 'SUCCESS';
       readonly icv: number;
       readonly pih: string;
-      readonly invoiceHash: string;
+      readonly artifactHash: string;
     }
   | {
       readonly outcome: 'ALREADY_APPLIED';
       readonly icv: number;
       readonly pih: string;
-      readonly invoiceHash: string;
+      readonly artifactHash: string;
       readonly uuid: string;
     }
   | {

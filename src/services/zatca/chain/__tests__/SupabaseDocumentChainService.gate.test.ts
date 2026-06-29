@@ -37,7 +37,7 @@ const REQ: AppendRequest = {
   documentType: 'invoice',
   documentId: 'doc-1',
   uuid: 'uuid-1',
-  invoiceHash: 'HASH_ONE',
+  artifactRef: { artifactId: 'art-1', artifactHash: 'HASH_ONE' },
   token: 0,
 };
 
@@ -72,7 +72,7 @@ describe('SupabaseDocumentChainService — gate', () => {
     const s = new SupabaseDocumentChainService(
       fakeClient(
         {
-          data: { outcome: 'SUCCESS', icv: 1, pih: 'SEED', invoiceHash: 'HASH_ONE' },
+          data: { outcome: 'SUCCESS', icv: 1, pih: 'SEED', artifactHash: 'HASH_ONE' },
           error: null,
         },
         (_fn, p) => {
@@ -81,14 +81,15 @@ describe('SupabaseDocumentChainService — gate', () => {
       )
     );
     const res = await s.append(REQ);
-    expect(res).toEqual({ outcome: 'SUCCESS', icv: 1, pih: 'SEED', invoiceHash: 'HASH_ONE' });
+    expect(res).toEqual({ outcome: 'SUCCESS', icv: 1, pih: 'SEED', artifactHash: 'HASH_ONE' });
     expect(calledParams).toEqual({
       p_company: 'company-1',
       p_environment: 'sandbox',
       p_document_type: 'invoice',
       p_document_id: 'doc-1',
       p_uuid: 'uuid-1',
-      p_invoice_hash: 'HASH_ONE',
+      p_artifact_id: 'art-1',
+      p_artifact_hash: 'HASH_ONE',
       p_token: 0,
     });
   });
@@ -100,7 +101,7 @@ describe('SupabaseDocumentChainService — gate', () => {
           outcome: 'ALREADY_APPLIED',
           icv: 1,
           pih: 'SEED',
-          invoiceHash: 'HASH_ONE',
+          artifactHash: 'HASH_ONE',
           uuid: 'uuid-1',
         },
         error: null,
