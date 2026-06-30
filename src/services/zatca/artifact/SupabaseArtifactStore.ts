@@ -98,6 +98,6 @@ export class SupabaseArtifactStore implements ArtifactStore {
 }
 
 /** Default factory: Supabase-backed store over the singleton client. */
-export function createArtifactStore(): ArtifactStore {
-  return new SupabaseArtifactStore(supabaseArtifactDbClient());
+export function createArtifactStore(client: SupabaseLike = supabase): ArtifactStore {
+  return new SupabaseArtifactStore(supabaseArtifactDbClient(client));
 }

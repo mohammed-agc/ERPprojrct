@@ -57,6 +57,6 @@ export class SupabaseProjectionWriter implements ProjectionWriter {
 }
 
 /** Default factory: Supabase-backed writer over the singleton client. */
-export function createProjectionWriter(): ProjectionWriter {
-  return new SupabaseProjectionWriter(supabaseProjectionDbClient());
+export function createProjectionWriter(client: SupabaseLike = supabase): ProjectionWriter {
+  return new SupabaseProjectionWriter(supabaseProjectionDbClient(client));
 }

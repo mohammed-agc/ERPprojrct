@@ -54,6 +54,6 @@ export class SupabaseProjectionFailureSink implements ProjectionFailureSink {
 }
 
 /** Default factory: Supabase-backed sink over the singleton client. */
-export function createProjectionFailureSink(): ProjectionFailureSink {
-  return new SupabaseProjectionFailureSink(supabaseOutboxDbClient());
+export function createProjectionFailureSink(client: SupabaseLike = supabase): ProjectionFailureSink {
+  return new SupabaseProjectionFailureSink(supabaseOutboxDbClient(client));
 }
