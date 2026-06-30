@@ -159,6 +159,11 @@ export class FetchZatcaComplianceClient implements ZatcaComplianceClient {
         (root.clearanceStatus as string | null | undefined) ?? null,
       reportingStatus:
         (root.reportingStatus as string | null | undefined) ?? null,
+      // clearance returns the ZATCA-stamped invoice (base64); reporting does not.
+      clearedInvoiceBase64:
+        typeof root.clearedInvoice === 'string'
+          ? (root.clearedInvoice as string)
+          : undefined,
       raw: parsed ?? text,
     };
   }

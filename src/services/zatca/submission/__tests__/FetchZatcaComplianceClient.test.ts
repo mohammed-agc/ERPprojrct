@@ -124,6 +124,31 @@ describe('FetchZatcaComplianceClient — ZATCA protocol adapter', () => {
     ).rejects.toBeInstanceOf(ZatcaTransportError);
   });
 
+  it('reads clearedInvoice (clearance only) into clearedInvoiceBase64', async () => {
+    const body = JSON.stringify({
+      validationResults: { infoMessages: [], warningMessages: [], errorMessages: [], status: 'PASS' },
+      clearanceStatus: 'CLEARED',
+      reportingStatus: null,
+      clearedInvoice: 'UERvY3VtZW50LWNsZWFyZWQ=',
+    });
+    const client = new FetchZatcaComplianceClient(fetchReturning(200, body));
+    const r = await client.submit('clearance', 'sandbox', REQ, AUTH);
+    expect(r.clearanceStatus).toBe('CLEARED');
+    expect(r.clearedInvoiceBase64).toBe('UERvY3VtZW50LWNsZWFyZWQ=');
+  });
+
+  it('reporting response carries no clearedInvoice (undefined)', async () => {
+    const body = JSON.stringify({
+      validationResults: { infoMessages: [], warningMessages: [], errorMessages: [], status: 'PASS' },
+      clearanceStatus: null,
+      reportingStatus: 'REPORTED',
+    });
+    const client = new FetchZatcaComplianceClient(fetchReturning(200, body));
+    const r = await client.submit('reporting', 'sandbox', REQ, AUTH);
+    expect(r.reportingStatus).toBe('REPORTED');
+    expect(r.clearedInvoiceBase64).toBeUndefined();
+  });
+
   it('posts Basic auth + correct URL + payload to the sandbox compliance endpoint', async () => {
     const f = vi
       .fn()
