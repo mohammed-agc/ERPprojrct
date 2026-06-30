@@ -26,18 +26,27 @@ import { buildInvoiceXmlWithChainSnapshot } from '../xmlBuilder';
 /** Sprint A operational policy. */
 const DEFAULT_OPTIONS: CoordinatorOptions = { maxRetries: 5 };
 
+/**
+ * Optional DB client for SERVER-SIDE runs (authenticated Node / service-role).
+ * Omitted in the browser → every DB factory falls back to the app singleton,
+ * so the browser path is byte-for-byte unchanged. `as never` bridges the three
+ * narrower factory client interfaces (each casts the singleton the same way).
+ */
+type InjectableDbClient = Parameters<typeof createArtifactStore>[0];
+
 export function createInvoiceSigningCoordinator(
   vaultConfig: FileSystemVaultConfig,
-  options: CoordinatorOptions = DEFAULT_OPTIONS
+  options: CoordinatorOptions = DEFAULT_OPTIONS,
+  dbClient?: InjectableDbClient
 ): InvoiceSigningCoordinator {
   return new DefaultInvoiceSigningCoordinator(
-    createSupabaseCredentialResolver(),
-    createSupabaseDocumentChainService(),
-    createArtifactStore(),
-    createProjectionWriter(),
+    createSupabaseCredentialResolver(dbClient as never),
+    createSupabaseDocumentChainService(dbClient as never),
+    createArtifactStore(dbClient),
+    createProjectionWriter(dbClient),
     createInvoiceSigningComposer(vaultConfig),
     buildInvoiceXmlWithChainSnapshot,
-    createProjectionFailureSink(),
+    createProjectionFailureSink(dbClient),
     options
   );
 }

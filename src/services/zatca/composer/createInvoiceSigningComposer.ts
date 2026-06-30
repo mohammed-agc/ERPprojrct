@@ -35,7 +35,7 @@ export function createInvoiceSigningComposer(
   // Zero-dependency authorities.
   const canonicalizer = new XmlCryptoCanonicalizationProvider();
   const hash = new NodeCryptoHashProvider();
-  const certLoader = new NodeCryptoCertificateLoader();
+  const certLoader = new NodeCryptoCertificateLoader(hash);
   const assembler = new NodeQrAssembler();
   const tlv = new NodeQrTlvProvider();
   const injector = new NodeQrInjector();
