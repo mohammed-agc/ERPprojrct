@@ -1,37 +1,40 @@
 /**
  * SupabaseSubmissionProjectionWriter — the submission READ MODEL.
  *
- * The submission_log is the TRUTH; this derives a single denormalized column,
+ * The submission_log is the TRUTH; this writes a single denormalized column,
  * invoices.zatca_status, from a submission's facts. Written AFTER the log,
  * best-effort: a failure here is recoverable by replaying the latest log row.
  *
- * Derivation (CHECK-constrained domain: draft|ready|reported|cleared|rejected|cancelled):
- *   validationStatus ERROR → 'rejected'
- *   clearanceStatus  CLEARED → 'cleared'
- *   reportingStatus  REPORTED → 'reported'
- *   anything else (unknown disposition) → NO write (never force an invalid value)
- *
- * It touches ONLY zatca_status. signed_artifact_id belongs to the signing
- * projection (S5.1), not here.
+ * Status derivation is NOT owned here — it is the domain policy in
+ * SubmissionStatusPolicy (deriveSubmissionStatus), shared with the
+ * ProjectionReconciler. This writer only WRITES the derived status; it touches
+ * ONLY zatca_status. signed_artifact_id belongs to the signing projection (S5.1).
  */
-
 import type {
   SubmissionProjectionWriter,
   SubmissionProjection,
 } from './SubmissionCoordinator';
+import {
+  deriveSubmissionStatus,
+  type SubmissionDerivedStatus,
+} from '../policy/SubmissionStatusPolicy';
 import { supabase } from '@/integrations/supabase/client';
 
 type SupabaseLike = typeof supabase;
 
-type InvoiceZatcaStatus = 'reported' | 'cleared' | 'rejected';
-
+/**
+ * Back-compat thin wrapper over the domain policy. The rules live in
+ * SubmissionStatusPolicy (single source); this only adapts the SubmissionProjection
+ * shape onto neutral facts.
+ */
 export function deriveZatcaStatus(
   p: SubmissionProjection
-): InvoiceZatcaStatus | null {
-  if (p.validationStatus === 'ERROR') return 'rejected';
-  if (p.clearanceStatus === 'CLEARED') return 'cleared';
-  if (p.reportingStatus === 'REPORTED') return 'reported';
-  return null;
+): SubmissionDerivedStatus | null {
+  return deriveSubmissionStatus({
+    validationStatus: p.validationStatus,
+    clearanceStatus: p.clearanceStatus,
+    reportingStatus: p.reportingStatus,
+  });
 }
 
 export class SupabaseSubmissionProjectionWriter
@@ -42,7 +45,7 @@ export class SupabaseSubmissionProjectionWriter
   async project(p: SubmissionProjection): Promise<void> {
     const status = deriveZatcaStatus(p);
     if (!status) {
-      // Unknown disposition — leave the read-model untouched rather than guess.
+      // Indeterminate disposition — leave the read-model untouched, never guess.
       return;
     }
 
