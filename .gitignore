@@ -31,3 +31,16 @@ zatca-research/
 
 # Phase 2 refactoring local backups (not for repo)
 src/services/zatca/_backup_phase2_*/
+
+# ZATCA onboarding secrets (never commit)
+privateKey.pem
+csr.pem
+cert.cnf
+ccsid-response.json
+*.pem
+
+signed-invoice.xml
+
+# ZATCA submission API credential (Vault) + TS build cache
+compliance.json
+*.tsbuildinfo
