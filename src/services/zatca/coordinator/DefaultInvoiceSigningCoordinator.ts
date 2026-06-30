@@ -159,7 +159,7 @@ export class DefaultInvoiceSigningCoordinator implements InvoiceSigningCoordinat
         pih,
         qrCode,
         xmlHash,
-        zatcaStatus: 'signed',
+        zatcaStatus: 'ready',
         signedArtifactId: artifactId,
         generatedAt: signingTime,
       });

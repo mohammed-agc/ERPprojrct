@@ -142,6 +142,27 @@ describe('DefaultInvoiceSigningCoordinator — gate', () => {
     expect(calls.indexOf('persist')).toBeLessThan(calls.indexOf('append'));
   });
 
+  // ── Read-model guard: the projection status MUST be within the
+  //    invoices_zatca_status_check domain. This regression test exists because
+  //    the coordinator once wrote 'signed' (outside the CHECK), which the DB
+  //    silently rejected → projection failed to the outbox, leaving
+  //    signed_artifact_id NULL while a later submission set zatca_status.
+  it("projects a CHECK-valid zatca_status ('ready') and the signed artifact id", async () => {
+    const { coord, captured } = harness({ appendOutcomes: [SUCCESS] });
+    await coord.run(INPUT);
+
+    const p = captured.projectArg as Record<string, unknown>;
+    const ALLOWED = ['draft', 'ready', 'reported', 'cleared', 'rejected', 'cancelled'];
+
+    // post-signing status is 'ready' (signed, ready to submit) — never 'signed'
+    expect(p.zatcaStatus).toBe('ready');
+    expect(ALLOWED).toContain(p.zatcaStatus);
+
+    // the artifact reference is carried into the projection (not dropped)
+    expect(p.signedArtifactId).toBe('art-1');
+    expect(p.invoiceId).toBe('inv-1');
+  });
+
   it('maps tax_invoice→invoice and wires uuid + artifactRef + token into append', async () => {
     const { coord, captured } = harness({ appendOutcomes: [SUCCESS] });
     await coord.run(INPUT);
