@@ -121,6 +121,28 @@ export const vehicleRepository = {
     return data as VehicleRecord;
   },
 
+  /**
+   * إحصائيّات مخزون المركبات (تُستعمَل في لوحات المعلومات والتقارير).
+   * المتوفّرة للبيع = active وغير مباعة، وفق دورة الحياة الرسمية
+   * (active → reserved → sold → delivered).
+   */
+  async getVehicleInventoryStats(): Promise<{ total: number; available: number }> {
+    const [totalRes, availRes] = await Promise.all([
+      supabase
+        .from("inventory_items")
+        .select("id", { count: "exact", head: true })
+        .eq("item_type", VEHICLE_TYPE),
+      supabase
+        .from("inventory_items")
+        .select("id", { count: "exact", head: true })
+        .eq("item_type", VEHICLE_TYPE)
+        .eq("status", "active")
+        .is("sold_at", null),
+    ]);
+    if (totalRes.error) throw totalRes.error;
+    if (availRes.error) throw availRes.error;
+    return { total: totalRes.count ?? 0, available: availRes.count ?? 0 };
+  },
   /** حذف مركبة — آمن: محمي بـ FK (لا يُحذف ما يرتبط بفاتورة) */
   async deleteVehicle(id: string): Promise<void> {
     const { error } = await supabase

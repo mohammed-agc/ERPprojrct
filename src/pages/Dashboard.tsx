@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Car, Users, Receipt, Calculator } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { vehicleRepository } from "@/services/erp/vehicleRepository";
 
 interface Stat { label: string; value: string | number; icon: any; hint?: string; }
 
@@ -12,16 +13,15 @@ export default function Dashboard() {
 
   useEffect(() => {
     (async () => {
-      const [v, c, o, j] = await Promise.all([
-        supabase.from("vehicles").select("id, status", { count: "exact", head: false }),
+      const [veh, c, o, j] = await Promise.all([
+        vehicleRepository.getVehicleInventoryStats(),
         supabase.from("customers").select("id", { count: "exact", head: true }),
         supabase.from("sales_orders").select("id, total", { count: "exact", head: false }),
         supabase.from("journal_entries").select("id", { count: "exact", head: true }),
       ]);
-      const available = (v.data ?? []).filter((x: any) => x.status === "available").length;
       const totalSales = (o.data ?? []).reduce((s: number, x: any) => s + Number(x.total || 0), 0);
       setStats([
-        { label: "المركبات المتوفرة", value: available, icon: Car, hint: `من إجمالي ${v.count ?? 0}` },
+        { label: "المركبات المتوفرة", value: veh.available, icon: Car, hint: `من إجمالي ${veh.total}` },
         { label: "العملاء", value: c.count ?? 0, icon: Users },
         { label: "إجمالي المبيعات", value: totalSales.toLocaleString("ar-SA", { maximumFractionDigits: 2 }) + " ر.س", icon: Receipt, hint: `${o.count ?? 0} طلب` },
         { label: "قيود اليومية", value: j.count ?? 0, icon: Calculator },
