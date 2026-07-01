@@ -118,7 +118,7 @@ export default function VehicleProfitability() {
   const [to, setTo] = useState(isoDate(today));
   const [dept, setDept] = useState<DeptCode | "all">("all");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "sold" | "available">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "reserved" | "sold" | "delivered">("all");
   const [sortKey, setSortKey] = useState<SortKey>("profit_desc");
 
   const [rows, setRows] = useState<VehicleRow[]>([]);
@@ -145,7 +145,7 @@ export default function VehicleProfitability() {
         .lte("credit_note.cn_date", to);
 
       // 3) vehicles for lookup — use authoritative stored acquired_at / sold_at
-      let vq = supabase.from("vehicles").select("id, code, name, brand, model, year, vin, status, acquired_at, sold_at, created_at").limit(500);
+      let vq = supabase.from("inventory_items").select("id, code:sku, name, brand, model, year, vin, status, sold_at, created_at").eq("item_type", "vehicle").limit(500);
       if (statusFilter !== "all") vq = vq.eq("status", statusFilter as any);
       if (search.trim()) {
         const s = `%${search.trim()}%`;
@@ -341,7 +341,9 @@ export default function VehicleProfitability() {
             <SelectContent>
               <SelectItem value="all">الكل</SelectItem>
               <SelectItem value="sold">مباعة</SelectItem>
-              <SelectItem value="available">متوفّرة</SelectItem>
+              <SelectItem value="active">متوفّرة</SelectItem>
+              <SelectItem value="reserved">محجوزة</SelectItem>
+              <SelectItem value="delivered">مسلّمة</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -415,7 +417,7 @@ export default function VehicleProfitability() {
                 <td className="p-2 font-mono text-xs">{r.vin || <span className="text-muted-foreground">—</span>}</td>
                 <td className="p-2">
                   <Badge variant={r.status === "sold" ? "default" : "secondary"} className="text-[11.5px]">
-                    {r.status === "sold" ? "مباعة" : r.status === "available" ? "متوفّرة" : r.status}
+                    {r.status === "sold" ? "مباعة" : r.status === "active" ? "متوفّرة" : r.status}
                   </Badge>
                 </td>
                 <td className="p-2 text-right tabular-nums text-xs">
