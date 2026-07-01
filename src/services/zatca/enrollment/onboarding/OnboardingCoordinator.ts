@@ -22,7 +22,8 @@
  *           → enroll PCSID (4.4)
  *             → replace cert + compliance.json with production (4.2, Vault, overwrite)
  *               → store metadata.json (4.2, Vault)
- *                 → register metadata (DB — last)
+ *                 → derive cert metadata (certificate/ package)
+ *                   → register metadata (DB — last)
  *
  * Output carries only what a consumer needs; secrets stay in the Vault.
  */
@@ -36,6 +37,7 @@ import type {
   CredentialRepository,
   CredentialMetadataRecord,
 } from './CredentialRepository';
+import type { CertificateMetadataLoader } from '../../certificate/CertificateMetadataLoader';
 
 /** Everything the run needs — all decided by the caller (nothing chosen here). */
 export interface OnboardingInput {
@@ -48,11 +50,9 @@ export interface OnboardingInput {
   readonly csr: CsrInput;
   /** The Fatoora OTP for CCSID enrollment. */
   readonly otp: string;
-  /** Certificate expiry to record (ISO) — derived by the caller. */
-  readonly certificateExpiryAt: string;
-  /** Fingerprints for the DB record — derived by the caller. */
-  readonly certificateFingerprint: string;
-  readonly credentialFingerprint: string;
+  // Note: certificate fingerprint / expiry / serial / subject are NOT input —
+  // they cannot be known before PCSID issues the production certificate. The
+  // coordinator derives them from that certificate via CertificateMetadataLoader.
 }
 
 /** The facts a consumer needs after onboarding; secrets remain in the Vault. */
@@ -88,6 +88,7 @@ export class DefaultOnboardingCoordinator implements OnboardingCoordinator {
     private readonly vaultWriter: VaultWriter,
     private readonly ccsidClient: CcsidEnrollmentClient,
     private readonly pcsidClient: PcsidEnrollmentClient,
+    private readonly certificateMetadataLoader: CertificateMetadataLoader,
     private readonly repository: CredentialRepository
   ) {}
 
@@ -131,12 +132,11 @@ export class DefaultOnboardingCoordinator implements OnboardingCoordinator {
     );
 
     // 6) Replace the Vault credential with the PRODUCTION one (4.2, overwrite).
+    const productionCertPem = this.toCertificatePem(pcsid.binarySecurityToken);
     await this.stage('store-pcsid', async () => {
-      await this.vaultWriter.storeCertificate(
-        credentialId,
-        this.toCertificatePem(pcsid.binarySecurityToken),
-        { overwrite: true }
-      );
+      await this.vaultWriter.storeCertificate(credentialId, productionCertPem, {
+        overwrite: true,
+      });
       await this.vaultWriter.storeComplianceCredential(
         credentialId,
         {
@@ -155,6 +155,13 @@ export class DefaultOnboardingCoordinator implements OnboardingCoordinator {
       });
     });
 
+    // 6b) Derive the registration metadata FROM the production certificate.
+    // Not a decision — a deterministic extraction owned by the certificate
+    // package (fingerprint / expiry / serial / subject).
+    const certMeta = await this.stage('inspect-certificate', async () =>
+      this.certificateMetadataLoader.loadMetadata(productionCertPem)
+    );
+
     // 7) Register metadata in the DB — LAST, only after everything above.
     await this.stage('register', () => {
       const record: CredentialMetadataRecord = {
@@ -162,9 +169,11 @@ export class DefaultOnboardingCoordinator implements OnboardingCoordinator {
         companyId: input.companyId,
         environment: input.environment,
         credentialType: input.credentialType,
-        certificateFingerprint: input.certificateFingerprint,
-        credentialFingerprint: input.credentialFingerprint,
-        certificateExpiryAt: input.certificateExpiryAt,
+        certificateFingerprint: certMeta.certificateFingerprint,
+        credentialFingerprint: certMeta.certificateFingerprint,
+        certificateExpiryAt: certMeta.certificateExpiryAt,
+        certificateSerial: certMeta.certificateSerial,
+        certificateSubject: certMeta.certificateSubject,
       };
       return this.repository.register(record);
     });
@@ -206,6 +215,7 @@ export function createOnboardingCoordinator(
   vaultWriter: VaultWriter,
   ccsidClient: CcsidEnrollmentClient,
   pcsidClient: PcsidEnrollmentClient,
+  certificateMetadataLoader: CertificateMetadataLoader,
   repository: CredentialRepository
 ): OnboardingCoordinator {
   return new DefaultOnboardingCoordinator(
@@ -213,6 +223,7 @@ export function createOnboardingCoordinator(
     vaultWriter,
     ccsidClient,
     pcsidClient,
+    certificateMetadataLoader,
     repository
   );
 }

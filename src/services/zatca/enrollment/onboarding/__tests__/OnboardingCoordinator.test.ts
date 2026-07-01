@@ -10,6 +10,7 @@ import type { VaultWriter } from '../../../vault/VaultWriter';
 import type { CcsidEnrollmentClient } from '../../ccsid/CcsidEnrollmentClient';
 import type { PcsidEnrollmentClient } from '../../pcsid/PcsidEnrollmentClient';
 import type { CredentialRepository } from '../CredentialRepository';
+import type { CertificateMetadataLoader } from '../../../certificate/CertificateMetadataLoader';
 
 const INPUT: OnboardingInput = {
   credentialId: 'cred-abc',
@@ -27,9 +28,6 @@ const INPUT: OnboardingInput = {
     businessCategory: 'Automotive',
   },
   otp: '123456',
-  certificateExpiryAt: '2027-01-01T00:00:00Z',
-  certificateFingerprint: 'fp-cert',
-  credentialFingerprint: 'fp-cred',
 };
 
 /** Builds a full set of fakes that record an ordered call log. */
@@ -90,6 +88,20 @@ function makeFakes(overrides: {
     },
   };
 
+  const certificateMetadataLoader: CertificateMetadataLoader = {
+    implementationName: 'FakeCertMeta',
+    loadMetadata() {
+      log.push('inspect');
+      return {
+        certificateFingerprint: 'fp-cert',
+        certificateExpiryAt: '2027-01-01T00:00:00.000Z',
+        certificateSerial: '42',
+        certificateSubject: 'CN=egs',
+        certificateIssuer: 'CN=ZATCA',
+      };
+    },
+  };
+
   const repository: CredentialRepository = {
     implementationName: 'FakeRepo',
     async register() {
@@ -98,7 +110,15 @@ function makeFakes(overrides: {
     },
   };
 
-  return { log, csrGenerator, vaultWriter, ccsidClient, pcsidClient, repository };
+  return {
+    log,
+    csrGenerator,
+    vaultWriter,
+    ccsidClient,
+    pcsidClient,
+    certificateMetadataLoader,
+    repository,
+  };
 }
 
 describe('DefaultOnboardingCoordinator — happy path', () => {
@@ -109,6 +129,7 @@ describe('DefaultOnboardingCoordinator — happy path', () => {
       f.vaultWriter,
       f.ccsidClient,
       f.pcsidClient,
+      f.certificateMetadataLoader,
       f.repository
     );
     const r = await c.onboard(INPUT);
@@ -127,6 +148,7 @@ describe('DefaultOnboardingCoordinator — happy path', () => {
       f.vaultWriter,
       f.ccsidClient,
       f.pcsidClient,
+      f.certificateMetadataLoader,
       f.repository
     );
     await c.onboard(INPUT);
@@ -140,6 +162,7 @@ describe('DefaultOnboardingCoordinator — happy path', () => {
       'vault:cert:overwrite',
       'vault:compliance:overwrite',
       'vault:metadata',
+      'inspect',
       'db:register',
     ]);
   });
@@ -151,6 +174,7 @@ describe('DefaultOnboardingCoordinator — happy path', () => {
       f.vaultWriter,
       f.ccsidClient,
       f.pcsidClient,
+      f.certificateMetadataLoader,
       f.repository
     );
     await c.onboard(INPUT);
@@ -168,6 +192,7 @@ describe('DefaultOnboardingCoordinator — invariants on failure', () => {
       f.vaultWriter,
       f.ccsidClient,
       f.pcsidClient,
+      f.certificateMetadataLoader,
       f.repository
     );
     await expect(c.onboard(INPUT)).rejects.toThrow(OnboardingError);
@@ -181,6 +206,7 @@ describe('DefaultOnboardingCoordinator — invariants on failure', () => {
       f.vaultWriter,
       f.ccsidClient,
       f.pcsidClient,
+      f.certificateMetadataLoader,
       f.repository
     );
     await expect(c.onboard(INPUT)).rejects.toMatchObject({
@@ -195,6 +221,7 @@ describe('DefaultOnboardingCoordinator — invariants on failure', () => {
       f.vaultWriter,
       f.ccsidClient,
       f.pcsidClient,
+      f.certificateMetadataLoader,
       f.repository
     );
     await expect(c.onboard(INPUT)).rejects.toMatchObject({
