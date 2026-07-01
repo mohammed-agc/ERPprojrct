@@ -8,6 +8,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { VEHICLE_STATUS } from "@/services/erp/salesVehicleStatus";
 
 const VEHICLE_TYPE = "vehicle";
 
@@ -126,23 +127,54 @@ export const vehicleRepository = {
    * المتوفّرة للبيع = active وغير مباعة، وفق دورة الحياة الرسمية
    * (active → reserved → sold → delivered).
    */
+  /**
+   * الفلتر الموحّد لـ"المركبة المتوفّرة للبيع": نقطة التعريف الوحيدة.
+   * متوفّرة = active وغير مباعة، وفق دورة الحياة الرسمية
+   * (active → reserved → sold → delivered). أيّ استعلامٍ يحتاج
+   * "المتوفّرة" يمرّ من هنا — فلا يتكرّر التعريف ولا ينحرف.
+   */
+  applyAvailableVehicleFilter<T>(query: T): T {
+    return (query as any)
+      .eq("item_type", VEHICLE_TYPE)
+      .eq("status", VEHICLE_STATUS.ACTIVE)
+      .is("sold_at", null) as T;
+  },
+
+  /**
+   * إحصائيّات كمّيّة: إجمالي المركبات + المتوفّرة للبيع.
+   * تُستعمَل في لوحات المعلومات والتقارير. عدٌّ فقط (head+count) بلا جلب صفوف.
+   */
   async getVehicleInventoryStats(): Promise<{ total: number; available: number }> {
-    const [totalRes, availRes] = await Promise.all([
+    const totalQuery = supabase
+      .from("inventory_items")
+      .select("id", { count: "exact", head: true })
+      .eq("item_type", VEHICLE_TYPE);
+    const availableQuery = this.applyAvailableVehicleFilter(
       supabase
         .from("inventory_items")
         .select("id", { count: "exact", head: true })
-        .eq("item_type", VEHICLE_TYPE),
-      supabase
-        .from("inventory_items")
-        .select("id", { count: "exact", head: true })
-        .eq("item_type", VEHICLE_TYPE)
-        .eq("status", "active")
-        .is("sold_at", null),
-    ]);
+    );
+    const [totalRes, availRes] = await Promise.all([totalQuery, availableQuery]);
     if (totalRes.error) throw totalRes.error;
     if (availRes.error) throw availRes.error;
     return { total: totalRes.count ?? 0, available: availRes.count ?? 0 };
   },
+
+  /**
+   * قيمة المخزون: مجموع تكلفة (cost_price) المركبات المتوفّرة للبيع.
+   * حقيقةٌ نقديّة (لا عددٌ) — لذلك دالّةٌ منفصلة. جمعٌ في JS (الأعداد صغيرة).
+   */
+  async getVehicleInventoryValue(): Promise<number> {
+    const { data, error } = await this.applyAvailableVehicleFilter(
+      supabase.from("inventory_items").select("cost_price")
+    );
+    if (error) throw error;
+    return (data ?? []).reduce(
+      (sum: number, row: any) => sum + Number(row.cost_price ?? 0),
+      0
+    );
+  },
+
   /** حذف مركبة — آمن: محمي بـ FK (لا يُحذف ما يرتبط بفاتورة) */
   async deleteVehicle(id: string): Promise<void> {
     const { error } = await supabase

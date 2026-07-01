@@ -17,7 +17,14 @@ import { supabase } from "@/integrations/supabase/client";
 
 const TABLE = "inventory_items";
 
-type SalesStatus = "active" | "reserved" | "sold" | "delivered";
+export const VEHICLE_STATUS = {
+  ACTIVE: "active",
+  RESERVED: "reserved",
+  SOLD: "sold",
+  DELIVERED: "delivered",
+} as const;
+
+export type SalesStatus = typeof VEHICLE_STATUS[keyof typeof VEHICLE_STATUS];
 
 async function vehicleIdsForOrder(orderId: string): Promise<string[]> {
   const { data } = await supabase

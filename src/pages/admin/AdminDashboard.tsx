@@ -9,6 +9,7 @@ import {
 import { purchasingService } from "@/services/erp/purchasing";
 import { salesService } from "@/services/erp/sales";
 import { governanceService } from "@/services/erp/governance";
+import { vehicleRepository } from "@/services/erp/vehicleRepository";
 
 interface Kpi {
   label: string;
@@ -42,10 +43,7 @@ export default function AdminDashboard() {
       let payables = 0;
       try {
         // Aggregate vehicle cost from vehicles table as inventory value proxy.
-        const { data: veh } = await supabase.from("vehicles").select("cost_price,status");
-        inventoryValue = (veh ?? [])
-          .filter((v: any) => v.status === "available")
-          .reduce((s: number, v: any) => s + Number(v.cost_price ?? 0), 0);
+        inventoryValue = await vehicleRepository.getVehicleInventoryValue();
       } catch { /* noop */ }
 
       const fmt = (n: number) => n.toLocaleString("ar-SA", { maximumFractionDigits: 0 });
