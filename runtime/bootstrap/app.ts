@@ -18,7 +18,9 @@ import {
   type RuntimeSupabaseConfig,
 } from '../infrastructure/createSupabaseRuntimeClient.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { setRuntimeSupabaseClient } from '../../src/integrations/supabase/client.js';
 import { registerZatcaHealthRoutes } from '../routes/zatcaHealthRoutes.js';
+import { registerZatcaSignRoutes } from '../routes/zatcaSignRoutes.js';
 
 export interface RuntimeContext {
   readonly startedAt: number;
@@ -30,6 +32,8 @@ export interface BuildAppOptions {
   readonly db?: SupabaseClient;
   readonly config?: RuntimeSupabaseConfig;
   readonly logger?: boolean;
+  /** Vault root for signing routes; defaults to process.env.ZATCA_VAULT_ROOT. */
+  readonly vaultRoot?: string;
 }
 
 const RUNTIME_NAME = 'ERP Node Runtime';
@@ -43,6 +47,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     createSupabaseRuntimeClient(options.config ?? readRuntimeSupabaseConfig());
 
   const ctx: RuntimeContext = { startedAt: Date.now(), db };
+
+  // Bridge for Domain modules that still import the browser singleton directly
+  // (e.g. invoiceDataLoader — pending Item 5's explicit-injection refactor):
+  // make every default `supabase` usage resolve to the Runtime's client.
+  setRuntimeSupabaseClient(db as never);
 
   // GET /runtime/info — liveness + environment + Supabase connectivity.
   // Isolates Fastify/config/Supabase problems from ZATCA logic.
@@ -67,6 +76,16 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
   // ZATCA authorities, hosted over HTTP, injected with the Runtime client.
   registerZatcaHealthRoutes(app, db);
+
+  // Signing needs the vault (private key on the server file system).
+  const vaultRoot = options.vaultRoot ?? process.env.ZATCA_VAULT_ROOT;
+  if (vaultRoot) {
+    registerZatcaSignRoutes(app, db, { vaultRoot });
+  } else {
+    app.log.warn(
+      'ZATCA_VAULT_ROOT not set — /zatca/sign not registered (signing unavailable)'
+    );
+  }
 
   return app;
 }

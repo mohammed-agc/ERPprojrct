@@ -27,18 +27,29 @@ function readEnv(key: string): string | undefined {
 }
 
 /**
- * LAZY singleton. The Node Runtime injects its own client
- * (createSupabaseRuntimeClient) and never uses this one — but importing any
- * Domain module transitively loads this file. So the client must be built ON
- * FIRST USE, not at import time: in Node it is simply never touched, hence never
- * built, hence never throws for missing browser env.
+ * LAZY singleton, with an optional Runtime override.
  *
- * A Proxy preserves the existing `import { supabase }` usage in the frontend
- * unchanged while deferring construction.
+ * Browser: built on first use from import.meta.env (unchanged behaviour).
+ *
+ * Node Runtime: the Runtime injects its own service-role client via
+ * setRuntimeSupabaseClient() at startup. Domain modules that still import this
+ * singleton directly (e.g. invoiceDataLoader — pending the Item 5 explicit-
+ * injection refactor) then transparently use the Runtime's client. This is the
+ * bridge that lets the Hosting Layer host Domain authorities today; the clean
+ * end state remains explicit per-call injection.
  */
 let _client: SupabaseClient<Database> | null = null;
+let _runtimeOverride: SupabaseClient<Database> | null = null;
+
+/** Runtime-only: install the client every default `supabase` usage resolves to. */
+export function setRuntimeSupabaseClient(
+  client: SupabaseClient<Database>
+): void {
+  _runtimeOverride = client;
+}
 
 function getClient(): SupabaseClient<Database> {
+  if (_runtimeOverride) return _runtimeOverride;
   if (_client) return _client;
 
   const url = readEnv('VITE_SUPABASE_URL') ?? readEnv('SUPABASE_URL');
@@ -50,7 +61,7 @@ function getClient(): SupabaseClient<Database> {
   if (!url || !key) {
     throw new Error(
       'supabase singleton: missing VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY. ' +
-        'In the Node Runtime, inject a client via createSupabaseRuntimeClient instead ' +
+        'In the Node Runtime, install a client via setRuntimeSupabaseClient() instead ' +
         'of using this browser singleton.'
     );
   }
