@@ -44,3 +44,8 @@ signed-invoice.xml
 # ZATCA submission API credential (Vault) + TS build cache
 compliance.json
 *.tsbuildinfo
+
+# Local environment (never commit secrets)
+.env
+.env.local
+.env.*.local
