@@ -1,8 +1,8 @@
-// @vitest-environment jsdom
+﻿// @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
 import { FetchCcsidEnrollmentClient, type FetchLike } from '../FetchCcsidEnrollmentClient';
 import { CcsidEnrollmentError } from '../CcsidEnrollmentClient';
-import { DefaultEnvironmentEndpointResolver } from '../EnvironmentEndpointResolver';
+import { DefaultEnvironmentEndpointResolver } from '../../EnvironmentEndpointResolver';
 
 const resolver = new DefaultEnvironmentEndpointResolver();
 
@@ -43,7 +43,7 @@ const ISSUED_BODY = JSON.stringify({
 
 const INPUT = { csrBase64: 'BASE64CSRBODY==', otp: '123456' };
 
-describe('FetchCcsidEnrollmentClient — success', () => {
+describe('FetchCcsidEnrollmentClient â€” success', () => {
   it('maps an ISSUED response to { requestId, binarySecurityToken, secret }', async () => {
     const client = new FetchCcsidEnrollmentClient({
       environment: 'sandbox',
@@ -71,7 +71,7 @@ describe('FetchCcsidEnrollmentClient — success', () => {
   });
 });
 
-describe('FetchCcsidEnrollmentClient — request shape', () => {
+describe('FetchCcsidEnrollmentClient â€” request shape', () => {
   it('POSTs to <base>/compliance with OTP header, V2, and the CSR body', async () => {
     const captured: Captured[] = [];
     const client = new FetchCcsidEnrollmentClient({
@@ -106,7 +106,7 @@ describe('FetchCcsidEnrollmentClient — request shape', () => {
   });
 });
 
-describe('FetchCcsidEnrollmentClient — protocol failures throw', () => {
+describe('FetchCcsidEnrollmentClient â€” protocol failures throw', () => {
   it('throws INVALID_OTP on HTTP 401', async () => {
     const client = new FetchCcsidEnrollmentClient({
       environment: 'sandbox',

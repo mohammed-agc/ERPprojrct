@@ -1,23 +1,23 @@
-/**
- * FetchCcsidEnrollmentClient — the fetch-backed CcsidEnrollmentClient.
+﻿/**
+ * FetchCcsidEnrollmentClient â€” the fetch-backed CcsidEnrollmentClient.
  *
  * Bound to an environment; resolves its endpoint via EnvironmentEndpointResolver
  * (no hardcoded URL). Performs POST <base>/compliance with the OTP header and the
  * CSR body, validates the ZATCA protocol, and maps the response to
  * EnrollmentResult. Raw JSON and dispositionMessage never escape this client.
  *
- * fetch is INJECTED (defaults to global fetch) — same posture as
- * FetchZatcaComplianceClient — so it is unit-testable with a fake fetch.
+ * fetch is INJECTED (defaults to global fetch) â€” same posture as
+ * FetchZatcaComplianceClient â€” so it is unit-testable with a fake fetch.
  */
 
-import type { ZatcaEnvironment } from '../credential/CredentialResolver';
+import type { ZatcaEnvironment } from '../../credential/CredentialResolver';
 import {
   CcsidEnrollmentError,
   type CcsidEnrollmentClient,
   type CcsidEnrollmentInput,
   type EnrollmentResult,
 } from './CcsidEnrollmentClient';
-import type { EnvironmentEndpointResolver } from './EnvironmentEndpointResolver';
+import type { EnvironmentEndpointResolver } from '../EnvironmentEndpointResolver';
 
 /** Minimal fetch shape this client needs (matches global fetch). */
 export type FetchLike = (
