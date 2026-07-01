@@ -22,6 +22,7 @@ import { setRuntimeSupabaseClient } from '../../src/integrations/supabase/client
 import { registerZatcaHealthRoutes } from '../routes/zatcaHealthRoutes.js';
 import { registerZatcaSignRoutes } from '../routes/zatcaSignRoutes.js';
 import { registerZatcaSubmitRoutes } from '../routes/zatcaSubmitRoutes.js';
+import { registerZatcaOnboardRoutes } from '../routes/zatcaOnboardRoutes.js';
 
 export interface RuntimeContext {
   readonly startedAt: number;
@@ -83,9 +84,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   if (vaultRoot) {
     registerZatcaSignRoutes(app, db, { vaultRoot });
     registerZatcaSubmitRoutes(app, db, { vaultRoot });
+    registerZatcaOnboardRoutes(app, db, { vaultRoot });
   } else {
     app.log.warn(
-      'ZATCA_VAULT_ROOT not set — /zatca/sign and /zatca/submit not registered'
+      'ZATCA_VAULT_ROOT not set — /zatca/sign, /zatca/submit, /zatca/onboard not registered'
     );
   }
 
