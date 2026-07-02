@@ -135,6 +135,63 @@
 
 ---
 
+### DEBT-008
+- **Title:** Financial SECURITY DEFINER RPCs Are Executable by anon/PUBLIC Without Authorization Controls
+- **Category:** Security / Accounting Control
+- **Finding:** Six high-impact financial RPC functions are SECURITY DEFINER, owned by postgres, and executable by PUBLIC / anon / authenticated / service_role. Function-definition review confirmed no auth.uid() null rejection, no internal role checks, and weak or missing company/branch scope across all six. Application-layer confirmation found that the existing RPC call sites use the anon client without service-layer role guards. can_cancel, document_remaining, UNIQUE constraints, and UI-only isAccounting checks are data-integrity or UI guards, not authorization controls.
+- **Affected functions:** create_manual_journal_entry, reverse_journal_entry, cancel_sales_invoice, create_partner_settlement, create_allocation, run_monthly_depreciation.
+- **Impact:** Unauthorized callers may be able to create manual journal drafts, reverse posted journal entries, cancel sales invoices, create partner settlements, insert open-item allocations, or run depreciation batches. This can affect GL, AR/AP, invoice status, open-item clearing, partner balances, aging reports, inventory reversal, fixed-asset depreciation, and financial-reporting integrity.
+- **Evidence:** pg_proc.proacl (2026-07-02): all six show `{=X, anon=X, authenticated=X, service_role=X}`. pg_get_functiondef of all six: no auth.uid() null-rejection, no role check. git grep of RPC call sites (partnerLedger.ts:110, creditNotes.ts:53, purchasePaymentsDb.ts:120, SalesInvoicesRegistry.tsx:127, Invoices.tsx:148): all use the shared anon client with no service-layer role guard; reverse_journal_entry / create_manual_journal_entry / run_monthly_depreciation have no call site at all (DB-only exposure, no application barrier possible).
+- **Evidence Level:** VERIFIED (both DB layer and application layer)
+- **Risk:** Critical
+- **Business Owner:** Mohammed Helwan
+- **Technical Owner:** Security / Accounting / Architecture
+- **Priority:** Critical
+- **Status:** Open
+- **Target Release:** 1.0
+- **Candidate Solution:** Restrict EXECUTE privileges on financial SECURITY DEFINER RPCs using least privilege. At minimum: REVOKE EXECUTE from PUBLIC and anon; do not rely on broad authenticated EXECUTE unless each function enforces internal role authorization; add auth.uid() null-rejection inside each function; add explicit finance/admin role authorization; add company_id / branch_id scoping inside the function; keep application-layer guards as UX controls only, not as the primary security boundary. Final privilege model is not decided in this audit step and must be designed carefully before remediation.
+- **Open Questions:** Whether any of these RPCs are ever legitimately called by anon in real flows (observed: all call sites are authenticated UI actions — anon appears unnecessary, so REVOKE likely safe, pending confirmation).
+- **Closed At:** —
+
+---
+
+### DEBT-009
+- **Title:** SECURITY DEFINER Financial Functions Do Not Enforce a Safe search_path
+- **Category:** Security / Database Hardening
+- **Finding:** SECURITY DEFINER functions should pin a safe search_path to avoid object-resolution ambiguity and privilege-escalation risks. Reviewed financial SECURITY DEFINER functions do not show a safe function-level search_path configuration.
+- **Affected functions:** all six (same list as DEBT-008).
+- **Impact:** Without a pinned search_path, a SECURITY DEFINER function's unqualified object references could, under certain conditions, resolve to attacker-controlled objects, enabling privilege escalation (the function runs as postgres). Partially mitigated where tables are already schema-qualified (public.*), but not eliminated.
+- **Evidence:** pg_proc.proconfig (2026-07-02): all six functions return `proconfig = null` (explicitly confirmed for every one: cancel_sales_invoice, create_allocation, create_manual_journal_entry, create_partner_settlement, reverse_journal_entry, run_monthly_depreciation). No SET search_path in any definition.
+- **Evidence Level:** VERIFIED (proconfig=null confirmed for all six explicitly)
+- **Risk:** High
+- **Business Owner:** Mohammed Helwan
+- **Technical Owner:** Security / Database
+- **Priority:** High
+- **Status:** Open
+- **Target Release:** 1.0
+- **Candidate Solution:** Set a safe, explicit search_path for financial SECURITY DEFINER functions using only trusted schemas, with pg_temp placed last when needed. The exact schema list must be reviewed before remediation. Prefer schema-qualifying referenced tables/functions explicitly and avoiding reliance on implicit object resolution. Not executed in this audit step.
+- **Closed At:** —
+
+---
+
+### DEBT-010
+- **Title:** create_allocation Allows Caller-Controlled created_by and Unauthenticated Clearing
+- **Category:** Security / Open Item Accounting / Audit Trail
+- **Finding:** create_allocation does not read auth.uid(), does not reject unauthenticated callers, does not perform role checks, and accepts p_created_by from the caller. Because the function is executable by anon/PUBLIC and writes directly to open_item_allocations, a direct RPC caller can create clearing allocations and control or spoof the created_by value.
+- **Impact:** Unauthorized or spoofed allocations may make invoices appear partially or fully paid/settled without a real payment or authorized clearing process. This can affect AR Aging, AP Aging, partner balances, invoice status, clearing reports, and audit-trail reliability. This is not merely a posting issue — clearing-layer manipulation can distort financial reports even without creating a journal entry.
+- **Evidence:** pg_get_functiondef(create_allocation) (2026-07-02): no auth.uid() read; created_by sourced from p_created_by parameter; guards are type-whitelist + document_remaining over-allocation check (data-integrity, not authorization). proacl: anon=X. Application layer: 3 call sites (purchasePaymentsDb.ts:120, SalesInvoicesRegistry.tsx:127, Invoices.tsx:148) pass p_created_by=userId correctly, but the parameter remains forgeable via direct REST.
+- **Evidence Level:** VERIFIED
+- **Risk:** High
+- **Business Owner:** Mohammed Helwan
+- **Technical Owner:** Security / Open Item Accounting
+- **Priority:** High
+- **Status:** Open
+- **Target Release:** 1.0
+- **Candidate Solution:** Derive created_by from auth.uid() inside the function instead of accepting p_created_by from the caller; reject unauthenticated callers; add role/company authorization; REVOKE EXECUTE from anon/PUBLIC. Not executed in this audit step.
+- **Closed At:** —
+
+---
+
 ## Evidence Backlog — Not Official Debt
 
 > **ليست ديوناً تقنيّة.** مرشّحاتٌ ذُكِرت في جلساتٍ سابقة (غالباً من الذاكرة) لكن **بلا دليلٍ
