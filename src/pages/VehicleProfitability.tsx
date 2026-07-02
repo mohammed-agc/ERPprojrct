@@ -127,20 +127,22 @@ export default function VehicleProfitability() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // 1) sales_order_lines (with order context) for revenue
+      // 1) invoice_lines from ISSUED invoices — accounting-realized revenue (VP-001)
       const sol = supabase
-        .from("sales_order_lines")
-        .select("vehicle_id, line_total, order:sales_orders!inner(order_date, department_code, status)")
+        .from("invoice_lines")
+        .select("vehicle_id, total, invoice:invoices!inner(invoice_date, status)")
         .not("vehicle_id", "is", null)
-        .gte("order.order_date", from)
-        .lte("order.order_date", to);
-      if (dept !== "all") sol.eq("order.department_code", dept);
+        .eq("invoice.status", "issued")
+        .gte("invoice.invoice_date", from)
+        .lte("invoice.invoice_date", to);
+
 
       // 2) credit_note_lines for refund/return offsets
       const cnl = supabase
         .from("credit_note_lines")
-        .select("vehicle_id, line_total, credit_note:credit_notes!inner(cn_date, status)")
+        .select("vehicle_id, line_total, credit_note:credit_notes!inner(cn_date, status, invoice:invoices!inner(status))")
         .not("vehicle_id", "is", null)
+        .eq("credit_note.invoice.status", "issued")
         .gte("credit_note.cn_date", from)
         .lte("credit_note.cn_date", to);
 
@@ -160,7 +162,7 @@ export default function VehicleProfitability() {
       const revMap = new Map<string, number>();
       for (const r of solRes.data ?? []) {
         const id = (r as any).vehicle_id as string;
-        revMap.set(id, (revMap.get(id) ?? 0) + Number((r as any).line_total || 0));
+        revMap.set(id, (revMap.get(id) ?? 0) + Number((r as any).total || 0));
       }
       const crMap = new Map<string, number>();
       for (const r of cnlRes.data ?? []) {
@@ -168,9 +170,9 @@ export default function VehicleProfitability() {
         crMap.set(id, (crMap.get(id) ?? 0) + Number((r as any).line_total || 0));
       }
 
-      const vehicles = (vRes.data ?? []).filter(v =>
-        revMap.has(v.id) || crMap.has(v.id) || (dept === "all" && !search && statusFilter === "all")
-      );
+      // VP-001: every vehicle returned by vq (already filtered by status/search)
+      // is a legitimate profitability row — an unsold vehicle has revenue 0, not hidden.
+      const vehicles = vRes.data ?? [];
 
       // 4) landed cost + COGS posted + COGS JE id + invoice existence, in parallel
       const enriched = await Promise.all(
@@ -178,7 +180,7 @@ export default function VehicleProfitability() {
           const [{ data: cd }, { data: inv }] = await Promise.all([
             supabase.rpc("compute_vehicle_landed_cost" as any, { p_vehicle_id: v.id }),
             supabase
-              .from("sales_order_lines")
+              .from("invoice_lines")
               .select("order:sales_orders(invoices(status, cogs_journal_entry_id))")
               .eq("vehicle_id", v.id)
               .limit(20),
@@ -293,8 +295,9 @@ export default function VehicleProfitability() {
     profit: a.profit + r.profit,
     units: a.units + (r.net_revenue > 0 ? 1 : 0),
     flagged: a.flagged + (r.flags.length > 0 ? 1 : 0),
-  }), { revenue: 0, cost: 0, profit: 0, units: 0, flagged: 0 }), [rows]);
+  }), { revenue: 0, cost: 0, profit: 0, flagged: 0 }), [rows]);
   const totalMargin = totals.revenue > 0 ? (totals.profit / totals.revenue) * 100 : 0;
+  const totalVehicles = rows.length;
 
   return (
     <div dir="rtl">
@@ -378,7 +381,7 @@ export default function VehicleProfitability() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-3">
-        <KPI label="عدد المركبات" value={String(totals.units)} />
+        <KPI label="عدد المركبات" value={String(totalVehicles)} />
         <KPI label="صافي الإيراد" value={fmtCompact(totals.revenue)} tone="good" />
         <KPI label="إجمالي التكلفة" value={fmtCompact(totals.cost)} />
         <KPI label="صافي الربح" value={fmtCompact(totals.profit)} tone={totals.profit >= 0 ? "good" : "bad"} />
