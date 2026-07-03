@@ -27,7 +27,22 @@
 - **OQ-P0-1:** النظام single-tenant فعليّاً (`get_current_company_id()` تُرجِع DEFAULT).
 - **OQ-P0-2:** `run_monthly_depreciation` بلا caller شرعيّ (DB-only exposed).
 - **OQ-P0-3:** service_role مستخدَمٌ عمداً في backend شرعيّ (`runtime/` + incentive Edge Functions) — لكن لا يستدعي الدوالّ الستّ.
+- **OQ-P0-4:** authenticated users + role assignments review — البيئة الحاليّة تستعمل عمليّاً حساباً واحداً بنمط super-user (كلّ الأدوار الخمسة لمستخدمٍ واحد). Track 1 لا يُتوقَّع أن يكسر تدفّقاً ماليّاً شرعيّاً متعدّد المستخدمين في هذه البيئة. لكنها **ليست عيّنة كافية للاختبار السلبيّ** (انظر §14).
 - **Phase 5 (Application-Layer):** كلّ call sites تستعمل anon client بلا service-layer role guard.
+
+### OQ-P0-4 — Authenticated Users / Role Assignments
+
+Phase 0 authenticated-user review found the current environment effectively uses a single super-user style account / role setup. Based on the currently observed users and role assignments, the Track 1 authorization model is not expected to break an existing legitimate multi-user finance workflow in this environment.
+
+However, this does not remove the need for role-based security. It means the current environment is not a sufficient negative-test sample.
+
+Before executing Track 1 remediation, create or provision at least one additional test user with a limited finance role, and one authenticated non-finance user if possible, to validate:
+- authorized finance access;
+- unauthorized authenticated rejection;
+- action-level permission rejection;
+- accountant cannot execute high-risk functions;
+- finance_manager/admin can execute high-risk functions;
+- general_manager oversight does not imply direct execution.
 
 ## 3. Scope
 
@@ -166,7 +181,8 @@ admin/finance_manager فقط.
 ## 14. Pre-Execution Checklist
 
 قبل أيّ تنفيذٍ فعليّ (لكلٍّ موافقةٌ صريحةٌ منفصلة):
-- [ ] authenticated users + role assignments review (Phase 0 المتبقّي).
+- [x] authenticated users + role assignments review (OQ-P0-4 — منجَز: مستخدمٌ واحدٌ super-user، Track 1 لا يكسر تدفّقاً شرعيّاً في البيئة الحاليّة).
+- [ ] **Pre-execution user test setup:** إنشاء أو تحديد مستخدمي اختبار لـ: accountant · finance_manager · admin · general_manager · authenticated non-finance user. الإعداد الحاليّ (super-user واحد) **غير كافٍ للاختبار السلبيّ للتصريح** (negative authorization testing).
 - [ ] حسم آلية تخزين has_finance_permission (role_permissions الموجود أم جديد).
 - [ ] تأكيد baseline EXECUTE محفوظٌ للـ rollback.
 - [ ] بيئة staging معزولة جاهزة.
