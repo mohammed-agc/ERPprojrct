@@ -31,6 +31,82 @@
 
 ---
 
+## Post-Phase-0 Findings — OQ-P0-1 / OQ-P0-2
+
+Phase 0 evidence collected so far changes the interpretation of the remediation plan, but does **not** reduce the severity of DEBT-008 / DEBT-009 / DEBT-010.
+
+### OQ-P0-1 — Tenant / Company Model
+
+`get_current_company_id()` does not map `auth.uid()` to a user-specific company. It returns the active company with code `DEFAULT`.
+
+No verified user → company mapping table was found in the current schema.
+
+**Interpretation:** the system is effectively single-tenant today, even though the product architecture uses multi-company language.
+
+**Impact on remediation:**
+
+- Core security debts remain active and severe:
+  - anon/PUBLIC EXECUTE exposure.
+  - no `auth.uid()` null rejection.
+  - no internal role authorization.
+  - unsafe `search_path`.
+  - caller-controlled `created_by` in `create_allocation`.
+- Cross-company / tenant-isolation risk is currently latent, not the primary active exposure.
+- Company scope remediation requires a real user → company mapping model and redesign of `get_current_company_id()`.
+- Company scope must not be treated as a simple `WHERE company_id = get_current_company_id()` patch until the tenant model exists.
+
+### OQ-P0-2 — run_monthly_depreciation Caller
+
+No legitimate caller was found for `run_monthly_depreciation`:
+
+- No frontend/service RPC call site.
+- No Edge Function / backend caller.
+- No SQL function caller except its own definition.
+- No pg_cron job table available / no scheduled job found.
+- No trigger caller.
+
+**Interpretation:** `run_monthly_depreciation` is currently a DB-only exposed financial RPC. No legitimate scheduled/server-side caller was found.
+
+**Impact on remediation option:**
+
+- Option A — finance/admin RPC with company scope — depends partly on the future tenant/company model.
+- Option B — scheduled/server-side controlled job — remains valid but requires building a scheduled path.
+- Option C — service-role-only backend process with explicit audit trail — is the preferred Track 1 direction for now, because it removes client-callable exposure without waiting for full multi-tenant architecture.
+
+This is a design preference, not an executed decision.
+
+### Track Split
+
+Based on OQ-P0-1 and OQ-P0-2, remediation is split into two tracks:
+
+**Track 1 — Immediate Security Remediation**
+
+Items independent of tenant model:
+
+- REVOKE anon/PUBLIC as containment.
+- `auth.uid()` null rejection.
+- finance/admin role authorization.
+- safe `search_path`.
+- `create_allocation.created_by` derived from `auth.uid()`.
+- audit trail normalization.
+- `run_monthly_depreciation` moved away from general client-callable RPC exposure.
+
+**Track 2 — Multi-Tenant Architecture Remediation**
+
+Items dependent on a real tenant model:
+
+- user → company mapping.
+- branch mapping if required.
+- redesign of `get_current_company_id()`.
+- company / branch scope enforcement.
+- cross-company clearing prevention.
+- per-company depreciation filtering.
+- multi-company authorization model.
+
+Track 2 is an architectural requirement for future multi-company readiness. It is not a substitute for Track 1 security remediation.
+
+---
+
 ## Affected Functions
 
 الدوالّ الستّ (SECURITY DEFINER، owner postgres، EXECUTE مُتاح حاليّاً لـ PUBLIC/anon/authenticated/service_role):
