@@ -135,3 +135,16 @@ AUDIT-RR-001 remains Designed / Structure Inspection In Progress. No final recon
 A follow-up review found that all currently observed active original/reversal allocation pairs are attached to cancelled invoices. No active sales invoice with the same reversal pattern was found.
 
 Result: DEBT-011 remains `High / Latent`. No final reconciliation SQL was executed. No PASS / FAIL judgment was made.
+
+### Completed DB Call-Site Review
+
+The remaining database call sites were reviewed.
+
+Additional findings:
+- `create_partner_settlement` uses `document_remaining` for FIFO settlement filtering and settlement amount calculation.
+- `partner_balance_summary` uses `document_remaining` for customer/vendor balance calculation and filtering.
+- `partner_balance_summary` feeds `create_partner_settlement`, creating a cascade path from balance reporting to settlement business logic.
+
+This expands the documented impact of DEBT-011 to: business-rule validation; Open Item SSOT status; aging/reporting; customer/vendor balance summary; settlement logic; and frontend/service display.
+
+Severity remains `High / Latent`. The expanded impact reinforces High severity, while the active reversal-pair scan supports the Latent qualifier.

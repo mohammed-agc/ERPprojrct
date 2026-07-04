@@ -216,11 +216,34 @@ Severity remains as previously recorded unless a separate severity review is per
 
 **Live Data Evidence:** Invoice `INV-2026-0002` (status `cancelled`, total `57,500`, credited `57,500`) has two active allocation rows on the same invoice: original `PAYMENT` `CLR-2026-00005` for `57,500` and reversal-like `CREDIT_NOTE` `REV-CLR-2026-00005` for `57,500` (referencing the original through `reverses_allocation_id`). Both remain `active` and both positive. `document_allocated('sales_invoice', <id>, NULL)` returned `115,000`; `document_remaining('sales_invoice', <id>, 57,500)` returned `-57,500`.
 
-**DB Call-Site Impact:** The defective functions are consumed across four layers:
-1. **Display:** `InvoiceDetail.tsx` (openRemaining, no sign guard) and `purchaseInvoicesDb.ts` (remaining_amount).
-2. **Business rule:** `create_allocation` uses `document_remaining` as an over-allocation guard (deciding whether to allow or reject an allocation).
-3. **SSOT status:** `document_clearing_status` derives `cleared_amount` / `open_amount` / `document_status` from `document_allocated` (can classify an active document as `CLEARED` incorrectly).
-4. **Reporting:** `partner_aging` uses `document_remaining` both for the outstanding amount and as the filter that decides whether a document enters the aging report.
+**DB Call-Site Impact:** DB call-site review found that `document_allocated` / `document_remaining` affect five database functions:
+
+1. `create_allocation`
+   - Uses `document_remaining` for over-allocation guarding.
+   - Impact: business-rule validation may be wrong in reversal scenarios.
+
+2. `create_partner_settlement`
+   - Uses `document_remaining` to filter candidate AR/AP documents and calculate FIFO settlement amounts.
+   - Also depends on `partner_balance_summary` to derive customer/vendor balances.
+   - Impact: settlement eligibility and settlement amount may be based on incorrect remaining balances.
+
+3. `document_clearing_status`
+   - Uses `document_allocated` to derive `cleared_amount`, `open_amount`, and `document_status`.
+   - Impact: the Open Item SSOT status can be derived incorrectly in reversal scenarios.
+
+4. `partner_aging`
+   - Uses `document_remaining` for outstanding amount and for filtering documents into aging buckets.
+   - Impact: aging can under-report or misstate open documents.
+
+5. `partner_balance_summary`
+   - Uses `document_remaining` for customer and vendor balances and filters.
+   - Impact: customer/vendor balances can be understated or misstated.
+
+In addition, two frontend/service call sites display the result directly: `InvoiceDetail.tsx` (openRemaining, no sign guard) and `purchaseInvoicesDb.ts` (remaining_amount).
+
+**Cascade impact:** `partner_balance_summary` is used by `create_partner_settlement`, so a reporting/balance calculation defect can cascade into settlement business logic.
+
+**Distinction from DEBT-010:** `create_partner_settlement` derives `created_by` from `auth.uid()` internally rather than accepting it as a caller-controlled parameter. Therefore, it is not the same defect as DEBT-010. Observed `created_by = NULL` settlement allocations are better explained as execution in an unauthenticated context or missing `auth.uid()` enforcement, which relates to the DEBT-008 authorization exposure. (DEBT-010 concerns allocation creation integrity, caller-controlled `created_by`, and journal-entry linkage; DEBT-011 concerns remaining-balance calculation and reversal semantics.)
 
 **Impact:** Severity is High because the defect affects business rules, open-item status derivation, reporting, and displayed balances.
 
