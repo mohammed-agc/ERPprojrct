@@ -47,10 +47,25 @@ Seed on **staging only** (production untouched). Build one dataset per test case
 4. **Invoice settled against AP** — seed a customer AR balance (sales invoice) + a supplier AP balance (purchase invoice) for the same contact, then call `create_partner_settlement` (which builds the two-line settlement JE and the SETTLEMENT allocations). Do not hand-build the settlement JE.
 5. **Payment + settlement (mixed)** — active invoice carrying both a PAYMENT (via `payments` + `create_allocation`) and a SETTLEMENT (via `create_partner_settlement`).
 6. **Already-cancelled invoice (idempotency)** — an invoice already cancelled once, to prove no duplicate treatment legs.
-7. **Unclear/multi-line settlement counter** — a settlement JE deliberately built multi-line (or with missing `journal_entry_id`) to exercise the block/manual-review path. This is the one case that needs a hand-built JE outside `create_partner_settlement` (which only ever builds clean two-line entries).
+7. **Unclear/multi-line settlement counter** — NOT a DB seed (see G3 below). The system never builds multi-line settlements (`create_partner_settlement` always makes a clean two-line JE; JE-2026-0004 is 2 lines). T7 is a fixture/unit test of the corrected guard's block logic, not a posted staging entry.
 8. **RR-001 validation dataset** — the aggregate state after the above, used to re-run RR-001 and observe variance behavior.
 
 Seed via workflow, not raw insert (A2): reference data (contacts, determinations) may be inserted directly; business documents (invoices, payments, allocations, settlements) go through the existing triggers/functions (`payments` trigger, `create_allocation`, `create_partner_settlement`) so the seed mirrors real system behavior rather than bypassing the engines under test.
+
+## 4a. Phase 0B — Final Review Version (G1–G4 resolved by live evidence)
+
+Phase 0B = **Seed-via-Workflow Draft Final Review Version / Not Executed.** The four workflow gaps were resolved by read-only live evidence:
+
+- **G1 (issued invoice workflow) — resolved.** The seed invoice pattern is a **simple issued invoice with no vehicle lines**. `create_invoice_journal_entry` produces the revenue JE from `total`/`subtotal`/`vat_amount` (it does not require lines or a vehicle); the COGS loop finds no vehicle lines so no COGS JE is created, and `complete_vehicle_sale` returns immediately because `cogs_journal_entry_id` stays NULL. So a simple issued invoice yields a clean revenue-only posting with no inventory impact. Live evidence: ZINV-TEST-002/003 are issued with 0 lines and `cogs=NULL`. (Evidence only.)
+- **G2 (payment JE linkage) — resolved.** Payment seed uses the `payments` table (not `sales_payments`). Its AFTER INSERT trigger `create_payment_journal_entry` posts the JE with `source_type='sales_payment'`, `source_id=payments.id`. The seed must fetch **exactly one** JE (`WHERE source_type='sales_payment' AND source_id=<payments.id>`) and pass it explicitly to `create_allocation('PAYMENT', ..., p_journal_entry_id => fetched_je)`. Calling `create_allocation` with a NULL `journal_entry_id` is **forbidden** — it reproduces the DEBT-010 pattern. Live evidence: INV-2026-0002 payment id 7f6b92c6 → JE-2026-0006, exactly one match, is_posted.
+- **G3 (T7 ambiguous settlement) — resolved.** `create_partner_settlement` builds a clean two-line settlement (Dr AP / Cr AR); no natural multi-line settlement exists (JE-2026-0004 is 2 lines). Hand-building a posted multi-line JE would pollute the ledger with an immutable, source-less entry, so **T7 is a fixture/unit test** of the guard's block logic (not a DB seed). Ambiguity criteria the guard must block on: (a) missing `journal_entry_id`; (b) more than one counter line; (c) counter amount ≠ allocation amount; (d) extra non-AR/AP lines; (e) multiple allocations sharing one JE in unclear proportions. Expected: block / manual review, no automatic F5.7, nothing posted.
+- **G4 (payment guard table mismatch) — confirmed with live data evidence.** See §2 and the Debt Register: the corrected guard must inspect `payments` + active unreversed `open_item_allocations`, not `sales_payments`.
+
+**Final test scope.** DB seed via workflow: T1 unpaid, T2 fully-paid cash, T3 partial cash, T4 settled-against-AP, T5 mixed, T6 idempotency, T8 RR-001 validation. Non-DB fixture: T7 ambiguous-settlement block.
+
+**Final safety gates.** Confirmed staging only; Phase 0A CUSTOMER_DEPOSITS exists; no existing `DEBT012_PHASE0B_SEED` unless reset approved; all seed data marked; simple invoices only (no vehicle lines); payment JE located exactly once before allocation; never `create_allocation` without `journal_entry_id`; never insert into `sales_payments`; T7 fixture only; explicit execution approval.
+
+**Remaining blocker:** environmental only — staging is not confirmed, so nothing may be applied. G1/G2/G3 are resolved by evidence; G4 is confirmed.
 
 ## 5. Phase 1 — Migration / Function Change Draft
 
@@ -145,9 +160,14 @@ Any unchecked item = No-Go.
 ## Judgment (unchanged)
 
 ```
-DEBT-012 = High / Active GL Impact / Remediation Design Drafted / Not Implemented
+DEBT-012 = High / Active GL Impact / Remediation Design Drafted / Staging Execution Plan Drafted / Phase 0B Final Review Drafted / Not Implemented
+Phase 0A = SQL Draft Corrected / Not Executed
+Phase 0B = Seed-via-Workflow Draft Final Review Version / Not Executed
+G1+G2+G3 = Resolved by read-only evidence
+G4 = Confirmed with live data evidence
 Staging Execution Plan = Draft
 Historical Data Fix = Deferred until staging remediation passes / Separate Approval Required
+Staging = Not confirmed
 No remediation · No PASS / FAIL
 Posting Engine = Under Audit / Partially Audited
 ```
