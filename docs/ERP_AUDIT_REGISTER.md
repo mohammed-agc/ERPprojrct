@@ -41,6 +41,42 @@
 |---|---|---|---|
 | Audit-003 | 2026-07-02 | Ledger Integrity | PASS — التوازن الرياضي مُثبت للريال (Σ=3,575,750، Trial Balance net=0، Balance Sheet فرق=0) |
 | VP Audit | 2026-07-02 | Vehicle Profitability revenue model | PASS — VP-001 مُصلَح؛ VP-002 مؤجّل (DEBT-004) |
+| AUDIT-RR-001 | 2026-07-03 | GL to AR Subledger Reconciliation | **Designed / Not Executed** — No SQL run, No PASS/FAIL |
 
 > **حدود Audit-003:** أثبت **التوازن الرياضي** لدفتر GL، لا **صحّة التصنيف الدلاليّ**
 > لكلّ معاملة — ذلك تدقيقٌ منفصلٌ لاحق.
+
+---
+
+## AUDIT-RR-001 — GL to AR Subledger Reconciliation
+
+> **Status: Designed / Not Executed**
+> **Result: No PASS / FAIL** · 2026-07-03
+
+**Purpose:** Validate that the GL AR control balance reconciles to the AR subledger / open-item balance.
+
+**Formula:**
+```
+Σ(GL debit − credit on AR control accounts)  =  Σ(AR invoice open balance)
+```
+
+**Scope:**
+- AR only.
+- Posted GL entries only.
+- Sales invoices / customer receivables.
+- Open-item allocations.
+- No AP, VAT, COGS, inventory, aging buckets, or cancel/reverse scenario execution in this audit yet.
+
+**Tolerance:** 0.01 SAR.
+
+**Execution:** Not executed. No SQL run. No PASS/FAIL judgment.
+
+**Risks / Known Limitations:**
+1. AR control account must be evidence-based, not guessed.
+2. GL side must not be limited to `source_type = sales_invoice`, because the AR control account is affected by invoices, receipts, settlements, cancellations, and reversals.
+3. Direct calculation from `open_item_allocations` is preferred before relying solely on `document_remaining` / `document_allocated`.
+4. DEBT-010 may cause Open Items / Aging to diverge from GL if unauthorized allocation occurs.
+5. Trial Balance balanced (Audit-003) does not prove GL ↔ Subledger reconciliation.
+6. AP is excluded because AP Open Item migration is a known technical debt (TECH-DEBT-AP-001).
+
+**Next step (when executed, with separate approval):** evidence-based identification of the AR control account(s) and table-structure verification, before running any reconciliation query.
