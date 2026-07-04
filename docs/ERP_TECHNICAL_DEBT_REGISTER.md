@@ -309,6 +309,36 @@ This confirms the current `Latent` qualifier: the defect is structurally high-im
 
 **Status:** Promoted to DEBT-011 (High / Latent) based on DB call-site review (AUDIT-RR-001 Step 4 + DB Call-Site Review). See DEBT-011 above for the full record.
 
+### CANDIDATE-RR-002 — Cancelled Invoices Leave Prior Payment / Settlement Credits on AR
+
+**Status:** Candidate / Confirmed with Live Data Evidence
+**Source:** AUDIT-RR-001 1131 GL Line Diagnostic
+**Category:** Accounting Posting / Cancellation / Open Item Clearing
+**Severity:** To Be Assessed
+
+**Finding:** RR-001 diagnostic review found that cancelled invoices can leave prior payment or settlement credits posted to AR control account `1131`. For `INV-2026-0001`, the original invoice debit and credit-note reversal net to zero, but a prior settlement credit of `129,425` remains posted. For `INV-2026-0002`, the original invoice debit and credit-note reversal net to zero, but a prior sales payment credit of `57,500` remains posted. This contributes to a negative AR control balance.
+
+**Impact:** Cancelled invoices with prior allocations may leave residual negative AR effects if the cancellation process reverses the invoice but does not correctly reverse or reclassify prior payment/settlement postings. This may affect: AR control account balance; GL ↔ AR subledger reconciliation; customer balance reporting; cancellation/reversal correctness.
+
+**Decision Pending:** Determine whether this is a cancellation-flow defect, a payment/settlement reversal defect, a missing refund/reclassification process, or a test-data artifact. Further investigation is required before assigning final severity or remediation.
+
+**Distinction:** DEBT-011 concerns `document_remaining` / `document_allocated` calculation and reversal semantics. CANDIDATE-RR-002 concerns GL posting effects after cancellation when prior payment or settlement credits remain on AR.
+
+### CANDIDATE-RR-003 — Fixed Asset Disposal Posted to AR Control Account 1131
+
+**Status:** Candidate / Confirmed with Live Data Evidence
+**Source:** AUDIT-RR-001 1131 GL Line Diagnostic
+**Category:** Account Determination / Fixed Asset Disposal / AR Control Account
+**Severity:** To Be Assessed
+
+**Finding:** RR-001 diagnostic review found a `fixed_asset_disposal` journal entry posting `6,000` debit to AR control account `1131`.
+
+**Impact:** Posting fixed asset disposal proceeds to the trade receivables control account may contaminate AR reconciliation if the transaction is not intended to be part of customer trade receivables.
+
+**Decision Pending:** Determine whether account `1131` is intentionally used for asset-sale receivables or whether a separate receivable / clearing account should be used. Further account-determination review is required before assigning final severity or remediation.
+
+**Distinction:** CANDIDATE-RR-003 concerns account determination for fixed asset disposal (separate from DEBT-011 and CANDIDATE-RR-002).
+
 ## البنود المغلقة (Closed Debts)
 
 *(لا شيء بعد)*

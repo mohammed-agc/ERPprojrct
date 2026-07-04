@@ -148,3 +148,25 @@ Additional findings:
 This expands the documented impact of DEBT-011 to: business-rule validation; Open Item SSOT status; aging/reporting; customer/vendor balance summary; settlement logic; and frontend/service display.
 
 Severity remains `High / Latent`. The expanded impact reinforces High severity, while the active reversal-pair scan supports the Latent qualifier.
+
+### 1131 GL Line Diagnostic
+
+**Status: Diagnostic Inspected / Reconciliation Not Executed**
+
+**Evidence:**
+- AR control account `1131` has 14 posted journal lines.
+- Total debit on `1131`: `449,900`.
+- Total credit on `1131`: `623,925`.
+- Net balance: `-174,025`.
+
+**Finding:** The AR control balance is negative, which is abnormal for a receivables control account and requires investigation before a final GL ↔ AR Subledger reconciliation query can be executed.
+
+**Source analysis:**
+- Cancelled invoices `INV-2026-0001` and `INV-2026-0002` have original invoice debits and credit-note reversals that balance each other.
+- However, prior settlement/payment credits remained posted: `INV-2026-0001` settlement credit `129,425`; `INV-2026-0002` sales payment credit `57,500`.
+- This leaves negative AR effects after cancellation.
+- A `fixed_asset_disposal` journal entry also posted `6,000` to AR account `1131`.
+
+**Impact:** A simple total-level RR-001 reconciliation query is not ready. The query design must account for source-type breakdown or per-invoice reconciliation and must investigate cancellation/payment/settlement interactions. These findings are tracked as CANDIDATE-RR-002 and CANDIDATE-RR-003 in the Technical Debt Register.
+
+**Result:** No final reconciliation SQL has been executed. No PASS / FAIL judgment has been made.
