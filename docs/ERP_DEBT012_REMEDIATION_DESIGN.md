@@ -1,6 +1,6 @@
 # DEBT-012 Remediation Design — Draft (Design Only / Do Not Implement)
 
-**Status:** Design Only. No DB change, no code change, no migration, no remediation, no commit.
+**Status:** Design Only. Open questions resolved (2026-07-04). No DB change, no code change, no migration, no remediation, no commit.
 **Date:** 2026-07-04
 **Policy selected by owner:** Payment leg → Reclassify to Customer Deposits (2141). Settlement leg → Reverse Settlement (restore original counter-account). The two paths are NOT unified.
 
@@ -175,11 +175,15 @@ END FOR
 
 ---
 
-## Open Questions (for owner)
+## Resolved Decisions (owner-confirmed 2026-07-04)
 
-1. **Historic data:** the existing `-174,025` on `1131` comes from already-cancelled INV-0001/0002. Correcting it is a separate one-time data-remediation decision — do we address it, and when? (Design proposes: separate approved step, not part of the flow.)
-2. **Counter-account resolution robustness:** for settlement, is "take the non-AR-control line of the original settlement JE" always correct, or can a settlement JE have more than two lines? (Live evidence is a clean 2-line entry; multi-line settlements would need a rule.)
-3. **Customer-Deposits partner tracking:** should the deposits credit carry `contact_id` so the customer's deposit balance is queryable per-partner? (Recommended yes, for later use/refund.)
+The three previously-open questions are now resolved for design:
+
+1. **Historic data fix — Deferred until staging remediation passes / Separate approval required.** The existing `-174,025` on the AR control account comes from already-cancelled INV-0001/0002. It is NOT corrected as part of this functional remediation. Policy: (a) implement remediation logic on `staging` first; (b) run the eight test cases; (c) only if staging validation passes, prepare a SEPARATE data-fix plan for the historic cases; (d) that data-fix needs its own independent approval; (e) NO automatic retroactive run across all data; (f) the known historic cases are corrected via reviewed, limited entries derived from their original journal entries and original allocations. **Governing policy: functional remediation prevents future contamination; historical data-fix cleans past contamination; the two are never mixed in the same execution decision.**
+
+2. **Settlement counter-account — resolve dynamically; block if unclear.** Resolve the counter-account from the original settlement journal entry (via the allocation's `journal_entry_id`). If a single clear counter-account matching the allocation can be resolved (the non-AR-control line of a clean two-line settlement) → allow. If the settlement JE is multi-line / partial / unclear, or its `journal_entry_id` is missing → block cancellation and require manual review. Never hardcode account numbers. (Live evidence: all current settlement entries are clean two-line — verified via aggregate scan, one settlement entry, `line_count=2`.)
+
+3. **Partner tracking — Required.** Any Customer-Deposits / customer-liability line MUST carry `contact_id` and `partner_type='customer'`. The deposits account must not become an anonymous lump-sum balance; the per-partner deposit balance must remain queryable for later use or refund. (Live evidence: `journal_entry_lines` carries both `contact_id` and `partner_type`; the target deposits account has `requires_partner`, making the partner mandatory.)
 
 ## Recommendation
 

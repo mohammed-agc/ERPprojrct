@@ -341,7 +341,7 @@ The payment or settlement should not simply disappear from GL. It must be refund
 - **Technical Owner:** Accounting Posting / Cancellation Flow
 - **Target Release:** 1.0
 - **Closed At:** —
-- **Remediation Design:** see `docs/ERP_DEBT012_REMEDIATION_DESIGN.md` (Design Only / Not Executed) — Payment leg → reclassify to Customer Deposits (resolved role); Settlement leg → reverse settlement (counter-account resolved from the original settlement JE). Accounts resolved dynamically per the Evidence/Design/Implementation principle; no hardcoded codes.
+- **Remediation Design:** see `docs/ERP_DEBT012_REMEDIATION_DESIGN.md` (Design Only / Not Implemented; open questions resolved 2026-07-04) — Payment leg → reclassify to Customer Deposits (resolved role, partner-tracked); Settlement leg → reverse settlement (counter-account resolved from the original settlement JE, block if unclear). Accounts resolved dynamically per the Evidence/Design/Implementation principle; no hardcoded codes. Historical data fix (`-174,025`) deferred until staging remediation passes, separate approval required.
 
 
 ### CANDIDATE-RR-003 — Fixed Asset Disposal Posted to AR Control Account 1131
