@@ -192,3 +192,17 @@ Result: `DEBT-012 = High / Active GL Impact / Design Decision Pending`. No final
 Review of `JE-2026-0038` (balanced: debit `1131` `6,000` / credit `1213` `5,000` / credit `433` `1,000`) and of `dispose_fixed_asset` confirmed that the disposal function is architecturally sound: cost, accumulated-depreciation, and gain/loss accounts resolve dynamically via `account_determinations`; the proceeds account comes from the caller parameter `p_proceeds_account_code` (default `1121`). The `1131` posting resulted from a caller passing `p_proceeds_account_code='1131'` on a test asset ("أصل اختبار النوع"), not from a code defect.
 
 Result: `CANDIDATE-RR-003` is assessed as a test-data artifact, not a code defect. No promotion. For RR-001, `fixed_asset_disposal` is non-trade and must be excluded via source-type breakdown. No PASS / FAIL judgment was made.
+
+### RR-001 Final Query Design (Design Only / Not Executed)
+
+With account `1131` now fully understood (DEBT-012 explains the negative balance; RR-003 is a non-trade test artifact; ZINV-TEST-001/002/003 are the real active invoices totalling `6,900`), a final reconciliation query was designed. It has not been executed.
+
+**GL side:** posted lines on `1131` + `1132`, decomposed by `source_type` into buckets: `trade_invoice` (sales_invoice), `trade_reversal` (credit_note), `trade_clearing` (sales_payment + settlement — where the DEBT-012 residual appears), `non_trade_ar_artifact` (fixed_asset_disposal — RR-003, isolated), and `other`.
+
+**AR subledger side (Design A):** active sales invoices only (status not in cancelled/draft); open amount = invoice total − Σ(valid active allocations), where valid = active originals with `reverses_allocation_id IS NULL` and not referenced by any active reversal. `document_remaining` / `document_allocated` are not used (DEBT-011). Tolerance `0.01`.
+
+**Output:** `gl_ar_total`, `gl_trade_ar_total`, `gl_non_trade_ar_total`, `ar_subledger_open_total`, `variance_total`, `variance_trade_only`, and `diagnostic_flags`.
+
+**Key design principle:** RR-001 is not expected to balance while DEBT-012 is live. The residual payment/settlement credits from cancelled invoices sit inside `trade_clearing`, so `variance_trade_only` will remain non-zero. This is the audit surfacing DEBT-012, not a reconciliation failure. A clean reconciliation becomes possible only after DEBT-012 is remediated.
+
+Result: `AUDIT-RR-001 = Diagnostic Inspected / Redesign In Progress`. No final reconciliation SQL was executed. No PASS / FAIL judgment was made.
