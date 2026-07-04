@@ -17,6 +17,17 @@ When a sales invoice that already has payment or settlement effects is cancelled
 - Net effect (INV-2026-0002, cash): invoice `+57,500` / payment `−57,500` (JE-0006 stays) / revenue reversal `−57,500` = `−57,500` residual.
 - Net effect (INV-2026-0001, settlement): invoice `+129,425` / settlement `−129,425` (JE-0004 stays) / revenue reversal `−129,425` = `−129,425` residual.
 
+## 2a. The Four Dimensions of DEBT-012 (incl. G4 — Payment Guard Table Mismatch)
+
+DEBT-012 has four dimensions:
+
+1. **Posting defect.** `cancel_sales_invoice` does not create GL treatment for prior payment/settlement credits.
+2. **Settlement / open-allocation guard gap.** `can_cancel_sales_invoice` does not inspect `open_item_allocations` (SETTLEMENT/PAYMENT), so settlement-cleared invoices pass the guard.
+3. **Payment guard table mismatch (G4 — Confirmed with live data evidence).** `can_cancel_sales_invoice` reads the paid amount from `sales_payments`, but real payments post through the `payments` table (which carries the `create_payment_journal_entry` AFTER INSERT trigger; `sales_payments` has no trigger and is secondary/legacy). Live evidence: INV-2026-0002 had a real payment of 57,500 in `payments` (0 rows in `sales_payments`), with payment JE-2026-0006 (Dr cash 1111 / Cr AR 1131). The guard read `v_paid=0` from `sales_payments` and allowed cancellation — which is exactly why a fully-paid invoice was cancelled and left the −57,500 residual.
+4. **Result.** Paid/settled invoices can be cancelled, leaving AR credit residuals in GL (aggregate −174,025 on the AR control account).
+
+**Guard correction implied by G4:** the corrected `can_cancel_sales_invoice` must inspect the `payments` table (source of truth for payments) AND active unreversed `open_item_allocations` — NOT `sales_payments`. `sales_payments` must not be used as source of truth unless future evidence proves it active.
+
 ## 3. Accounting Policy Decision (owner-confirmed)
 
 - **Cash payment received then invoice cancelled:** the cash physically entered the treasury and is still held by the company. Do NOT reverse the original cash receipt (do not reduce `1111`). Instead reclassify the amount from AR to a customer credit liability. The customer holds a deposit balance to be used on a later invoice or refunded later via a separate voucher/refund process.
@@ -87,7 +98,7 @@ The sum of all reclass/reversal debits to the AR control account equals the sum 
 
 Replace the payments-only guard with allocation-aware logic. Conceptually (design only, not code):
 
-- Inspect BOTH `sales_payments` AND `open_item_allocations` (active, `reverses_allocation_id IS NULL`, targeting this invoice) for `PAYMENT` and `SETTLEMENT` types.
+- Inspect the `payments` table (source of truth for real payments — see G4, dimension 3) AND `open_item_allocations` (active, `reverses_allocation_id IS NULL`, targeting this invoice) for `PAYMENT` and `SETTLEMENT` types. Do NOT use `sales_payments` (secondary/legacy, empty for real payments).
 - For each such allocation, determine whether the cancellation flow can safely generate the required GL treatment:
   - PAYMENT → needs the Customer-Deposits account (resolved via `account_determinations` CUSTOMER_DEPOSITS) to exist and be postable. If yes → resolvable.
   - SETTLEMENT → needs the original settlement JE and its counter-account to be resolvable. If yes → resolvable.

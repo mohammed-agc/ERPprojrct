@@ -42,15 +42,15 @@ Governing principle (constitution): Evidence may mention account numbers; Design
 Seed on **staging only** (production untouched). Build one dataset per test case:
 
 1. **Active unpaid invoice** — reuse a ZINV-style active issued invoice (no payment/allocation).
-2. **Fully paid cash invoice** — active invoice + one full `sales_payment` (cash) + PAYMENT allocation.
-3. **Partially paid cash invoice** — active invoice + partial `sales_payment` + PAYMENT allocation for the paid portion.
-4. **Invoice settled against AP** — active invoice + SETTLEMENT allocation with a two-line settlement JE (AR control vs an AP/counter account) for a customer-who-is-also-supplier contact.
-5. **Payment + settlement (mixed)** — active invoice carrying both a PAYMENT and a SETTLEMENT allocation.
+2. **Fully paid cash invoice** — active invoice + one full payment via the `payments` table (cash) + a PAYMENT `open_item_allocation`. NOTE (G4/A2): payments seed into `payments` (whose AFTER INSERT trigger posts the payment JE), NOT `sales_payments` (secondary/legacy). The PAYMENT allocation is created via `create_allocation`.
+3. **Partially paid cash invoice** — active invoice + partial payment in `payments` + a partial PAYMENT allocation via `create_allocation`.
+4. **Invoice settled against AP** — seed a customer AR balance (sales invoice) + a supplier AP balance (purchase invoice) for the same contact, then call `create_partner_settlement` (which builds the two-line settlement JE and the SETTLEMENT allocations). Do not hand-build the settlement JE.
+5. **Payment + settlement (mixed)** — active invoice carrying both a PAYMENT (via `payments` + `create_allocation`) and a SETTLEMENT (via `create_partner_settlement`).
 6. **Already-cancelled invoice (idempotency)** — an invoice already cancelled once, to prove no duplicate treatment legs.
-7. **Unclear/multi-line settlement counter** — a settlement JE deliberately built multi-line (or with missing `journal_entry_id`) to exercise the block/manual-review path.
+7. **Unclear/multi-line settlement counter** — a settlement JE deliberately built multi-line (or with missing `journal_entry_id`) to exercise the block/manual-review path. This is the one case that needs a hand-built JE outside `create_partner_settlement` (which only ever builds clean two-line entries).
 8. **RR-001 validation dataset** — the aggregate state after the above, used to re-run RR-001 and observe variance behavior.
 
-Each seed records: invoice id/no, contact id, allocation ids, original JE ids — so tests can assert against known references. Seed script lives in staging tooling, is idempotent, and is cleaned up per the rollback plan.
+Seed via workflow, not raw insert (A2): reference data (contacts, determinations) may be inserted directly; business documents (invoices, payments, allocations, settlements) go through the existing triggers/functions (`payments` trigger, `create_allocation`, `create_partner_settlement`) so the seed mirrors real system behavior rather than bypassing the engines under test.
 
 ## 5. Phase 1 — Migration / Function Change Draft
 
@@ -66,7 +66,7 @@ Migration is idempotent (`CREATE OR REPLACE`, guarded), developed on staging, an
 
 Replace the payments-only check with allocation-aware logic:
 
-- Inspect active, unreversed allocations (`reverses_allocation_id IS NULL`) targeting the invoice, of types PAYMENT and SETTLEMENT (in addition to the existing `sales_payments` and delivered/credited/JE-present checks).
+- Inspect the `payments` table (source of truth for real payments — G4) AND active, unreversed `open_item_allocations` (`reverses_allocation_id IS NULL`) targeting the invoice, of types PAYMENT and SETTLEMENT (plus the existing delivered/credited/JE-present checks). Do NOT use `sales_payments` (secondary/legacy; the current guard's `sales_payments` check is the G4 defect — it reads 0 for real payments).
 - For each allocation, determine treatment resolvability:
   - PAYMENT → the Customer-Deposits determination key must resolve. If missing → **block** (`CANCELLATION_REQUIRES_DEPOSITS_ACCOUNT` or similar).
   - SETTLEMENT → the original settlement JE and a single clear counter-account must be resolvable. If multi-line / partial / unclear / missing `journal_entry_id` → **block / manual review**.
