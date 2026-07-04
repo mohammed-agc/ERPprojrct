@@ -121,3 +121,11 @@
 **This is separate from DEBT-010.** DEBT-010 = allocation creation / created_by / journal linkage risk. This finding (tracked as CANDIDATE-RR-001) = allocation remaining calculation / reversal semantics defect.
 
 **Result:** No final reconciliation SQL has been executed. No PASS / FAIL judgment has been made.
+
+### DB Call-Site Review — Promotion to DEBT-011
+
+A DB call-site review confirmed that `document_remaining` / `document_allocated` are consumed not only by display code but also by DB business logic, open-item status derivation, and reporting: `create_allocation` (over-allocation guard), `document_clearing_status` (derives `cleared_amount` / `open_amount` / `document_status`), and `partner_aging` (outstanding amount and aging entry filter), in addition to `InvoiceDetail.tsx` and `purchaseInvoicesDb.ts` display.
+
+**CANDIDATE-RR-001 was promoted to DEBT-011 based on this DB call-site review** (Severity High / Latent). See DEBT-011 in the Technical Debt Register.
+
+AUDIT-RR-001 remains Designed / Structure Inspection In Progress. No final reconciliation SQL executed. No PASS / FAIL judgment.

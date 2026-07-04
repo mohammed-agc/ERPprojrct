@@ -204,6 +204,48 @@ Severity remains as previously recorded unless a separate severity review is per
 
 ---
 
+### DEBT-011 — document_allocated / document_remaining Reversal Handling Defect
+
+- **Status:** Confirmed with Live Data Evidence
+- **Severity:** High / Latent
+- **Category:** Reporting / Open Item Accounting / Business Rule
+- **Source:** AUDIT-RR-001 Step 4 + DB Call-Site Review
+- **Promoted from:** CANDIDATE-RR-001
+
+**Finding:** `document_allocated` calculates allocation totals by summing active `open_item_allocations.allocated_amount` rows as positive values. It does not account for reversal semantics through `reverses_allocation_id`. As a result, `document_remaining` (which derives from `document_allocated`) can produce inflated or impossible negative remaining balances in reversal scenarios.
+
+**Live Data Evidence:** Invoice `INV-2026-0002` (status `cancelled`, total `57,500`, credited `57,500`) has two active allocation rows on the same invoice: original `PAYMENT` `CLR-2026-00005` for `57,500` and reversal-like `CREDIT_NOTE` `REV-CLR-2026-00005` for `57,500` (referencing the original through `reverses_allocation_id`). Both remain `active` and both positive. `document_allocated('sales_invoice', <id>, NULL)` returned `115,000`; `document_remaining('sales_invoice', <id>, 57,500)` returned `-57,500`.
+
+**DB Call-Site Impact:** The defective functions are consumed across four layers:
+1. **Display:** `InvoiceDetail.tsx` (openRemaining, no sign guard) and `purchaseInvoicesDb.ts` (remaining_amount).
+2. **Business rule:** `create_allocation` uses `document_remaining` as an over-allocation guard (deciding whether to allow or reject an allocation).
+3. **SSOT status:** `document_clearing_status` derives `cleared_amount` / `open_amount` / `document_status` from `document_allocated` (can classify an active document as `CLEARED` incorrectly).
+4. **Reporting:** `partner_aging` uses `document_remaining` both for the outstanding amount and as the filter that decides whether a document enters the aging report.
+
+**Impact:** Severity is High because the defect affects business rules, open-item status derivation, reporting, and displayed balances.
+
+**Scope Note:** The issue is marked Latent because the confirmed live-data example is a cancelled invoice, and no currently active invoice with the same reversal pattern has been confirmed in this review. However, the defect is structural and would affect any active document that follows the same original-allocation plus reversal-allocation pattern.
+
+**Difference from DEBT-010:** DEBT-010 concerns allocation creation, created_by integrity, and journal-entry linkage. DEBT-011 concerns remaining-balance calculation and reversal semantics in `document_allocated` / `document_remaining`. They are related through Open Item Accounting, but they are separate defects.
+
+**Recommended Remediation Direction** (direction only — not code; final approach designed and tested separately):
+1. mark the original allocation as reversed when a reversal allocation is created; or
+2. calculate net allocations by excluding reversed allocation pairs; or
+3. apply explicit sign logic based on `reverses_allocation_id` and `allocation_type`.
+
+**Verification Needed** (later):
+1. identify all active invoices / purchase invoices with reversal allocation patterns;
+2. confirm whether any active documents are currently affected;
+3. test corrected `document_allocated` / `document_remaining` against: normal payment, partial payment, settlement, credit note, reversal, cancelled invoice;
+4. verify `partner_aging` and `document_clearing_status` after remediation.
+
+- **Business Owner:** Mohammed Helwan
+- **Technical Owner:** Reporting / Open Item Accounting
+- **Target Release:** 1.0
+- **Closed At:** —
+
+---
+
 ## Evidence Backlog — Not Official Debt
 
 > **ليست ديوناً تقنيّة.** مرشّحاتٌ ذُكِرت في جلساتٍ سابقة (غالباً من الذاكرة) لكن **بلا دليلٍ
@@ -232,24 +274,9 @@ Severity remains as previously recorded unless a separate severity review is per
 
 **Next Action:** Confirm whether '1121' is a required caller-provided default, a safe placeholder, or a hardcoded fallback used in production posting.
 
-### CANDIDATE-RR-001 — document_allocated / document_remaining Reversal Handling Defect
+### CANDIDATE-RR-001 — PROMOTED
 
-**Status:** Candidate / Confirmed with Live Data Evidence
-**Source:** AUDIT-RR-001 Step 4
-**Category:** Reporting / Open Item Accounting
-**Severity:** To Be Assessed
-
-**Finding:** `document_allocated` calculates allocation totals by summing active `open_item_allocations.allocated_amount` rows as positive values. It does not account for reversal semantics through `reverses_allocation_id`.
-
-Live data evidence showed an original `PAYMENT` allocation and a reversal-like `CREDIT_NOTE` allocation on the same sales invoice, both active and both positive. `document_allocated` returned the sum of both rows (`115,000`), and `document_remaining` returned a negative remaining balance (`-57,500`).
-
-**Impact:** `document_remaining` is not reliable as the authoritative source for AR open-balance calculation in reversal scenarios. This can affect reports or screens that rely on `document_remaining` or `document_allocated` to display customer balances, invoice remaining amounts, or aging-related figures.
-
-**Scope Note:** The observed invoice is cancelled and should be excluded from AR open-balance reconciliation. The defect is nevertheless structural because the function logic does not handle reversal semantics.
-
-**Separation from DEBT-010:** This is separate from DEBT-010. DEBT-010 = allocation creation / created_by / journal linkage risk. CANDIDATE-RR-001 = allocation remaining calculation / reversal semantics defect.
-
-**Decision Pending:** Determine whether this candidate should be promoted to a formal debt item after: identifying all call sites of `document_remaining` and `document_allocated`; checking whether any active invoices have similar reversal patterns; assessing reporting impact on AR aging, customer balances, and invoice status.
+**Status:** Promoted to DEBT-011 (High / Latent) based on DB call-site review (AUDIT-RR-001 Step 4 + DB Call-Site Review). See DEBT-011 above for the full record.
 
 ## البنود المغلقة (Closed Debts)
 
