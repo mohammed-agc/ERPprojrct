@@ -99,3 +99,25 @@
 **Note (AR structure):** The absence of SAP-style `open_amount` / `original_amount` fields on `invoices` is noted as a potential AR open-item migration discrepancy for later review, not a concluded debt in this step.
 
 **Result:** No reconciliation SQL has been executed. No PASS / FAIL judgment has been made.
+
+### Step 4 — document_remaining Reversal Handling
+
+**Status: Confirmed with live data evidence / Reconciliation Not Executed**
+
+**Evidence:**
+- Invoice `INV-2026-0002` has total `57,500`, credited amount `57,500`, and status `cancelled`.
+- The invoice has two active allocation rows:
+  - original `PAYMENT` allocation `CLR-2026-00005` for `57,500`;
+  - reversal-like `CREDIT_NOTE` allocation `REV-CLR-2026-00005` for `57,500`, referencing the original allocation through `reverses_allocation_id`.
+- `document_allocated('sales_invoice', <invoice_id>, NULL)` returned `115,000`.
+- `document_remaining('sales_invoice', <invoice_id>, 57,500)` returned `-57,500`.
+
+**Finding:** `document_allocated` sums active allocation rows as positive amounts and does not account for reversal semantics through `reverses_allocation_id`. As a result, `document_remaining` can produce impossible negative remaining balances in reversal scenarios.
+
+**Scope note:** The observed invoice is cancelled and should be excluded from AR open-balance reconciliation. However, the defect is structural and may affect any active document with a similar reversal pattern.
+
+**Impact on RR-001:** `document_remaining` must not be used as the authoritative calculation for AR_Open_Balance. RR-001 must use a direct calculation with explicit reversal/sign logic.
+
+**This is separate from DEBT-010.** DEBT-010 = allocation creation / created_by / journal linkage risk. This finding (tracked as CANDIDATE-RR-001) = allocation remaining calculation / reversal semantics defect.
+
+**Result:** No final reconciliation SQL has been executed. No PASS / FAIL judgment has been made.

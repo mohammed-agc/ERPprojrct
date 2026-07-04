@@ -232,6 +232,25 @@ Severity remains as previously recorded unless a separate severity review is per
 
 **Next Action:** Confirm whether '1121' is a required caller-provided default, a safe placeholder, or a hardcoded fallback used in production posting.
 
+### CANDIDATE-RR-001 — document_allocated / document_remaining Reversal Handling Defect
+
+**Status:** Candidate / Confirmed with Live Data Evidence
+**Source:** AUDIT-RR-001 Step 4
+**Category:** Reporting / Open Item Accounting
+**Severity:** To Be Assessed
+
+**Finding:** `document_allocated` calculates allocation totals by summing active `open_item_allocations.allocated_amount` rows as positive values. It does not account for reversal semantics through `reverses_allocation_id`.
+
+Live data evidence showed an original `PAYMENT` allocation and a reversal-like `CREDIT_NOTE` allocation on the same sales invoice, both active and both positive. `document_allocated` returned the sum of both rows (`115,000`), and `document_remaining` returned a negative remaining balance (`-57,500`).
+
+**Impact:** `document_remaining` is not reliable as the authoritative source for AR open-balance calculation in reversal scenarios. This can affect reports or screens that rely on `document_remaining` or `document_allocated` to display customer balances, invoice remaining amounts, or aging-related figures.
+
+**Scope Note:** The observed invoice is cancelled and should be excluded from AR open-balance reconciliation. The defect is nevertheless structural because the function logic does not handle reversal semantics.
+
+**Separation from DEBT-010:** This is separate from DEBT-010. DEBT-010 = allocation creation / created_by / journal linkage risk. CANDIDATE-RR-001 = allocation remaining calculation / reversal semantics defect.
+
+**Decision Pending:** Determine whether this candidate should be promoted to a formal debt item after: identifying all call sites of `document_remaining` and `document_allocated`; checking whether any active invoices have similar reversal patterns; assessing reporting impact on AR aging, customer balances, and invoice status.
+
 ## البنود المغلقة (Closed Debts)
 
 *(لا شيء بعد)*
