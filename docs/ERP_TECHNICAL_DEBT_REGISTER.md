@@ -309,40 +309,39 @@ This confirms the current `Latent` qualifier: the defect is structurally high-im
 
 **Status:** Promoted to DEBT-011 (High / Latent) based on DB call-site review (AUDIT-RR-001 Step 4 + DB Call-Site Review). See DEBT-011 above for the full record.
 
-### CANDIDATE-RR-002 — Cancelled Invoices Leave Prior Payment / Settlement Credits on AR
+### DEBT-012 — Cancelled Paid / Settled Invoices Leave Prior AR Credits in GL
 
-**Status:** Candidate / Confirmed with Live Data Evidence
-**Source:** AUDIT-RR-001 1131 GL Line Diagnostic
-**Category:** Accounting Posting / Cancellation / Open Item Clearing
-**Severity:** To Be Assessed
+- **Status:** Confirmed with Live Data Evidence
+- **Severity:** High / Active GL Impact / Design Decision Pending
+- **Category:** Accounting Posting / Cancellation / Open Item Clearing / AR Control
+- **Source:** AUDIT-RR-001 1131 GL Line Diagnostic + CANDIDATE-RR-002 Deep Dive
+- **Promoted from:** CANDIDATE-RR-002
 
-**Finding:** RR-001 diagnostic review found that cancelled invoices can leave prior payment or settlement credits posted to AR control account `1131`. For `INV-2026-0001`, the original invoice debit and credit-note reversal net to zero, but a prior settlement credit of `129,425` remains posted. For `INV-2026-0002`, the original invoice debit and credit-note reversal net to zero, but a prior sales payment credit of `57,500` remains posted. This contributes to a negative AR control balance.
+**Finding:** Cancelled invoices with prior payment or settlement effects can leave residual credits on AR control account `1131`. The cancellation flow reverses the invoice revenue and creates Open Item reversal rows, but does not reverse or reclassify prior payment / settlement GL effects. This causes negative AR effects after invoice cancellation.
 
-**Impact:** Cancelled invoices with prior allocations may leave residual negative AR effects if the cancellation process reverses the invoice but does not correctly reverse or reclassify prior payment/settlement postings. This may affect: AR control account balance; GL ↔ AR subledger reconciliation; customer balance reporting; cancellation/reversal correctness.
+**Live Data Evidence:** AR control account `1131` showed total debit `449,900`, total credit `623,925`, net balance `-174,025`. Specific examples: `INV-2026-0001` — original invoice debit and credit-note reversal net to zero, but prior settlement credit `129,425` remained posted on AR. `INV-2026-0002` — original invoice debit and credit-note reversal net to zero, but prior sales payment credit `57,500` remained posted on AR.
 
-**Decision Pending:** Determine whether this is a cancellation-flow defect, a payment/settlement reversal defect, a missing refund/reclassification process, or a test-data artifact. Further investigation is required before assigning final severity or remediation.
+**Root Cause Evidence:** Review of `cancel_sales_invoice` confirmed that cancellation performs revenue reversal in GL, COGS reversal, inventory reversal, and Open Item reversal through `REV-*` allocation rows. However, it does not create a GL reversal or reclassification for prior payment / settlement entries that credited AR.
 
-**Distinction:** DEBT-011 concerns `document_remaining` / `document_allocated` calculation and reversal semantics. CANDIDATE-RR-002 concerns GL posting effects after cancellation when prior payment or settlement credits remain on AR.
+**Guard Evidence:** Review of `can_cancel_sales_invoice` showed that the cancellation guard checks sales payments but does not fully cover settlement / allocation scenarios. This allowed at least settlement-based cancellation exposure to pass the guard.
 
-#### Root Cause Evidence — cancel_sales_invoice
+**Impact:** This defect can affect: AR control account balance; GL ↔ AR Subledger reconciliation; cancelled invoice accounting correctness; customer balance interpretation; settlement/payment reversal integrity; RR-001 reconciliation readiness.
 
-Review of `cancel_sales_invoice` shows that invoice cancellation performs: revenue reversal in GL; COGS reversal; inventory reversal; and Open Item reversal by inserting `REV-*` rows into `open_item_allocations` with `reverses_allocation_id`.
+**Accounting Design Decision Pending:** The correct accounting treatment must be decided before remediation. Possible treatments include:
+1. prevent cancellation until payments / settlements are reversed through a controlled workflow;
+2. reclassify paid amounts to customer credit / liability;
+3. issue a refund workflow;
+4. create controlled reversal / clearing entries for prior allocations.
 
-However, the function does not create a GL reversal or reclassification for prior payment or settlement entries that already credited AR.
+The payment or settlement should not simply disappear from GL. It must be refunded, reclassified, or cleared through a controlled accounting process.
 
-For `INV-2026-0002`: original invoice debit AR `57,500`; sales payment credit AR `57,500`; cancellation credit note credit AR `57,500`. Net AR effect: `-57,500`. For `INV-2026-0001`, a prior settlement credit of `129,425` similarly remains posted after cancellation.
+**Distinction from DEBT-011:** DEBT-011 concerns incorrect Open Item remaining-balance calculation caused by reversal allocation semantics. DEBT-012 concerns missing GL treatment for prior payment or settlement effects during invoice cancellation. They are related through the same cancelled invoices, but they are different defects: DEBT-011 = Open Item calculation defect; DEBT-012 = GL posting / cancellation-flow defect.
 
-This confirms that the issue is not merely test data noise. It is a structural cancellation-flow defect when cancelling invoices that already have payment or settlement effects.
+- **Business Owner:** Mohammed Helwan
+- **Technical Owner:** Accounting Posting / Cancellation Flow
+- **Target Release:** 1.0
+- **Closed At:** —
 
-#### Accounting Design Decision Pending
-
-When cancelling an invoice that has already been paid or settled, the payment or settlement should not disappear from GL. A formal accounting design decision is required:
-1. refund the customer;
-2. reclassify the amount to customer credit / liability;
-3. reverse the allocation and create a controlled clearing entry;
-4. prevent cancellation until payment / settlement is reversed through a separate workflow.
-
-The correct treatment must be designed before remediation.
 
 ### CANDIDATE-RR-003 — Fixed Asset Disposal Posted to AR Control Account 1131
 

@@ -178,3 +178,11 @@ Review of `cancel_sales_invoice` confirmed that cancellation reverses the invoic
 This explains the negative AR balance observed on account `1131` for cancelled invoices `INV-2026-0001` and `INV-2026-0002`.
 
 Result: `CANDIDATE-RR-002` remains a confirmed structural candidate finding. Severity and final debt promotion are pending review of `can_cancel_sales_invoice` and a formal accounting design decision for paid-invoice cancellation.
+
+### CANDIDATE-RR-002 Promotion
+
+`CANDIDATE-RR-002` was promoted to `DEBT-012` after root cause review of `cancel_sales_invoice` and `can_cancel_sales_invoice`.
+
+The review confirmed both: missing GL treatment for prior payment / settlement effects during cancellation; and incomplete cancellation guard coverage.
+
+Result: `DEBT-012 = High / Active GL Impact / Design Decision Pending`. No final reconciliation SQL was executed. No PASS / FAIL judgment was made.
