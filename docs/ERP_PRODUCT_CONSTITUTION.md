@@ -46,6 +46,16 @@ One Owner لكلّ Business Rule · Service Layer Only · Document Flow First ·
 Every Financial Event → Journal Entry · Audit First · Review Before Build ·
 Zero Magic · Simplicity for End Users.
 
+### مبدأ حاكم — فصل الطبقات المعرفيّة الثلاث (Evidence / Design / Implementation)
+
+قاعدةٌ حاكمةٌ لكلّ تصميمٍ محاسبيٍّ أو منطقٍ يمسّ الحسابات:
+
+- **Evidence** قد تذكر أرقام الحسابات (لأنها ما رُصِد حيّاً في قاعدة الشركة الحاليّة).
+- **Design** يجب أن يستعمل أدوار الحسابات (account roles: AR control، Customer Deposits، counter-account…) لا الأرقام.
+- **Implementation** يجب أن يستعمل account determination (حلٌّ ديناميكيٌّ وقت التشغيل حسب سياق `company_id`/`branch_id`).
+
+الأرقام (مثل 1131/2111/2141) أمثلة دليلٍ حيّ لا ثوابت تصميميّة. الخلط بين الطبقات هو مصدر الـhardcoding (تسرّب رقم الدليل إلى منطق التنفيذ). هذا المبدأ يشرح آليّة **Product-First / Installable By Any Customer** عمليّاً. لو تعذّر حلّ حسابٍ حتميّاً وقت التنفيذ → إيقاف العمليّة وتحويلها لمراجعةٍ يدويّة (لا تخمين، لا fallback ثابت).
+
 ---
 
 ## 4. كيف نقرّر (Decision Framework)
