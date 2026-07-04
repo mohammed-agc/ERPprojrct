@@ -170,3 +170,11 @@ Severity remains `High / Latent`. The expanded impact reinforces High severity, 
 **Impact:** A simple total-level RR-001 reconciliation query is not ready. The query design must account for source-type breakdown or per-invoice reconciliation and must investigate cancellation/payment/settlement interactions. These findings are tracked as CANDIDATE-RR-002 and CANDIDATE-RR-003 in the Technical Debt Register.
 
 **Result:** No final reconciliation SQL has been executed. No PASS / FAIL judgment has been made.
+
+### CANDIDATE-RR-002 Deep Dive
+
+Review of `cancel_sales_invoice` confirmed that cancellation reverses the invoice and creates Open Item reversal rows, but does not reverse or reclassify prior payment / settlement GL effects.
+
+This explains the negative AR balance observed on account `1131` for cancelled invoices `INV-2026-0001` and `INV-2026-0002`.
+
+Result: `CANDIDATE-RR-002` remains a confirmed structural candidate finding. Severity and final debt promotion are pending review of `can_cancel_sales_invoice` and a formal accounting design decision for paid-invoice cancellation.
