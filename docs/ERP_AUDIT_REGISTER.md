@@ -186,3 +186,9 @@ Result: `CANDIDATE-RR-002` remains a confirmed structural candidate finding. Sev
 The review confirmed both: missing GL treatment for prior payment / settlement effects during cancellation; and incomplete cancellation guard coverage.
 
 Result: `DEBT-012 = High / Active GL Impact / Design Decision Pending`. No final reconciliation SQL was executed. No PASS / FAIL judgment was made.
+
+### CANDIDATE-RR-003 Deep Dive
+
+Review of `JE-2026-0038` (balanced: debit `1131` `6,000` / credit `1213` `5,000` / credit `433` `1,000`) and of `dispose_fixed_asset` confirmed that the disposal function is architecturally sound: cost, accumulated-depreciation, and gain/loss accounts resolve dynamically via `account_determinations`; the proceeds account comes from the caller parameter `p_proceeds_account_code` (default `1121`). The `1131` posting resulted from a caller passing `p_proceeds_account_code='1131'` on a test asset ("أصل اختبار النوع"), not from a code defect.
+
+Result: `CANDIDATE-RR-003` is assessed as a test-data artifact, not a code defect. No promotion. For RR-001, `fixed_asset_disposal` is non-trade and must be excluded via source-type breakdown. No PASS / FAIL judgment was made.

@@ -345,18 +345,24 @@ The payment or settlement should not simply disappear from GL. It must be refund
 
 ### CANDIDATE-RR-003 — Fixed Asset Disposal Posted to AR Control Account 1131
 
-**Status:** Candidate / Confirmed with Live Data Evidence
-**Source:** AUDIT-RR-001 1131 GL Line Diagnostic
+**Status:** Assessed — Not a Defect / Test-Data Artifact
+**Source:** AUDIT-RR-001 1131 GL Line Diagnostic + `dispose_fixed_asset` review
 **Category:** Account Determination / Fixed Asset Disposal / AR Control Account
-**Severity:** To Be Assessed
+**Severity:** Not Applicable (no code defect)
 
-**Finding:** RR-001 diagnostic review found a `fixed_asset_disposal` journal entry posting `6,000` debit to AR control account `1131`.
+**Finding:** RR-001 diagnostic review found a `fixed_asset_disposal` journal entry (`JE-2026-0038`) posting `6,000` debit to AR control account `1131`. The full entry is balanced: debit `1131` `6,000` / credit `1213` (equipment & showrooms) `5,000` / credit `433` (gain on asset disposal) `1,000` — a sound sale of an asset with book value `5,000` for `6,000`, yielding a `1,000` gain.
 
-**Impact:** Posting fixed asset disposal proceeds to the trade receivables control account may contaminate AR reconciliation if the transaction is not intended to be part of customer trade receivables.
+**Root Cause Evidence — dispose_fixed_asset:** Review of `dispose_fixed_asset` confirmed the function is architecturally sound. Cost and accumulated-depreciation accounts resolve dynamically via `account_determinations` (by asset class); gain/loss accounts resolve via `GAIN_ON_DISPOSAL` / `LOSS_ON_DISPOSAL`. The proceeds (debit) account comes from the caller parameter `p_proceeds_account_code` (default `1121`), read from `accounts` by code, with a `requires_partner` check. There is no hardcoding — the function respects Product-First.
 
-**Decision Pending:** Determine whether account `1131` is intentionally used for asset-sale receivables or whether a separate receivable / clearing account should be used. Further account-determination review is required before assigning final severity or remediation.
+The `1131` posting resulted from the caller passing `p_proceeds_account_code='1131'` (overriding the `1121` default), not from a code defect. The entry description "أصل اختبار النوع" (test asset) confirms this was a manual test input.
 
-**Distinction:** CANDIDATE-RR-003 concerns account determination for fixed asset disposal (separate from DEBT-011 and CANDIDATE-RR-002).
+**Assessment:** This is a test-data artifact, not a code defect. The function is sound; no promotion to a formal debt is warranted.
+
+**Design Observation (improvement opportunity, not a defect):** `dispose_fixed_asset` accepts any valid account as the proceeds account without validating that it is appropriate for asset sales (it does not prevent using the trade-vehicle receivables account). An optional guard could be added in future, but this is an enhancement, not a fix.
+
+**Impact on RR-001:** The `6,000` on `1131` is non-trade (asset sale, no invoice). RR-001 reconciliation must exclude `fixed_asset_disposal` source types via source-type breakdown. This reinforces the per-source-type decomposition already noted for RR-001.
+
+**Distinction:** CANDIDATE-RR-003 concerned account determination for fixed asset disposal (separate from DEBT-011 and DEBT-012). Assessed as not a defect.
 
 ## البنود المغلقة (Closed Debts)
 
