@@ -342,6 +342,7 @@ The payment or settlement should not simply disappear from GL. It must be refund
 - **Target Release:** 1.0
 - **Closed At:** —
 - **Remediation Design:** see `docs/ERP_DEBT012_REMEDIATION_DESIGN.md` (Design Only / Not Implemented; open questions resolved 2026-07-04) — Payment leg → reclassify to Customer Deposits (resolved role, partner-tracked); Settlement leg → reverse settlement (counter-account resolved from the original settlement JE, block if unclear). Accounts resolved dynamically per the Evidence/Design/Implementation principle; no hardcoded codes. Historical data fix (`-174,025`) deferred until staging remediation passes, separate approval required.
+- **Staging Execution Plan:** see `docs/ERP_DEBT012_STAGING_EXECUTION_PLAN.md` (Draft / Staging Only / Not Executed) — 12-phase plan. Prerequisites discovered via live reads: `CUSTOMER_DEPOSITS` determination key is missing (Phase 0A must create it by role) and 6 of 8 test cases need fresh staging seed data (Phase 0B). Not an execution authorization; production remediation requires separate explicit approval.
 
 
 ### CANDIDATE-RR-003 — Fixed Asset Disposal Posted to AR Control Account 1131
