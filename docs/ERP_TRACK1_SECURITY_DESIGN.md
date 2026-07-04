@@ -130,6 +130,81 @@ but must not directly execute the cancel_sales_invoice RPC.**
   currently contain `public.role_permissions` (see §16, OQ-B1).
 - كلّ دالّةٍ ماليّةٍ تبدأ بـ: `auth.uid() null-rejection` ثمّ فحص role/permission المناسب.
 
+### 8.1 SQL Pattern Design — Conceptual Only
+
+> **CONCEPTUAL PATTERN — NOT FOR EXECUTION.** كلّ ما يلي أمثلةٌ توضيحيّةٌ للبنية فقط — ليست
+> migration، ليست نصّاً جاهزاً للتطبيق، ولا تُنفَّذ على قاعدة البيانات. الغرض توضيح **شكل** النمط
+> قبل أيّ قرار تنفيذٍ منفصل.
+
+**1. Unified Guard Block** (رأس كلّ دالّةٍ ماليّة):
+```
+-- CONCEPTUAL PATTERN — NOT FOR EXECUTION
+--   v_uid uuid := auth.uid();
+--   IF v_uid IS NULL THEN RAISE EXCEPTION 'UNAUTHENTICATED' USING ERRCODE='28000'; END IF;
+--   -- authorization check (role أو permission حسب المستوى — انظر أدناه)
+--   -- ثم منطق الأعمال الأصلي يبقى كما هو + data-integrity guards (can_cancel/document_remaining/UNIQUE).
+```
+الطبقة الأمنيّة تُضاف **فوق** المنطق الأصليّ، لا تستبدله.
+
+**2. has_finance_role — Level 1** (بوّابة عامّة: accountant / finance_manager / admin):
+```
+-- CONCEPTUAL PATTERN — NOT FOR EXECUTION
+-- CREATE FUNCTION has_finance_role(p_uid uuid) RETURNS boolean
+--   LANGUAGE sql STABLE SECURITY DEFINER SET search_path = <trusted schemas> AS $$
+--   SELECT EXISTS (SELECT 1 FROM public.user_roles
+--     WHERE user_id = p_uid AND role IN ('accountant','finance_manager','admin'));
+--   $$;
+```
+
+**3. has_finance_permission — Level 2** (Option A: hardcoded action matrix، fail-safe):
+```
+-- CONCEPTUAL PATTERN — NOT FOR EXECUTION
+-- CREATE FUNCTION has_finance_permission(p_uid uuid, p_action text) RETURNS boolean
+--   LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = <trusted> AS $$
+-- DECLARE v_allowed text[];
+-- BEGIN
+--   v_allowed := CASE p_action
+--     WHEN 'reverse'        THEN ARRAY['finance_manager','admin']
+--     WHEN 'cancel_invoice' THEN ARRAY['finance_manager','admin']
+--     WHEN 'settlement'     THEN ARRAY['finance_manager','admin']
+--     WHEN 'depreciation'   THEN ARRAY['finance_manager','admin']
+--     ELSE ARRAY[]::text[]   -- unknown action = reject (fail-safe)
+--   END;
+--   RETURN EXISTS (SELECT 1 FROM public.user_roles WHERE user_id=p_uid AND role = ANY(v_allowed));
+-- END; $$;
+```
+
+**4. Function mapping** (أيّ دالّةٍ تأخذ أيّ مستوى):
+```
+manual_journal_entry  → has_finance_role
+create_allocation     → has_finance_role  (+ created_by := auth.uid)
+reverse_journal_entry → has_finance_permission(v_uid,'reverse')
+cancel_sales_invoice  → has_finance_permission(v_uid,'cancel_invoice')
+partner_settlement    → has_finance_permission(v_uid,'settlement')  (+ created_by := auth.uid)
+run_monthly_depreciation → Option C backend (§9)؛ أو has_finance_permission('depreciation') إن بقي مسار user مؤقتاً.
+```
+
+**5. create_allocation** (DEBT-010):
+```
+-- CONCEPTUAL PATTERN — NOT FOR EXECUTION
+-- created_by يُشتقّ داخلياً: v_created_by := auth.uid();  (لا يُقبل p_created_by من المستدعي — يُتجاهَل/يُهمَل)
+-- document_remaining guard يبقى (سلامة بيانات، تكمّل التصريح).
+-- توافقية: call sites الثلاثة تمرّر userId الصحيح → الاشتقاق الداخلي = نفس القيمة للمستخدم الشرعي.
+```
+
+**6. search_path** (DEBT-009):
+```
+-- CONCEPTUAL PATTERN — NOT FOR EXECUTION
+-- الدوال المساعدة (has_finance_role/has_finance_permission) + الست RPCs يجب أن تحمل search_path آمناً صريحاً.
+-- ALTER FUNCTION <fn>(<args>) SET search_path = <trusted schema list>؛ القائمة تُراجَع قبل التنفيذ.
+```
+
+**7. role_permissions:** غير مستخدَمٍ في Track 1 لأن قاعدة البيانات الحيّة لا تحوي
+`public.role_permissions` (OQ-B1، §16). النمط أعلاه (Option A، matrix داخل الدالّة) هو المعتمد.
+جدول role_permissions تحسينٌ مستقبليٌّ اختياريٌّ فقط.
+
+**fail-safe by default:** null uid → رفض · فعلٌ غير معروف → رفض · غياب الدور → رفض. الافتراض دائماً "امنع".
+
 ## 9. run_monthly_depreciation — Option C Design
 
 الإهلاك عمليّةٌ دوريّةٌ إداريّةٌ (batch على كلّ الأصول)، لا فعلٌ تفاعليٌّ لمستخدم (OQ-P0-2: لا caller
