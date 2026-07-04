@@ -190,6 +190,18 @@
 - **Candidate Solution:** Derive created_by from auth.uid() inside the function instead of accepting p_created_by from the caller; reject unauthenticated callers; add role/company authorization; REVOKE EXECUTE from anon/PUBLIC. Not executed in this audit step.
 - **Closed At:** —
 
+#### Evidence Update — RR-001 Step 2
+
+RR-001 Step 2 found active `PAYMENT` allocations in `open_item_allocations` with `journal_entry_id = NULL`.
+
+This is live data evidence that open-item clearing can exist without a linked GL journal entry. It confirms the reporting-risk impact of DEBT-010: Open Items / Aging may diverge from GL when allocations are created or stored without enforceable posting linkage.
+
+Additional related evidence:
+- Some `SETTLEMENT` allocation rows have `created_by = NULL`, confirming audit-trail weakness observed during Phase 5.
+- Reversal rows exist through `reverses_allocation_id`, so allocation netting must account for reversal semantics.
+
+Severity remains as previously recorded unless a separate severity review is performed.
+
 ---
 
 ## Evidence Backlog — Not Official Debt

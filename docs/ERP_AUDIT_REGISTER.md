@@ -80,3 +80,22 @@
 6. AP is excluded because AP Open Item migration is a known technical debt (TECH-DEBT-AP-001).
 
 **Next step (when executed, with separate approval):** evidence-based identification of the AR control account(s) and table-structure verification, before running any reconciliation query.
+
+### Step 2 — open_item_allocations Structure Review
+
+**Status: Structure Inspected / Reconciliation Not Executed**
+
+**Evidence:**
+- `open_item_allocations` contains allocation rows for `PAYMENT`, `SETTLEMENT`, and `CREDIT_NOTE`.
+- `target_document_type` includes both `sales_invoice` and `purchase_invoice`, so AR reconciliation must filter AR targets explicitly.
+- Active `PAYMENT` allocations were observed with `journal_entry_id = NULL`.
+- `SETTLEMENT` allocations were observed with `created_by = NULL`.
+- Reversal-like allocation rows exist through `reverses_allocation_id`, including `CREDIT_NOTE` rows.
+
+**Finding:** The table is structurally sufficient to support direct AR open-item calculation, but the calculation cannot be a naïve sum of `allocated_amount`. Allocation sign and business meaning must account for `allocation_type`, `status`, and `reverses_allocation_id`.
+
+**Important:** Active PAYMENT allocations without `journal_entry_id` provide live data evidence that Open Items can move without a linked GL journal entry. This confirms the practical reporting risk described in DEBT-010.
+
+**Note (AR structure):** The absence of SAP-style `open_amount` / `original_amount` fields on `invoices` is noted as a potential AR open-item migration discrepancy for later review, not a concluded debt in this step.
+
+**Result:** No reconciliation SQL has been executed. No PASS / FAIL judgment has been made.
