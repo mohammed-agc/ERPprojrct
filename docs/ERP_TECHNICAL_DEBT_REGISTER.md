@@ -244,6 +244,14 @@ Severity remains as previously recorded unless a separate severity review is per
 - **Target Release:** 1.0
 - **Closed At:** —
 
+#### Evidence Update — Active Document Scan
+
+A follow-up scan of active original-allocation plus reversal-allocation pairs found that all currently observed reversal pairs belong to cancelled invoices (`INV-2026-0001` and `INV-2026-0002`).
+
+No currently active sales invoice with the same reversal allocation pattern was found in this review.
+
+This confirms the current `Latent` qualifier: the defect is structurally high-impact, but no active invoice impact has been confirmed at this time.
+
 ---
 
 ## Evidence Backlog — Not Official Debt

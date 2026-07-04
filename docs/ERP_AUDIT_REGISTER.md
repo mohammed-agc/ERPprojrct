@@ -129,3 +129,9 @@ A DB call-site review confirmed that `document_remaining` / `document_allocated`
 **CANDIDATE-RR-001 was promoted to DEBT-011 based on this DB call-site review** (Severity High / Latent). See DEBT-011 in the Technical Debt Register.
 
 AUDIT-RR-001 remains Designed / Structure Inspection In Progress. No final reconciliation SQL executed. No PASS / FAIL judgment.
+
+### Active Reversal-Pair Scan
+
+A follow-up review found that all currently observed active original/reversal allocation pairs are attached to cancelled invoices. No active sales invoice with the same reversal pattern was found.
+
+Result: DEBT-011 remains `High / Latent`. No final reconciliation SQL was executed. No PASS / FAIL judgment was made.
