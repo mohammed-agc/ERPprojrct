@@ -124,8 +124,10 @@ but must not directly execute the cancel_sales_invoice RPC.**
 - `has_finance_permission(uid, action)` — تُرجِع true إذا كان المستخدم مصرّحاً للفعل المحدّد
   (reverse / cancel_invoice / settlement / depreciation). تُقيّد على `{finance_manager, admin}`
   للأفعال عالية الخطورة.
-- كلتا الدالّتين يجب أن تكونا SECURITY DEFINER بـ search_path آمن، وتُقرآن من مصدر أدوار موثوق
-  (user_roles؛ آلية تخزين permission — مثل role_permissions الموجود — تُحسَم عند التنفيذ).
+- كلتا الدالّتين يجب أن تكونا SECURITY DEFINER بـ search_path آمن، وتُقرآن من مصدر أدوار موثوق (user_roles).
+- **For Track 1, `has_finance_permission` will use an internal action matrix (Option A).** The
+  role_permissions-table approach (Option B) is deferred because the live database does not
+  currently contain `public.role_permissions` (see §16, OQ-B1).
 - كلّ دالّةٍ ماليّةٍ تبدأ بـ: `auth.uid() null-rejection` ثمّ فحص role/permission المناسب.
 
 ## 9. run_monthly_depreciation — Option C Design
@@ -198,7 +200,18 @@ admin/finance_manager فقط.
 
 ## 16. Remaining Pre-Execution Questions
 
-- آلية تخزين has_finance_permission (مصدر بيانات الصلاحيّة على مستوى الفعل) — تُحسَم عند التنفيذ.
+### OQ-B1 — role_permissions Suitability (Resolved)
+
+Phase 0 / Pre-execution inspection found that `public.role_permissions` does not exist in the live database. `information_schema.columns` and `information_schema.table_constraints` returned no rows, and direct selection failed with `42P01: relation does not exist`.
+
+Therefore, Track 1 will use **Option A** for `has_finance_permission`: an internal, fail-safe action matrix inside the helper function.
+
+The `role_permissions` table approach remains a future optional improvement, but it is not a Track 1 prerequisite.
+
+This also corrects an earlier migration-based assumption: historical migrations contain GRANT statements referencing some tables that are not present in the live database. Live database evidence takes precedence over migration assumptions. Historical migrations may contain GRANTs for non-existent legacy tables; this is noted as migration hygiene, not a current Track 1 security blocker.
+
+### Remaining
+
 - authenticated users review (من يملك أيّ دورٍ فعليّاً) — Phase 0 المتبقّي، لا يعيق التصميم.
 - service_role per-function النهائيّ — معتمدٌ مبدئيّاً، يُراجَع قبل التنفيذ.
 
