@@ -77,3 +77,65 @@ No remediation
 No PASS / FAIL
 Posting Engine = Under Audit / Partially Audited
 ```
+
+---
+
+## R-RR2 Service Review — Centralized Financial Reporting SSOT
+
+This section records a follow-up code/service review of R-RR2, performed after Phase A (read-only, code only, no DB).
+
+### 1. Finding
+
+R-RR2 = Resolved — Centralized SSOT.
+
+### 2. Evidence
+
+The core financial reports depend on a single central module, `src/services/erp/accounting.ts`:
+
+- `listAccounts()`
+- `accountBalances(from, to)`
+- `naturalBalance(type, debit, credit)`
+- `trialBalance()`
+- `incomeStatement()`
+- `balanceSheet()`
+- `cashFlow()`
+- `chartTree()`
+
+### 3. Helper Evidence
+
+- `listAccounts` is the unified account source (reads `accounts`, returns `AccountRow[]` with `type` and `is_active`).
+- `accountBalances` aggregates `journal_entry_lines` with posted entries only and from/to filters, returning a `Map<account_id, {debit, credit}>`.
+- `naturalBalance` applies the accounting nature: asset/expense = debit − credit; liability/equity/revenue = credit − debit.
+
+### 4. Report Dependency
+
+- `incomeStatement` uses listAccounts + accountBalances + naturalBalance.
+- `balanceSheet` uses the same helpers and computes retained earnings from revenue − expense logic (same naturalBalance).
+- `cashFlow` uses the same helpers but has a hardcoded cash classification.
+- `trialBalance` repeats the aggregation internally but uses the same source (`journal_entry_lines`, posted) and the same accounting logic.
+- `chartTree` also uses the same helpers.
+
+### 5. Judgment
+
+- The absence of DB views/functions for TB/BS/IS does not mean scattered logic.
+- A financial reporting SSOT exists in the service/code layer (`accounting.ts`).
+- Classification is based on `account.type`, not hardcoded account numbers, for TB/BS/IS.
+
+### 6. Secondary Candidates (not promoted)
+
+- **R-RR2a:** `trialBalance` repeats aggregation instead of reusing `accountBalances`.
+- **R-RR2b:** `cashFlow` uses a hardcoded cash classification by Arabic names and code prefixes 1101/1102.
+- **R-RR2c:** reports are client-side and may have future performance/scalability limits.
+- **R-RR2d:** `accounts.nature` exists but reports use `naturalBalance(type)`, so a type/nature duplication needs a later review.
+
+### 7. Status
+
+```
+R-RR2 = Resolved — Centralized SSOT
+Secondary candidates = R-RR2a / R-RR2b / R-RR2c / R-RR2d
+Reports/RR Phase A = Read-only Reviewed / Not Executed
+No DB writes
+No remediation
+No PASS / FAIL
+Posting Engine = Under Audit / Partially Audited
+```
