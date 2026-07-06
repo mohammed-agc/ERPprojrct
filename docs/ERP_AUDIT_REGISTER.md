@@ -206,3 +206,26 @@ With account `1131` now fully understood (DEBT-012 explains the negative balance
 **Key design principle:** RR-001 is not expected to balance while DEBT-012 is live. The residual payment/settlement credits from cancelled invoices sit inside `trade_clearing`, so `variance_trade_only` will remain non-zero. This is the audit surfacing DEBT-012, not a reconciliation failure. A clean reconciliation becomes possible only after DEBT-012 is remediated.
 
 Result: `AUDIT-RR-001 = Diagnostic Inspected / Redesign In Progress`. No final reconciliation SQL was executed. No PASS / FAIL judgment was made.
+
+### Session Live-Read Evidence — 2026-07-06 (Remediation Design Review Session)
+
+This session performed live reads (via `pg_get_functiondef` and `information_schema`) to verify five findings before designing remediations. All read-only — no SQL mutation, no reconciliation run, no PASS/FAIL judgment. Recorded here as audit evidence.
+
+**Functions read live (definitions inspected, read-only):**
+- `can_cancel_sales_invoice(p_invoice_id)` — STABLE SECURITY DEFINER. Confirms DEBT-012 dimensions 2 and 3 literally: it checks the paid amount from `sales_payments` only (`v_paid`), not `payments`; and it never inspects `open_item_allocations`. It is otherwise mature (idempotency via posted CN, REVENUE_JE_MISSING, COGS_JE_MISSING keyed on an actual active COGS JE, VEHICLE_DELIVERED via status or notes overlay).
+- `cancel_sales_invoice(p_invoice_id, p_reason)` — SECURITY DEFINER. Refines DEBT-012 dimension 1 (see below): it calls `can_cancel_sales_invoice` first, then reverses revenue (F5.2), COGS (F5.3), inventory (F5.4, vehicle Per-VIN vs part cumulative), and open-item allocations (F5.5, `REV-*` rows with `reverses_allocation_id`, filtering `IS NULL`), posts a Credit Note, and logs governance. It does not touch a prior cash payment.
+- `approve_request(p_request_id, p_comment)` — mature (SoD SUBMITTER_CANNOT_APPROVE, admin override logged, multi-step advance, document posting). Reads `approver_role` only; ignores `approver_type`, `approver_id`, `approval_mode`, `timeout_hours`, `escalate_to` (basis for R-AP1/R-AP2/R-AP3, matching CANDIDATE-004).
+- `run_monthly_depreciation(p_period text)` — mature (account determination, idempotent via `fixed_asset_depreciation(asset_id, period)`, straight-line, month-end date, batch DEP-YYYY-NNNN). Only gap: no future-period guard (basis for R-FA2).
+- `next_zatca_icv(p_company uuid)` — atomic (INSERT ON CONFLICT DO NOTHING → SELECT FOR UPDATE → UPDATE), keyed on `company_id` only (basis for R-Z1). Metadata-only read; no secrets.
+
+**Table structures read live (metadata only):**
+- `account_determinations` — 13 columns, no `company_id`; ~48 rows / 16 keys; no CASH key (real cash accounts 1111 + 1121 sit under CUSTOMER_PAYMENT_RECEIVE / SUPPLIER_PAYMENT_PAY — basis for R-RR2b).
+- `approval_workflow_steps` — 11 columns; `approver_type` (text, NOT NULL) is the discriminator; `approver_id`, `approver_role`, `approval_mode`, `timeout_hours`, `escalate_to` all nullable and unconsumed.
+- `zatca_icv_counter` — 3 columns (`company_id`, `current_icv`, `updated_at`); no `environment` (R-Z1).
+- `zatca_credentials` — 21 columns; `last_used_at` exists (timestamptz, nullable) but is never populated (R-Z2); `secret_encrypted` values not read.
+
+**Refinement to CANDIDATE-RR-002 Deep Dive / DEBT-012 dimension 1:** the earlier note ("cancellation ... does not reverse or reclassify prior payment / settlement GL effects") is accurate about the cash leg but should not be read as "no reversing GL." The live read shows `cancel_sales_invoice` is mature and reverses revenue, COGS, inventory, and allocations; the precise defect is that it leaves the prior cash payment stranded (Dr 1111 / Cr 1131 from the original receipt), because the broken guard (dimension 3) let a paid invoice through on the assumption no payment exists. The load-bearing remediation is the guard source fix (`payments` + active unreversed `open_item_allocations`, not `sales_payments`). This is documented in `docs/SARAT_REMEDIATION_DEBT012_DESIGN_REVIEW.md` (commit 8bc9f68) and the DebtRegister Session Evidence Update (commit ea6e765).
+
+**Positive finding (DEBT-011 cross-reference):** `cancel_sales_invoice` F5.5 already respects `reverses_allocation_id` (filters `IS NULL` on its source set), so the cancellation flow is on the correct side of DEBT-011 for its own reversal rows. This is consistent with the RR-001 Final Query Design principle (valid allocations = active originals with `reverses_allocation_id IS NULL`).
+
+**Governing constraints (unchanged):** staging not confirmed → treat as production → no DB writes, no reconciliation run, no execution. AUDIT-RR-001 remains Diagnostic Inspected / Redesign In Progress. No PASS / FAIL judgment was made. Evidence Level for the above live reads = VERIFIED.
