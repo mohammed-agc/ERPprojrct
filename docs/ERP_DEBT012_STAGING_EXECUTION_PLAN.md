@@ -28,6 +28,34 @@ Confirmed by live reads (2026-07-04):
 - **Partner tracking:** `journal_entry_lines` carries `contact_id` + `partner_type`; the deposits account `requires_partner`.
 
 Governing principle (constitution): Evidence may mention account numbers; Design uses account roles; Implementation uses account determination. Account codes below (`1131/2111/2141/1111`) are evidence examples for the current company, never constants.
+## Gate 0 — Staging Identity Proof (MANDATORY, before Phase 0A)
+
+**No Phase 0A, Phase 0B, remediation, seed, or reconciliation write may occur until it is proven that the target environment is an isolated staging environment and NOT production.** This gate sits before Phase 0A and blocks everything downstream. It is a safety gate, not an execution step; satisfying it is a prerequisite, not an authorization on its own (see §Explicit write authorization below).
+
+The current live database is production (company `f40c7eff`, active production PCSID, live ZATCA data). Therefore the default assumption is production, and Gate 0 must be positively satisfied before any write — verbal assurance or an environment label is not sufficient.
+
+**1. Supabase project / DB URL proof.** Document that the target `project_id` (or DB URL) is different from the production project_id/URL. Record both identifiers side by side so the difference is explicit. An environment name ("staging") or a spoken assurance does not satisfy this.
+
+**2. Company isolation proof.** Prove that the `company_id` in the target environment is NOT the known production company `f40c7eff`, or that it is a clearly isolated copy explicitly marked as staging. Any live production company is treated as production and blocks Gate 0.
+
+**3. ZATCA safety proof.** Prove that no production ZATCA credentials and no production PCSID/CCSID exist in the target environment. While Gate 0 is unsatisfied (and in general for this plan): no external ZATCA call, no onboarding, no reporting, no clearance, no submission. Seed invoices must not enter any live ZATCA chain.
+
+**4. Explicit write authorization.** A separate, explicit, written authorization from the owner is required for execution on that specific environment. A general/standing authorization does not suffice. The authorization must state which write scope is permitted (e.g. "Phase 0A only", "Phase 0B only", or otherwise). Absent this, the environment stays read-only.
+
+**5. Programmatic anti-production assertion (recommended).** Any later execution script should begin with a read-only check that aborts before the first write if any of the following is true: the DB URL / project_id matches production; the `company_id` matches `f40c7eff` without an explicit staging marker; or production ZATCA credentials are present. On failure: abort before the first write, log the reason, and do nothing else. This is defence-in-depth on top of the manual proofs above, not a replacement for them.
+
+**6. Cleanup marking requirement.** Every seed row must be clearly marked (e.g. a documented tag/marker convention) so it is identifiable for teardown. The cleanup strategy must cover rows generated indirectly via triggers — in particular `journal_entries` and `journal_entry_lines` posted by the payment/invoice/settlement triggers — not only the directly-inserted business documents. Because posted journal entries are immutable (`trg_prevent_posted_modify`), the teardown sequence must account for un-posting or the correct removal order before deletion.
+
+**7. Gate 0 status.**
+
+```
+Gate 0 = Required before any staging execution
+Gate 0 current status = Not satisfied / Not executed
+Staging environment = Not confirmed
+Execution = Not authorized
+```
+
+
 
 ## 3. Phase 0A — Account Determination Prerequisites
 
@@ -147,6 +175,7 @@ Each case: setup → expected GL → expected open items → expected document s
 
 Proceed to (a later, separately-approved) production step ONLY if, on staging:
 
+- [ ] **Gate 0 — Staging Identity Proof is satisfied** ... **No-Go if Gate 0 is not satisfied.**
 - [ ] All required account determinations exist and resolve deterministically (CUSTOMER_DEPOSITS present).
 - [ ] Partner tracking works (deposits lines carry contact_id + partner_type; no anonymous deposits balance).
 - [ ] All 8 test cases pass on staging.
@@ -167,6 +196,9 @@ G1+G2+G3 = Resolved by read-only evidence
 G4 = Confirmed with live data evidence
 Staging Execution Plan = Draft
 Historical Data Fix = Deferred until staging remediation passes / Separate Approval Required
+Gate 0 = Required before any staging execution
+Gate 0 current status = Not satisfied / Not executed
+Execution = Not authorized until Gate 0 satisfied + separate explicit approval
 Staging = Not confirmed
 No remediation · No PASS / FAIL
 Posting Engine = Under Audit / Partially Audited
